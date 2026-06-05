@@ -5345,8 +5345,11 @@ function renderCanvas() {
   empty.style.display = 'none';
   inner.querySelectorAll('.canvas-section').forEach(e => e.remove());
 
+  let globalQNum = 0;
   builder.sections.forEach((sec, si) => {
-    const el = buildSectionEl(sec, si);
+    const el = buildSectionEl(sec, si, globalQNum);
+    // Count questions in this section for next section's offset
+    globalQNum += sec.blocks.filter(b => b.type === 'question').length;
     inner.appendChild(el);
   });
 
@@ -5356,7 +5359,7 @@ function renderCanvas() {
 // ============================================================
 // BUILD SECTION ELEMENT
 // ============================================================
-function buildSectionEl(sec, si) {
+function buildSectionEl(sec, si, qOffset = 0) {
   const div = document.createElement('div');
   div.className = 'canvas-section' + (sec.blocks.length === 0 ? ' empty-section' : '');
   div.id = 'section-' + sec.id;
@@ -5382,7 +5385,7 @@ function buildSectionEl(sec, si) {
   blocksContainer.id = 'blocks-' + sec.id;
   blocksContainer.style.cssText = 'display:flex;flex-direction:column;gap:6px;padding:4px 0 8px;';
 
-  let qNum = 0;
+  let qNum = qOffset;
   sec.blocks.forEach((block, bi) => {
     if (block.type === 'question') qNum++;
     const blockEl = buildBlockEl(block, sec.id, bi, qNum);
