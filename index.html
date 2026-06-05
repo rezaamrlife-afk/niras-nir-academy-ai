@@ -2178,10 +2178,470 @@ body::after {
 }
 .btn-modal-confirm:hover { background: var(--gold-light); }
 
-@media (max-width: 768px) {
-  .builder-sidebar { display: none; }
-  .builder-canvas { padding: 24px 16px 60px; }
+/* ============================================================
+   AI FEATURES — Question Generator + Smart Fill
+   ============================================================ */
+
+/* ——— AI Generate Button in block picker ——— */
+.picker-item.ai {
+  background: rgba(201,168,76,0.05);
+  border-top: 1px solid var(--black-border);
+  margin-top: 4px;
+  padding-top: 12px;
 }
+.picker-item.ai .picker-item-icon {
+  background: rgba(201,168,76,0.1);
+  color: var(--gold);
+}
+
+/* ——— Smart Fill button in sidebar ——— */
+.btn-smart-fill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  background: rgba(201,168,76,0.08);
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: var(--radius);
+  color: var(--gold);
+  font-family: var(--font-ui);
+  font-size: var(--text-label);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wide);
+  cursor: pointer;
+  padding: 8px;
+  margin-top: 12px;
+  transition: all var(--transition);
+}
+.btn-smart-fill:hover {
+  background: rgba(201,168,76,0.14);
+  border-color: var(--gold-dim);
+}
+.btn-smart-fill.loading {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btn-smart-fill .ai-spinner {
+  display: none;
+  width: 12px; height: 12px;
+  border: 1.5px solid rgba(201,168,76,0.3);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+.btn-smart-fill.loading .ai-spinner { display: block; }
+.btn-smart-fill.loading .ai-btn-text { display: none; }
+
+/* ——— AI Question Generator Modal ——— */
+.ai-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.ai-modal-overlay.open { display: flex; }
+
+.ai-modal {
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 580px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  animation: modal-in 0.2s ease;
+  overflow: hidden;
+}
+
+.ai-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--black-border);
+  flex-shrink: 0;
+}
+
+.ai-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-modal-title-text {
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  color: var(--white);
+}
+
+.ai-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--gold);
+  padding: 2px 8px;
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 10px;
+  background: rgba(201,168,76,0.06);
+}
+
+.btn-ai-close {
+  background: none;
+  border: none;
+  color: var(--white-muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  transition: color var(--transition);
+  line-height: 1;
+}
+.btn-ai-close:hover { color: var(--white); }
+
+.ai-modal-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.ai-field { display: flex; flex-direction: column; gap: 6px; }
+
+.ai-field-label {
+  font-size: var(--text-label);
+  font-weight: var(--weight-medium);
+  color: var(--white-dim);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+}
+
+.ai-input {
+  background: var(--black-soft);
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius);
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  padding: 10px 12px;
+  outline: none;
+  width: 100%;
+  transition: border-color var(--transition);
+  line-height: var(--leading-normal);
+}
+.ai-input:focus { border-color: var(--gold-dim); }
+.ai-input::placeholder { color: rgba(155,150,144,0.4); }
+
+.ai-textarea {
+  resize: vertical;
+  min-height: 80px;
+  line-height: var(--leading-relaxed);
+}
+
+.ai-options-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.ai-select {
+  background: var(--black-soft);
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius);
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  padding: 9px 10px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239B9690' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+  transition: border-color var(--transition);
+}
+.ai-select:focus { border-color: var(--gold-dim); }
+.ai-select option { background: var(--black-card); }
+
+/* AI Results area */
+.ai-results {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+.ai-results.visible { display: flex; }
+
+.ai-results-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  padding-bottom: 4px;
+}
+
+.ai-question-preview {
+  background: var(--black-soft);
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+  position: relative;
+}
+.ai-question-preview:hover {
+  border-color: var(--gold-dim);
+  background: rgba(201,168,76,0.03);
+}
+.ai-question-preview.selected {
+  border-color: var(--gold);
+  background: rgba(201,168,76,0.06);
+}
+
+.ai-q-stem {
+  font-size: var(--text-body-sm);
+  color: var(--white);
+  line-height: var(--leading-relaxed);
+  margin-bottom: 8px;
+  font-weight: var(--weight-medium);
+}
+
+.ai-q-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ai-q-option {
+  font-size: var(--text-caption);
+  color: var(--white-dim);
+  padding: 2px 0;
+  display: flex;
+  gap: 6px;
+}
+.ai-q-option.correct { color: var(--green); }
+
+.ai-q-type-badge {
+  position: absolute;
+  top: 10px; right: 10px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--white-muted);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+}
+
+/* Loading state */
+.ai-loading {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 0;
+  color: var(--white-dim);
+  font-size: var(--text-body-sm);
+}
+.ai-loading.visible { display: flex; }
+.ai-loading-spinner {
+  width: 18px; height: 18px;
+  border: 2px solid rgba(201,168,76,0.2);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.ai-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-top: 1px solid var(--black-border);
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+.ai-footer-left {
+  font-size: var(--text-caption);
+  color: var(--white-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-ai-generate {
+  background: var(--gold);
+  border: none;
+  color: var(--black);
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  padding: 10px 22px;
+  border-radius: var(--radius);
+  transition: all var(--transition);
+  letter-spacing: var(--tracking-wide);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-ai-generate:hover { background: var(--gold-light); }
+.btn-ai-generate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-ai-insert {
+  background: var(--gold);
+  border: none;
+  color: var(--black);
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  padding: 10px 22px;
+  border-radius: var(--radius);
+  transition: all var(--transition);
+  letter-spacing: var(--tracking-wide);
+}
+.btn-ai-insert:hover { background: var(--gold-light); }
+.btn-ai-insert:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ai-regen {
+  background: none;
+  border: 1px solid var(--black-border);
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  cursor: pointer;
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  transition: all var(--transition);
+}
+.btn-ai-regen:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+/* ============================================================
+   PDF EXPORT — Modal + Print Styles
+   ============================================================ */
+.export-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  z-index: 3000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.export-modal-overlay.open { display: flex; }
+
+.export-modal {
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 460px;
+  animation: modal-in 0.2s ease;
+  overflow: hidden;
+}
+
+.export-modal-header {
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--black-border);
+}
+
+.export-modal-title {
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  color: var(--white);
+  margin-bottom: 4px;
+}
+
+.export-modal-sub {
+  font-size: var(--text-caption);
+  color: var(--white-muted);
+}
+
+.export-modal-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.export-version-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  border: 1.5px solid var(--black-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.export-version-card:hover { border-color: var(--gold-dim); background: rgba(201,168,76,0.03); }
+.export-version-card.selected { border-color: var(--gold); background: rgba(201,168,76,0.06); }
+
+.export-version-icon { font-size: 22px; margin-top: 2px; }
+.export-version-info { flex: 1; }
+
+.export-version-name {
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--white);
+  margin-bottom: 3px;
+}
+
+.export-version-desc {
+  font-size: var(--text-caption);
+  color: var(--white-muted);
+  line-height: var(--leading-normal);
+}
+
+.export-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--black-border);
+}
+
+.btn-export-cancel {
+  background: none;
+  border: 1px solid var(--black-border);
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  cursor: pointer;
+  padding: 9px 18px;
+  border-radius: var(--radius);
+  transition: all var(--transition);
+}
+.btn-export-cancel:hover { border-color: var(--white-dim); color: var(--white); }
+
+.btn-export-print {
+  background: var(--gold);
+  border: none;
+  color: var(--black);
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  padding: 9px 22px;
+  border-radius: var(--radius);
+  transition: all var(--transition);
+  letter-spacing: var(--tracking-wide);
+}
+.btn-export-print:hover { background: var(--gold-light); }
+
 </style>
 </head>
 <body>
@@ -2429,6 +2889,10 @@ body::after {
             <option value="Mixed">Mixed</option>
           </select>
         </div>
+        <button class="btn-smart-fill" id="btn-smart-fill" onclick="runSmartFill()">
+          <div class="ai-spinner"></div>
+          <span class="ai-btn-text">✦ Smart Fill</span>
+        </button>
       </div>
 
       <!-- Educational Context -->
@@ -2505,6 +2969,13 @@ body::after {
       <div class="picker-item-desc">Visual separator</div>
     </div>
   </div>
+  <div class="picker-item ai" onclick="openAIGenerator()">
+    <div class="picker-item-icon">✦</div>
+    <div class="picker-item-info">
+      <div class="picker-item-name">AI Generate</div>
+      <div class="picker-item-desc">Generate questions with AI</div>
+    </div>
+  </div>
 </div>
 
 <!-- Add Section Modal -->
@@ -2546,6 +3017,123 @@ body::after {
   </div>
 </div>
 
+<!-- AI Question Generator Modal -->
+<div class="ai-modal-overlay" id="ai-modal">
+  <div class="ai-modal">
+    <div class="ai-modal-header">
+      <div class="ai-modal-title">
+        <span class="ai-modal-title-text">AI Question Generator</span>
+        <span class="ai-badge">Groq</span>
+      </div>
+      <button class="btn-ai-close" onclick="closeAIModal()">×</button>
+    </div>
+
+    <div class="ai-modal-body">
+      <!-- Input fields -->
+      <div id="ai-input-area">
+        <div class="ai-field">
+          <label class="ai-field-label">Topic or Passage</label>
+          <textarea class="ai-input ai-textarea" id="ai-topic-input"
+            placeholder="e.g. Present Perfect tense, or paste a reading passage…"></textarea>
+        </div>
+
+        <div class="ai-options-row">
+          <div class="ai-field">
+            <label class="ai-field-label">Type</label>
+            <select class="ai-select" id="ai-qtype">
+              <option value="mcq">MCQ</option>
+              <option value="true_false">True / False</option>
+              <option value="short_answer">Short Answer</option>
+              <option value="fill_blank">Fill in Blank</option>
+              <option value="matching">Matching</option>
+            </select>
+          </div>
+          <div class="ai-field">
+            <label class="ai-field-label">Difficulty</label>
+            <select class="ai-select" id="ai-difficulty">
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+          <div class="ai-field">
+            <label class="ai-field-label">Count</label>
+            <select class="ai-select" id="ai-count">
+              <option value="1">1</option>
+              <option value="3" selected>3</option>
+              <option value="5">5</option>
+              <option value="10">10</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div class="ai-loading" id="ai-loading">
+        <div class="ai-loading-spinner"></div>
+        Generating questions…
+      </div>
+
+      <!-- Results -->
+      <div class="ai-results" id="ai-results">
+        <div class="ai-results-label">Generated — click to select</div>
+        <div id="ai-results-list"></div>
+      </div>
+    </div>
+
+    <div class="ai-modal-footer">
+      <div class="ai-footer-left" id="ai-footer-info">
+        <span>✦</span> Powered by Groq · llama-3.1-8b-instant
+      </div>
+      <div style="display:flex;gap:8px;" id="ai-footer-actions-generate">
+        <button class="btn-ai-close" style="padding:10px 16px;border:1px solid var(--black-border);border-radius:var(--radius);"
+          onclick="closeAIModal()">Cancel</button>
+        <button class="btn-ai-generate" id="btn-ai-generate" onclick="generateQuestions()">
+          ✦ Generate
+        </button>
+      </div>
+      <div style="display:none;gap:8px;" id="ai-footer-actions-insert">
+        <button class="btn-ai-regen" onclick="resetAIModal()">← Regenerate</button>
+        <button class="btn-ai-insert" id="btn-ai-insert" onclick="insertSelectedQuestions()" disabled>
+          Insert Selected
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PDF Export Modal -->
+<div class="export-modal-overlay" id="export-modal">
+  <div class="export-modal">
+    <div class="export-modal-header">
+      <div class="export-modal-title">Export PDF</div>
+      <div class="export-modal-sub">Choose which version to export</div>
+    </div>
+    <div class="export-modal-body">
+      <div class="export-version-card selected" id="export-card-student"
+           onclick="selectExportVersion('student')">
+        <div class="export-version-icon">📄</div>
+        <div class="export-version-info">
+          <div class="export-version-name">Student Version</div>
+          <div class="export-version-desc">Clean exam without answers or explanations. Ready to print and distribute.</div>
+        </div>
+      </div>
+      <div class="export-version-card" id="export-card-teacher"
+           onclick="selectExportVersion('teacher')">
+        <div class="export-version-icon">📋</div>
+        <div class="export-version-info">
+          <div class="export-version-name">Teacher Version</div>
+          <div class="export-version-desc">Includes answer key, correct options highlighted, and explanations.</div>
+        </div>
+      </div>
+    </div>
+    <div class="export-modal-footer">
+      <button class="btn-export-cancel" onclick="closeExportModal()">Cancel</button>
+      <button class="btn-export-print" onclick="executePrint()">Print / Save PDF</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast container -->
 <div id="toast-container"></div>
 
@@ -2558,6 +3146,12 @@ body::after {
 // ============================================================
 const SUPABASE_URL = 'https://bvwudwvikijmzbutpdtw.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2d3Vkd3Zpa2lqbXpidXRwZHR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NDQ5MDgsImV4cCI6MjA5NjIyMDkwOH0.fv_hLbC10KB635C0mZi_lmjwniOtALAwgeK-nwaDtF0';
+
+// ============================================================
+// CONFIG — Groq AI
+// ============================================================
+const GROQ_API_KEY = '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';
+const GROQ_MODEL   = 'llama-3.1-8b-instant';
 
 // ============================================================
 // SUPABASE REST CLIENT (no CDN dependency)
@@ -2936,7 +3530,26 @@ function renderExams(exams) {
 }
 
 async function exportExam(id) {
-  showToast('PDF Export coming in Step 4 📄', 'info');
+  if (SUPABASE_URL.includes('YOUR_')) {
+    showToast('Configure Supabase first', 'error');
+    return;
+  }
+  showToast('Loading exam…', 'info');
+  const exam = await sb.getExam(id);
+  if (!exam) { showToast('Could not load exam', 'error'); return; }
+  _exportExamData = {
+    title:   exam.title,
+    meta: {
+      subject: exam.subject     || '',
+      level:   exam.level       || '',
+      book:    exam.book_name   || '',
+      unit:    exam.unit_lesson || '',
+      topic:   exam.topic       || ''
+    },
+    sections: exam.content?.sections || []
+  };
+  openExportModal();
+  sb.incrementExportCount(id);
 }
 
 async function deleteExam(id) {
@@ -3813,7 +4426,16 @@ function builderPreview() {
   showToast('Preview coming in Step 3 👁', 'info');
 }
 function builderExport() {
-  showToast('PDF Export coming in Step 4 📄', 'info');
+  if (!builder.sections.length) {
+    showToast('Add at least one section first', 'error');
+    return;
+  }
+  _exportExamData = {
+    title:    builder.title || 'Untitled Exam',
+    meta:     builder.meta,
+    sections: builder.sections
+  };
+  openExportModal();
 }
 
 // ============================================================
@@ -3860,9 +4482,526 @@ async function openExam(id) {
   });
 }
 
+
 // ============================================================
-// INIT — check session on load
+// ——————————  GROQ AI  ——————————
 // ============================================================
+
+// ——— Core Groq call ———
+async function groqChat(systemPrompt, userPrompt) {
+  const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${GROQ_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      temperature: 0.7,
+      max_tokens: 2000,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userPrompt }
+      ]
+    })
+  });
+  if (!r.ok) throw new Error(`Groq API error: ${r.status}`);
+  const data = await r.json();
+  return data.choices[0].message.content;
+}
+
+// ——— Safe JSON parse from AI response ———
+function parseAIJson(text) {
+  const clean = text.replace(/```json|```/g, '').trim();
+  // Find first [ or {
+  const start = clean.search(/[\[{]/);
+  if (start === -1) throw new Error('No JSON found');
+  return JSON.parse(clean.slice(start));
+}
+
+// ============================================================
+// SMART FILL
+// ============================================================
+async function runSmartFill() {
+  const title = document.getElementById('builder-title-input').value.trim();
+  if (!title || title === 'Untitled Exam') {
+    showToast('Enter an exam title first', 'error');
+    document.getElementById('builder-title-input').focus();
+    return;
+  }
+
+  const btn = document.getElementById('btn-smart-fill');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  try {
+    const system = `You are an academic exam metadata assistant. Given an exam title, infer the best metadata values. Respond ONLY with valid JSON, no explanation, no markdown.`;
+
+    const user = `Exam title: "${title}"
+
+Return JSON with this exact structure:
+{
+  "subject": "short subject name (e.g. English, IELTS, Grammar)",
+  "level": "one of: Beginner, Intermediate, Advanced, Mixed",
+  "topic": "specific topic (e.g. Present Perfect, Reading Comprehension)",
+  "book_hint": "likely textbook series if inferable, else empty string"
+}`;
+
+    const raw = await groqChat(system, user);
+    const meta = parseAIJson(raw);
+
+    // Apply to sidebar
+    if (meta.subject) {
+      document.getElementById('meta-subject').value = meta.subject;
+      builder.meta.subject = meta.subject;
+    }
+    if (meta.level && ['Beginner','Intermediate','Advanced','Mixed'].includes(meta.level)) {
+      document.getElementById('meta-level').value = meta.level;
+      builder.meta.level = meta.level;
+    }
+    if (meta.topic) {
+      document.getElementById('meta-topic').value = meta.topic;
+      builder.meta.topic = meta.topic;
+    }
+
+    triggerAutosave();
+    showToast('✦ Smart Fill complete', 'success');
+
+  } catch (err) {
+    console.error('Smart Fill error:', err);
+    showToast('AI could not fill metadata', 'error');
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+// ============================================================
+// AI QUESTION GENERATOR
+// ============================================================
+let _aiTargetSection = null;
+let _aiGeneratedQuestions = [];
+let _aiSelectedIndices = new Set();
+
+function openAIGenerator() {
+  closeAllPickers();
+  _aiTargetSection = _pickerTargetSection;
+  _aiGeneratedQuestions = [];
+  _aiSelectedIndices = new Set();
+  resetAIModal();
+  document.getElementById('ai-modal').classList.add('open');
+}
+
+function closeAIModal() {
+  document.getElementById('ai-modal').classList.remove('open');
+}
+
+function resetAIModal() {
+  document.getElementById('ai-loading').classList.remove('visible');
+  document.getElementById('ai-results').classList.remove('visible');
+  document.getElementById('ai-results-list').innerHTML = '';
+  document.getElementById('ai-footer-actions-generate').style.display = 'flex';
+  document.getElementById('ai-footer-actions-insert').style.display = 'none';
+  document.getElementById('btn-ai-generate').disabled = false;
+  _aiGeneratedQuestions = [];
+  _aiSelectedIndices = new Set();
+}
+
+async function generateQuestions() {
+  const topic = document.getElementById('ai-topic-input').value.trim();
+  if (!topic) {
+    showToast('Enter a topic or passage first', 'error');
+    document.getElementById('ai-topic-input').focus();
+    return;
+  }
+
+  const qtype      = document.getElementById('ai-qtype').value;
+  const difficulty = document.getElementById('ai-difficulty').value;
+  const count      = parseInt(document.getElementById('ai-count').value);
+
+  // Show loading
+  document.getElementById('btn-ai-generate').disabled = true;
+  document.getElementById('ai-loading').classList.add('visible');
+  document.getElementById('ai-results').classList.remove('visible');
+
+  try {
+    const system = `You are an expert ELT exam writer. Generate exam questions in valid JSON only. No explanation, no markdown, no extra text.`;
+
+    const typeInstructions = {
+      mcq: `MCQ with 4 options (A-D). Mark correct_index (0-3).`,
+      true_false: `True/False. correct_answer must be "true" or "false".`,
+      short_answer: `Short answer. Provide a model correct_answer.`,
+      fill_blank: `Fill in the blank. Use ___ in the stem. Provide correct_answer.`,
+      matching: `Matching. Provide pairs array of [item, match] arrays.`
+    };
+
+    const user = `Topic/Passage: "${topic}"
+Type: ${qtype} — ${typeInstructions[qtype]}
+Difficulty: ${difficulty}
+Count: ${count}
+
+Return a JSON array of ${count} question object(s). Each object must have:
+- stem: string (the question text)
+- qtype: "${qtype}"
+- difficulty: "${difficulty}"
+- points: 1
+${qtype === 'mcq' ? '- options: array of 4 strings\n- correct_index: number 0-3' : ''}
+${qtype === 'true_false' ? '- correct_answer: "true" or "false"' : ''}
+${qtype === 'short_answer' ? '- correct_answer: string' : ''}
+${qtype === 'fill_blank' ? '- correct_answer: string' : ''}
+${qtype === 'matching' ? '- pairs: array of [string, string] pairs (min 3)' : ''}
+- explanation: brief explanation of the answer`;
+
+    const raw = await groqChat(system, user);
+    const questions = parseAIJson(raw);
+
+    if (!Array.isArray(questions) || questions.length === 0) throw new Error('No questions returned');
+
+    _aiGeneratedQuestions = questions;
+    renderAIResults(questions);
+
+  } catch (err) {
+    console.error('AI generate error:', err);
+    showToast('Generation failed. Try again.', 'error');
+    document.getElementById('btn-ai-generate').disabled = false;
+  } finally {
+    document.getElementById('ai-loading').classList.remove('visible');
+  }
+}
+
+function renderAIResults(questions) {
+  const list = document.getElementById('ai-results-list');
+  const letters = ['A','B','C','D'];
+
+  list.innerHTML = questions.map((q, i) => {
+    let optionsHtml = '';
+
+    if (q.qtype === 'mcq' && q.options) {
+      optionsHtml = '<div class="ai-q-options">' +
+        q.options.map((opt, oi) => `
+          <div class="ai-q-option ${oi === q.correct_index ? 'correct' : ''}">
+            <span>${letters[oi]}.</span> ${escHtml(opt)}${oi === q.correct_index ? ' ✓' : ''}
+          </div>`).join('') +
+        '</div>';
+    } else if (q.qtype === 'true_false') {
+      optionsHtml = `<div class="ai-q-option correct">Answer: ${q.correct_answer === 'true' ? '✓ True' : '✗ False'}</div>`;
+    } else if (q.qtype === 'short_answer' || q.qtype === 'fill_blank') {
+      optionsHtml = `<div class="ai-q-option correct">Answer: ${escHtml(q.correct_answer || '')}</div>`;
+    } else if (q.qtype === 'matching' && q.pairs) {
+      optionsHtml = '<div class="ai-q-options">' +
+        q.pairs.map(p => `<div class="ai-q-option"><span>${escHtml(p[0])}</span> → <span>${escHtml(p[1])}</span></div>`).join('') +
+        '</div>';
+    }
+
+    return `
+      <div class="ai-question-preview" id="ai-q-${i}" onclick="toggleAIQuestion(${i})">
+        <span class="ai-q-type-badge">${q.qtype?.replace('_',' ')}</span>
+        <div class="ai-q-stem">${i+1}. ${escHtml(q.stem || '')}</div>
+        ${optionsHtml}
+      </div>`;
+  }).join('');
+
+  document.getElementById('ai-results').classList.add('visible');
+  document.getElementById('ai-footer-actions-generate').style.display = 'none';
+  document.getElementById('ai-footer-actions-insert').style.display = 'flex';
+  updateInsertBtn();
+}
+
+function toggleAIQuestion(idx) {
+  if (_aiSelectedIndices.has(idx)) {
+    _aiSelectedIndices.delete(idx);
+    document.getElementById('ai-q-' + idx)?.classList.remove('selected');
+  } else {
+    _aiSelectedIndices.add(idx);
+    document.getElementById('ai-q-' + idx)?.classList.add('selected');
+  }
+  updateInsertBtn();
+}
+
+function updateInsertBtn() {
+  const btn = document.getElementById('btn-ai-insert');
+  const count = _aiSelectedIndices.size;
+  btn.disabled = count === 0;
+  btn.textContent = count > 0 ? `Insert ${count} Question${count>1?'s':''}` : 'Insert Selected';
+}
+
+function insertSelectedQuestions() {
+  if (!_aiTargetSection) {
+    showToast('No target section', 'error');
+    return;
+  }
+
+  const sec = builder.sections.find(s => s.id === _aiTargetSection);
+  if (!sec) {
+    showToast('Section not found', 'error');
+    return;
+  }
+
+  let inserted = 0;
+  // If none selected, insert all
+  const toInsert = _aiSelectedIndices.size > 0
+    ? [..._aiSelectedIndices]
+    : _aiGeneratedQuestions.map((_, i) => i);
+
+  toInsert.forEach(idx => {
+    const q = _aiGeneratedQuestions[idx];
+    if (!q) return;
+    const block = {
+      id:          'blk_' + Date.now() + '_' + idx,
+      type:        'question',
+      qtype:       q.qtype || 'mcq',
+      stem:        q.stem || '',
+      options:     q.options || ['','','',''],
+      correct_index:   q.correct_index ?? null,
+      correct_answer:  q.correct_answer || '',
+      correct_indices: q.correct_indices || [],
+      pairs:       q.pairs || [['',''],['',''],['','']],
+      items:       q.items || ['','',''],
+      explanation: q.explanation || '',
+      points:      q.points || 1,
+      difficulty:  q.difficulty || ''
+    };
+    sec.blocks.push(block);
+    inserted++;
+  });
+
+  closeAIModal();
+  renderBuilder();
+  triggerAutosave();
+  showToast(`✦ ${inserted} question${inserted>1?'s':''} inserted`, 'success');
+
+  // Scroll to section
+  setTimeout(() => scrollToSection(_aiTargetSection), 100);
+}
+
+// ============================================================
+// PDF EXPORT ENGINE
+// ============================================================
+let _exportVersion  = 'student';
+let _exportExamData = null;
+
+function openExportModal() {
+  _exportVersion = 'student';
+  selectExportVersion('student');
+  document.getElementById('export-modal').classList.add('open');
+}
+
+function closeExportModal() {
+  document.getElementById('export-modal').classList.remove('open');
+}
+
+function selectExportVersion(v) {
+  _exportVersion = v;
+  document.getElementById('export-card-student').classList.toggle('selected', v === 'student');
+  document.getElementById('export-card-teacher').classList.toggle('selected', v === 'teacher');
+}
+
+function executePrint() {
+  if (!_exportExamData) return;
+  closeExportModal();
+  const html = buildPrintDocument(_exportExamData, _exportVersion);
+  const win = window.open('', '_blank');
+  if (!win) { showToast('Allow popups to export PDF', 'error'); return; }
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 700);
+}
+
+function buildPrintDocument(exam, version) {
+  const isTeacher = version === 'teacher';
+  const letters   = ['A','B','C','D','E','F'];
+  const meta      = exam.meta || {};
+
+  const metaParts = [
+    meta.subject && `<span>${escHtml(meta.subject)}</span>`,
+    meta.level   && `<span>${escHtml(meta.level)}</span>`,
+    meta.topic   && `<span>${escHtml(meta.topic)}</span>`
+  ].filter(Boolean).join('<span class="meta-sep">·</span>');
+
+  const contextParts = [
+    meta.book && `Book: ${escHtml(meta.book)}`,
+    meta.unit && escHtml(meta.unit)
+  ].filter(Boolean).join('  |  ');
+
+  let qCounter = 0;
+  const sectionsHtml = (exam.sections || []).map(sec => {
+    const blocksHtml = (sec.blocks || []).map(block =>
+      buildPrintBlock(block, isTeacher, letters, () => ++qCounter)
+    ).join('');
+    return `
+      <div class="pdf-section">
+        <div class="pdf-section-header">
+          <span class="pdf-section-icon">${getSectionIcon(sec.type)}</span>
+          <span class="pdf-section-title">${escHtml(sec.title || '')}</span>
+        </div>
+        ${blocksHtml}
+      </div>`;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${escHtml(exam.title)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{--black:#0D0D0D;--body:#1A1A1A;--mid:#555;--light:#999;--border:#DDD;--bg:#F7F7F5;--gold:#7A6020;--green:#2E7D47;--red:#B03030;}
+@page{size:A4;margin:20mm 18mm 22mm 18mm;}
+body{font-family:'Inter',sans-serif;font-size:10.5pt;line-height:1.65;color:var(--body);background:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+/* Cover */
+.pdf-cover{border-bottom:2pt solid var(--black);padding-bottom:14pt;margin-bottom:20pt;}
+.pdf-cover-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16pt;}
+.pdf-title{font-family:'Cormorant Garamond',serif;font-size:26pt;font-weight:600;color:var(--black);line-height:1.1;flex:1;}
+.pdf-version-badge{font-family:'DM Mono',monospace;font-size:7pt;letter-spacing:.14em;text-transform:uppercase;color:white;background:${isTeacher?'var(--gold)':'var(--black)'};padding:4pt 10pt;border-radius:3pt;white-space:nowrap;margin-top:6pt;}
+.pdf-meta-row{display:flex;align-items:center;gap:6pt;flex-wrap:wrap;margin-top:8pt;font-size:9pt;color:var(--mid);font-family:'DM Mono',monospace;letter-spacing:.04em;}
+.meta-sep{color:var(--border);margin:0 2pt;}
+.pdf-context{font-size:8.5pt;color:var(--light);margin-top:5pt;}
+.pdf-info-row{display:flex;gap:20pt;margin-top:14pt;padding-top:12pt;border-top:1pt solid var(--border);font-size:9pt;}
+.pdf-info-field{display:flex;flex-direction:column;gap:3pt;flex:1;}
+.pdf-info-label{font-family:'DM Mono',monospace;font-size:7pt;letter-spacing:.1em;text-transform:uppercase;color:var(--light);}
+.pdf-info-value{border-bottom:1pt solid var(--border);padding-bottom:3pt;min-width:80pt;}
+/* Section */
+.pdf-section{margin-bottom:18pt;}
+.pdf-section-header{display:flex;align-items:center;gap:7pt;padding:7pt 10pt;background:var(--bg);border-left:3pt solid var(--black);margin-bottom:12pt;page-break-after:avoid;}
+.pdf-section-icon{font-size:11pt;}
+.pdf-section-title{font-family:'DM Mono',monospace;font-size:8.5pt;letter-spacing:.12em;text-transform:uppercase;color:var(--black);}
+/* Blocks */
+.pdf-instruction{padding:8pt 12pt;background:#FFFDF5;border:1pt solid #E8DFC0;border-radius:3pt;margin-bottom:10pt;font-size:9.5pt;font-style:italic;page-break-inside:avoid;}
+.pdf-passage{border:1pt solid var(--border);border-left:3pt solid var(--gold);border-radius:3pt;padding:12pt 14pt;margin-bottom:14pt;page-break-inside:avoid;}
+.pdf-passage-title{font-family:'Cormorant Garamond',serif;font-size:13pt;font-weight:600;color:var(--black);margin-bottom:8pt;}
+.pdf-passage-text{font-size:10pt;line-height:1.75;white-space:pre-wrap;}
+.pdf-divider{border:none;border-top:1pt solid var(--border);margin:12pt 0;}
+/* Question */
+.pdf-question{margin-bottom:14pt;page-break-inside:avoid;}
+.pdf-q-header{display:flex;align-items:flex-start;gap:8pt;margin-bottom:6pt;}
+.pdf-q-num{font-family:'DM Mono',monospace;font-size:8pt;color:var(--gold);min-width:20pt;margin-top:1pt;}
+.pdf-q-stem{font-size:10.5pt;line-height:1.6;color:var(--black);font-weight:500;flex:1;}
+.pdf-q-meta{display:flex;gap:5pt;align-items:center;flex-shrink:0;}
+.pdf-q-badge{font-family:'DM Mono',monospace;font-size:6.5pt;letter-spacing:.1em;text-transform:uppercase;color:var(--light);padding:1pt 6pt;border:.5pt solid var(--border);border-radius:10pt;}
+.pdf-q-points{font-family:'DM Mono',monospace;font-size:7pt;color:var(--mid);}
+/* Options */
+.pdf-options{display:flex;flex-direction:column;gap:5pt;margin:8pt 0 8pt 28pt;}
+.pdf-option{display:flex;align-items:flex-start;gap:8pt;font-size:10pt;line-height:1.5;}
+.pdf-option-letter{width:16pt;height:16pt;min-width:16pt;border:1pt solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:7.5pt;color:var(--mid);margin-top:1pt;flex-shrink:0;}
+.pdf-option.correct .pdf-option-letter{background:var(--green);border-color:var(--green);color:white;}
+.pdf-option.correct .pdf-option-text{color:var(--green);font-weight:500;}
+/* T/F */
+.pdf-tf-options{display:flex;gap:12pt;margin:8pt 0 8pt 28pt;}
+.pdf-tf-btn{padding:5pt 16pt;border:1pt solid var(--border);border-radius:3pt;font-size:9.5pt;color:var(--mid);}
+.pdf-tf-btn.correct-true{border-color:var(--green);color:var(--green);font-weight:500;}
+.pdf-tf-btn.correct-false{border-color:var(--red);color:var(--red);font-weight:500;}
+/* Answer lines */
+.pdf-answer-line{margin:8pt 0 4pt 28pt;border-bottom:1pt solid var(--border);height:18pt;}
+.pdf-answer-key{font-size:9pt;color:var(--green);font-style:italic;margin-left:28pt;margin-top:2pt;}
+/* Matching */
+.pdf-matching{margin:8pt 0 8pt 28pt;display:flex;flex-direction:column;gap:5pt;}
+.pdf-match-row{display:flex;align-items:center;gap:10pt;font-size:10pt;}
+.pdf-match-col{flex:1;padding:4pt 8pt;border:.5pt solid var(--border);border-radius:3pt;background:var(--bg);}
+.pdf-match-arrow{color:var(--light);font-size:9pt;}
+.pdf-match-blank{flex:1;border-bottom:1pt solid var(--border);height:16pt;}
+.pdf-match-answer{flex:1;padding:3pt 8pt;color:var(--green);font-size:9pt;font-weight:500;}
+/* Ordering */
+.pdf-ordering{margin:8pt 0 8pt 28pt;display:flex;flex-direction:column;gap:5pt;}
+.pdf-order-row{display:flex;align-items:center;gap:8pt;font-size:10pt;}
+.pdf-order-num{font-family:'DM Mono',monospace;font-size:8pt;color:var(--light);min-width:14pt;}
+.pdf-order-box{flex:1;padding:4pt 8pt;border:.5pt solid var(--border);border-radius:3pt;}
+/* Explanation */
+.pdf-explanation{margin:6pt 0 0 28pt;padding:6pt 10pt;background:#F0FFF4;border-left:2pt solid var(--green);font-size:9pt;color:var(--green);font-style:italic;border-radius:0 3pt 3pt 0;}
+.pdf-explanation-label{font-family:'DM Mono',monospace;font-size:7pt;letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:2pt;font-style:normal;}
+/* Footer */
+.pdf-footer{position:fixed;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:6pt 18mm;border-top:.5pt solid var(--border);font-family:'DM Mono',monospace;font-size:7.5pt;color:var(--light);background:white;}
+@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}.pdf-question{page-break-inside:avoid;}.pdf-section-header{page-break-after:avoid;}}
+</style>
+</head>
+<body>
+<div class="pdf-cover">
+  <div class="pdf-cover-top">
+    <div class="pdf-title">${escHtml(exam.title)}</div>
+    <div class="pdf-version-badge">${isTeacher ? 'Teacher Key' : 'Student Copy'}</div>
+  </div>
+  ${metaParts ? `<div class="pdf-meta-row">${metaParts}</div>` : ''}
+  ${contextParts ? `<div class="pdf-context">${contextParts}</div>` : ''}
+  ${!isTeacher ? `
+  <div class="pdf-info-row">
+    <div class="pdf-info-field"><span class="pdf-info-label">Name</span><div class="pdf-info-value"></div></div>
+    <div class="pdf-info-field"><span class="pdf-info-label">Date</span><div class="pdf-info-value"></div></div>
+    <div class="pdf-info-field"><span class="pdf-info-label">Score</span><div class="pdf-info-value"></div></div>
+  </div>` : ''}
+</div>
+${sectionsHtml}
+<div class="pdf-footer">
+  <span>NIRAS AI · Nir Academy</span>
+  <span>${escHtml(exam.title)}</span>
+  <span>${isTeacher ? 'TEACHER KEY — CONFIDENTIAL' : ''}</span>
+</div>
+</body></html>`;
+}
+
+function buildPrintBlock(block, isTeacher, letters, getQNum) {
+  switch(block.type) {
+    case 'instruction':
+      return `<div class="pdf-instruction">${escHtml(block.text||'')}</div>`;
+    case 'passage':
+      return `<div class="pdf-passage">${block.title?`<div class="pdf-passage-title">${escHtml(block.title)}</div>`:''}<div class="pdf-passage-text">${escHtml(block.text||'')}</div></div>`;
+    case 'divider':
+      return `<hr class="pdf-divider">`;
+    case 'question':
+      return buildPrintQuestion(block, isTeacher, letters, getQNum());
+    default: return '';
+  }
+}
+
+function buildPrintQuestion(block, isTeacher, letters, qNum) {
+  const qtype = block.qtype || 'mcq';
+  const typeLabel = {mcq:'MCQ',true_false:'T/F',short_answer:'Short Ans',fill_blank:'Fill Blank',matching:'Matching',ordering:'Ordering',multiple_select:'Multi'}[qtype]||qtype;
+  let answerHtml = '';
+
+  if (qtype === 'mcq') {
+    answerHtml = `<div class="pdf-options">`+(block.options||[]).map((opt,i)=>
+      `<div class="pdf-option ${isTeacher&&i===block.correct_index?'correct':''}"><div class="pdf-option-letter">${letters[i]}</div><div class="pdf-option-text">${escHtml(opt)}</div></div>`
+    ).join('')+`</div>`;
+
+  } else if (qtype === 'true_false') {
+    const ca = block.correct_answer;
+    answerHtml = `<div class="pdf-tf-options"><div class="pdf-tf-btn ${isTeacher&&ca==='true'?'correct-true':''}">✓ True</div><div class="pdf-tf-btn ${isTeacher&&ca==='false'?'correct-false':''}">✗ False</div></div>`;
+
+  } else if (qtype === 'short_answer' || qtype === 'fill_blank') {
+    answerHtml = `<div class="pdf-answer-line"></div>`;
+    if (isTeacher && block.correct_answer)
+      answerHtml += `<div class="pdf-answer-key">▸ ${escHtml(block.correct_answer)}</div>`;
+
+  } else if (qtype === 'matching') {
+    answerHtml = `<div class="pdf-matching">`+(block.pairs||[]).map(p=>
+      `<div class="pdf-match-row"><div class="pdf-match-col">${escHtml(p[0]||'')}</div><span class="pdf-match-arrow">→</span>${isTeacher?`<div class="pdf-match-answer">${escHtml(p[1]||'')}</div>`:`<div class="pdf-match-blank"></div>`}</div>`
+    ).join('')+`</div>`;
+
+  } else if (qtype === 'ordering') {
+    const items = block.items||[];
+    const display = isTeacher ? items : [...items].sort(()=>Math.random()-.5);
+    answerHtml = `<div class="pdf-ordering">`+display.map((item,i)=>
+      `<div class="pdf-order-row"><span class="pdf-order-num">${i+1}.</span><div class="pdf-order-box">${escHtml(item)}</div></div>`
+    ).join('')+`</div>`;
+
+  } else if (qtype === 'multiple_select') {
+    const correct = block.correct_indices||[];
+    answerHtml = `<div class="pdf-options">`+(block.options||[]).map((opt,i)=>
+      `<div class="pdf-option ${isTeacher&&correct.includes(i)?'correct':''}"><div class="pdf-option-letter" style="border-radius:3pt">${letters[i]}</div><div class="pdf-option-text">${escHtml(opt)}</div></div>`
+    ).join('')+`</div>`;
+  }
+
+  const expHtml = isTeacher && block.explanation
+    ? `<div class="pdf-explanation"><span class="pdf-explanation-label">Explanation</span>${escHtml(block.explanation)}</div>` : '';
+
+  return `<div class="pdf-question"><div class="pdf-q-header"><span class="pdf-q-num">Q${qNum}</span><span class="pdf-q-stem">${escHtml(block.stem||'')}</span><div class="pdf-q-meta">${block.difficulty?`<span class="pdf-q-badge">${escHtml(block.difficulty)}</span>`:''}<span class="pdf-q-points">${block.points||1}pt</span></div></div>${answerHtml}${expHtml}</div>`;
+}
+
+function getSectionIcon(type) {
+  return {questions:'❓',reading:'📖',writing:'✍️',speaking:'🎤',custom:'⚙️'}[type]||'📄';
+}
+
+
 (function init() {
   if (sb.restoreSession()) {
     enterDashboard();
