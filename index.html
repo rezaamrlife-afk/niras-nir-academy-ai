@@ -2592,12 +2592,14 @@ const sb = {
     });
     const data = await r.json();
     if (data.access_token) {
-      this._token = data.access_token;
-      this._user = data.user;
+      this._token        = data.access_token;
+      this._refreshToken = data.refresh_token;
+      this._user         = data.user;
       localStorage.setItem('nir_exam_session', JSON.stringify({
-        token: data.access_token,
-        user: data.user,
-        expires_at: Date.now() + (data.expires_in * 1000)
+        token:         data.access_token,
+        refresh_token: data.refresh_token,
+        user:          data.user,
+        expires_at:    Date.now() + (data.expires_in * 1000)
       }));
     }
     return data;
@@ -2618,102 +2620,147 @@ const sb = {
       const raw = localStorage.getItem('nir_exam_session');
       if (!raw) return false;
       const s = JSON.parse(raw);
-      if (s.expires_at < Date.now()) {
+      // Allow 60s buffer before expiry
+      if (s.expires_at < Date.now() + 60000) {
         localStorage.removeItem('nir_exam_session');
         return false;
       }
-      this._token = s.token;
-      this._user = s.user;
+      this._token        = s.token;
+      this._refreshToken = s.refresh_token;
+      this._user         = s.user;
       return true;
     } catch { return false; }
   },
 
+  async refreshSession() {
+    const raw = localStorage.getItem('nir_exam_session');
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    if (!s.refresh_token) return false;
+    try {
+      const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: this._headers(),
+        body: JSON.stringify({ refresh_token: s.refresh_token })
+      });
+      const data = await r.json();
+      if (data.access_token) {
+        this._token        = data.access_token;
+        this._refreshToken = data.refresh_token;
+        this._user         = data.user;
+        localStorage.setItem('nir_exam_session', JSON.stringify({
+          token:         data.access_token,
+          refresh_token: data.refresh_token,
+          user:          data.user,
+          expires_at:    Date.now() + (data.expires_in * 1000)
+        }));
+        return true;
+      }
+      return false;
+    } catch { return false; }
+  },
+
+  // Authenticated fetch — auto-retry with refresh on 401
+  async authFetch(url, options = {}) {
+    options.headers = { ...this._headers(), ...(options.headers || {}) };
+    let r = await fetch(url, options);
+    if (r.status === 401) {
+      const refreshed = await this.refreshSession();
+      if (refreshed) {
+        options.headers = { ...this._headers(), ...(options.headers || {}) };
+        r = await fetch(url, options);
+      } else {
+        // Session truly expired — sign out
+        this._token = null; this._user = null;
+        localStorage.removeItem('nir_exam_session');
+        showPage('landing');
+        showToast('Session expired. Please sign in again.', 'error');
+      }
+    }
+    return r;
+  },
+
   // Exams CRUD
   async getExams() {
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/exams?select=id,title,subject,level,export_count,created_at,updated_at&order=updated_at.desc`,
-      { headers: this._headers() }
+    const r = await this.authFetch(
+      `${SUPABASE_URL}/rest/v1/exams?select=id,title,subject,level,export_count,created_at,updated_at&order=updated_at.desc`
     );
-    if (!r.ok) return [];
+    if (!r || !r.ok) return [];
     return r.json();
   },
 
   async getExam(id) {
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/exams?id=eq.${id}&select=*`,
-      { headers: this._headers() }
+    const r = await this.authFetch(
+      `${SUPABASE_URL}/rest/v1/exams?id=eq.${id}&select=*`
     );
-    if (!r.ok) return null;
+    if (!r || !r.ok) return null;
     const data = await r.json();
     return data[0] || null;
   },
 
   async createExam(examData) {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/exams`, {
+    const r = await this.authFetch(`${SUPABASE_URL}/rest/v1/exams`, {
       method: 'POST',
-      headers: { ...this._headers(), 'Prefer': 'return=representation' },
+      headers: { 'Prefer': 'return=representation' },
       body: JSON.stringify({
-        user_id:    this._user.id,
-        title:      examData.title      || 'Untitled Exam',
-        subject:    examData.subject    || null,
-        level:      examData.level      || null,
-        book_name:  examData.book_name  || null,
-        unit_lesson:examData.unit_lesson|| null,
-        topic:      examData.topic      || null,
-        content:    examData.content    || { sections: [] }
+        user_id:     this._user.id,
+        title:       examData.title       || 'Untitled Exam',
+        subject:     examData.subject     || null,
+        level:       examData.level       || null,
+        book_name:   examData.book_name   || null,
+        unit_lesson: examData.unit_lesson || null,
+        topic:       examData.topic       || null,
+        content:     examData.content     || { sections: [] }
       })
     });
-    if (!r.ok) return null;
+    if (!r || !r.ok) return null;
     const data = await r.json();
     return data[0] || null;
   },
 
   async updateExam(id, examData) {
     const body = {};
-    if (examData.title      !== undefined) body.title       = examData.title;
-    if (examData.subject    !== undefined) body.subject     = examData.subject || null;
-    if (examData.level      !== undefined) body.level       = examData.level   || null;
-    if (examData.book_name  !== undefined) body.book_name   = examData.book_name  || null;
-    if (examData.unit_lesson!== undefined) body.unit_lesson = examData.unit_lesson|| null;
-    if (examData.topic      !== undefined) body.topic       = examData.topic   || null;
-    if (examData.content    !== undefined) body.content     = examData.content;
+    if (examData.title       !== undefined) body.title       = examData.title;
+    if (examData.subject     !== undefined) body.subject     = examData.subject     || null;
+    if (examData.level       !== undefined) body.level       = examData.level       || null;
+    if (examData.book_name   !== undefined) body.book_name   = examData.book_name   || null;
+    if (examData.unit_lesson !== undefined) body.unit_lesson = examData.unit_lesson || null;
+    if (examData.topic       !== undefined) body.topic       = examData.topic       || null;
+    if (examData.content     !== undefined) body.content     = examData.content;
 
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/exams?id=eq.${id}`, {
+    const r = await this.authFetch(`${SUPABASE_URL}/rest/v1/exams?id=eq.${id}`, {
       method: 'PATCH',
-      headers: { ...this._headers(), 'Prefer': 'return=minimal' },
+      headers: { 'Prefer': 'return=minimal' },
       body: JSON.stringify(body)
     });
-    return r.ok;
+    return r && r.ok;
   },
 
   async incrementExportCount(id) {
-    // Use rpc or a direct update — simple increment via PATCH
     const exam = await this.getExam(id);
     if (!exam) return;
-    await fetch(`${SUPABASE_URL}/rest/v1/exams?id=eq.${id}`, {
+    await this.authFetch(`${SUPABASE_URL}/rest/v1/exams?id=eq.${id}`, {
       method: 'PATCH',
-      headers: { ...this._headers(), 'Prefer': 'return=minimal' },
+      headers: { 'Prefer': 'return=minimal' },
       body: JSON.stringify({
-        export_count: (exam.export_count || 0) + 1,
+        export_count:     (exam.export_count || 0) + 1,
         last_exported_at: new Date().toISOString()
       })
     });
   },
 
   async deleteExam(id) {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/exams?id=eq.${id}`, {
-      method: 'DELETE',
-      headers: this._headers()
+    const r = await this.authFetch(`${SUPABASE_URL}/rest/v1/exams?id=eq.${id}`, {
+      method: 'DELETE'
     });
-    return r.ok;
+    return r && r.ok;
   },
 
   async getProfile() {
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/profiles?id=eq.${this._user?.id}&select=*`,
-      { headers: this._headers() }
+    const r = await this.authFetch(
+      `${SUPABASE_URL}/rest/v1/profiles?id=eq.${this._user?.id}&select=*`
     );
-    if (!r.ok) return null;
+    if (!r || !r.ok) return null;
     const data = await r.json();
     return data[0] || null;
   }
@@ -2809,7 +2856,7 @@ async function handleSignOut() {
 // ============================================================
 // DASHBOARD
 // ============================================================
-function enterDashboard() {
+async function enterDashboard() {
   const user = sb._user;
   const email = user?.email || '';
   const letter = email.charAt(0).toUpperCase() || 'N';
@@ -2819,20 +2866,30 @@ function enterDashboard() {
 
   showPage('dashboard');
   loadExams();
+
+  // Load profile name in background
+  const profile = await sb.getProfile();
+  if (profile?.full_name) {
+    document.getElementById('dash-user-email').textContent = profile.full_name;
+    document.getElementById('dash-avatar-letter').textContent =
+      profile.full_name.charAt(0).toUpperCase();
+  }
 }
 
 async function loadExams() {
   const list = document.getElementById('exam-list');
-  list.innerHTML = `<div style="color:var(--white-dim);font-size:14px;padding:20px 0;">Loading...</div>`;
+  list.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:20px 0;color:var(--white-muted);font-size:13px;">
+      <div style="width:14px;height:14px;border:1.5px solid var(--gold-dim);border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;"></div>
+      Loading exams…
+    </div>`;
 
-  // If Supabase not configured yet, show empty state
-  if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
-    renderExams([]);
-    return;
+  try {
+    const exams = await sb.getExams();
+    renderExams(exams);
+  } catch (err) {
+    list.innerHTML = `<div style="color:var(--red-err);font-size:13px;padding:20px 0;">Failed to load exams. Please refresh.</div>`;
   }
-
-  const exams = await sb.getExams();
-  renderExams(exams);
 }
 
 function renderExams(exams) {
@@ -2884,8 +2941,12 @@ async function exportExam(id) {
 
 async function deleteExam(id) {
   if (!confirm('Delete this exam? This cannot be undone.')) return;
-  await sb.deleteExam(id);
-  showToast('Exam deleted.', 'success');
+  const ok = await sb.deleteExam(id);
+  if (ok) {
+    showToast('Exam deleted.', 'success');
+  } else {
+    showToast('Could not delete exam.', 'error');
+  }
   loadExams();
 }
 
@@ -3023,42 +3084,38 @@ async function saveExam() {
   autosaveEl.classList.add('visible');
 
   const payload = {
-    title:       builder.title || 'Untitled Exam',
-    subject:     builder.meta.subject    || null,
-    level:       builder.meta.level      || null,
-    book_name:   builder.meta.book      || null,
-    unit_lesson: builder.meta.unit       || null,
-    topic:       builder.meta.topic      || null,
+    title:       builder.title       || 'Untitled Exam',
+    subject:     builder.meta.subject || null,
+    level:       builder.meta.level   || null,
+    book_name:   builder.meta.book    || null,
+    unit_lesson: builder.meta.unit    || null,
+    topic:       builder.meta.topic   || null,
     content:     { sections: builder.sections }
   };
 
-  // If Supabase not configured, skip silently
-  if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
-    autosaveEl.textContent = 'Saved (local)';
-    setTimeout(() => autosaveEl.classList.remove('visible'), 2000);
-    builder._dirty = false;
-    return;
-  }
+  try {
+    let ok = false;
+    // UUID v4 pattern — if examId looks like a UUID it's an existing record
+    const isExisting = builder.examId &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(builder.examId);
 
-  let ok = false;
-  if (builder.examId && builder.examId.includes('-')) {
-    // existing exam — update
-    ok = await sb.updateExam(builder.examId, payload);
-  } else {
-    // new exam — create
-    const created = await sb.createExam(payload);
-    if (created) {
-      builder.examId = created.id;
-      ok = true;
+    if (isExisting) {
+      ok = await sb.updateExam(builder.examId, payload);
+    } else {
+      const created = await sb.createExam(payload);
+      if (created) {
+        builder.examId = created.id;
+        ok = true;
+      }
     }
+
+    autosaveEl.textContent = ok ? 'Saved' : 'Save failed';
+    builder._dirty = !ok;
+  } catch (err) {
+    autosaveEl.textContent = 'Save failed';
+    console.error('saveExam error:', err);
   }
 
-  if (ok) {
-    autosaveEl.textContent = 'Saved';
-    builder._dirty = false;
-  } else {
-    autosaveEl.textContent = 'Save failed';
-  }
   setTimeout(() => autosaveEl.classList.remove('visible'), 2200);
 }
 
