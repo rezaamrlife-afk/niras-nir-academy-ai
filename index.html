@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NIRAS AI — Nir Academy</title>
-<!-- Vercel injects environment variables here at build time -->
-<script>window.__GROQ_KEY__ = '@GROQ_API_KEY';</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
@@ -3152,9 +3150,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // ============================================================
 // CONFIG — Groq AI
 // ============================================================
-// Key is injected via Vercel environment variable at build time
-// Set GROQ_API_KEY in Vercel project settings → Environment Variables
-const GROQ_API_KEY = window.__GROQ_KEY__ || '';
+const GROQ_API_KEY = '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';
 const GROQ_MODEL   = 'llama-3.1-8b-instant';
 
 // ============================================================
