@@ -1381,6 +1381,29 @@ body::after {
   .profile-modal { max-width: 100%; border-radius: 16px 16px 0 0; max-height: 92vh; }
   .profile-modal-overlay { align-items: flex-end; padding: 0; }
   .profile-modal-footer { padding: 14px 20px 32px; }
+
+  /* AI Generate modal */
+  .ai-modal { max-width: 100%; max-height: 95vh; border-radius: 16px 16px 0 0; }
+  .ai-modal-overlay { align-items: flex-end; padding: 0; }
+  .ai-options-row { grid-template-columns: 1fr 1fr; }
+
+  /* Skill Generator modal */
+  .sg-modal { max-width: 100%; border-radius: 16px 16px 0 0; max-height: 94vh; }
+  .sg-overlay { align-items: flex-end; padding: 0; }
+  .sg-footer { padding: 12px 16px 32px; }
+  .sg-body { padding: 16px; gap: 14px; }
+  .sg-header { padding: 14px 16px 12px; }
+  .sg-row { grid-template-columns: 1fr; gap: 10px; }
+  .sg-row-3 { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .sg-tabs { gap: 3px; }
+  .sg-tab { font-size: 12px; padding: 7px 8px; }
+  .sg-chips { gap: 6px; }
+  .sg-chip { font-size: 12px; padding: 5px 11px; }
+
+  /* Upload modal */
+  .upload-modal { max-width: 100%; max-height: 95vh; border-radius: 16px 16px 0 0; }
+  .upload-modal-overlay { align-items: flex-end; padding: 0; }
+  .upload-modal-footer { padding: 12px 16px 32px; }
 }
 
 /* ============================================================
@@ -5490,6 +5513,224 @@ body::after {
   </div>
 </div>
 
+<!-- Skill Generator Modal -->
+<div class="sg-overlay" id="sg-modal" onclick="if(event.target===this)closeSG()">
+  <div class="sg-modal">
+
+    <!-- Header -->
+    <div class="sg-header">
+      <div class="sg-header-top">
+        <div class="sg-title">
+          ✦ Skill Generator
+          <span class="sg-title-badge">AI Powered</span>
+        </div>
+        <button class="btn-ai-close" onclick="closeSG()">×</button>
+      </div>
+      <div class="sg-tabs">
+        <button class="sg-tab active" data-skill="reading"  onclick="sgSwitchSkill('reading')">📖 Reading</button>
+        <button class="sg-tab"        data-skill="writing"  onclick="sgSwitchSkill('writing')">✍️ Writing</button>
+        <button class="sg-tab"        data-skill="speaking" onclick="sgSwitchSkill('speaking')">🎤 Speaking</button>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="sg-body" id="sg-body">
+
+      <!-- FORM PANEL -->
+      <div id="sg-form-panel">
+
+        <!-- Metadata hint -->
+        <div class="sg-meta-banner" id="sg-meta-banner">
+          <span class="sg-meta-banner-icon">💡</span>
+          <span id="sg-meta-banner-text">Fill in Subject, Level, and Topic in the sidebar for more accurate AI generation. Or customize below.</span>
+        </div>
+
+        <!-- Exam Type -->
+        <div class="sg-field">
+          <label class="sg-label">
+            Exam Type
+            <span style="font-size:10px;color:var(--white-muted);font-weight:400;text-transform:none;">— choose the target exam</span>
+          </label>
+          <div class="sg-chips" id="sg-exam-type-chips">
+            <div class="sg-chip selected" data-val="IELTS Academic">IELTS Academic</div>
+            <div class="sg-chip" data-val="IELTS General">IELTS General</div>
+            <div class="sg-chip" data-val="TOEFL iBT">TOEFL iBT</div>
+            <div class="sg-chip" data-val="Cambridge B2">Cambridge B2</div>
+            <div class="sg-chip" data-val="Cambridge C1">Cambridge C1</div>
+            <div class="sg-chip" data-val="Cambridge C2">Cambridge C2</div>
+            <div class="sg-chip" data-val="General English">General English</div>
+            <div class="sg-chip" data-val="School Exam">School Exam</div>
+            <div class="sg-chip" data-val="Custom">Custom…</div>
+          </div>
+          <div class="sg-hint">💡 Each exam type generates content matching its real format and standards</div>
+        </div>
+
+        <!-- Level -->
+        <div class="sg-field">
+          <label class="sg-label">
+            Level
+            <span style="font-size:10px;color:var(--white-muted);font-weight:400;text-transform:none;">— CEFR or exam band</span>
+          </label>
+          <div class="sg-chips" id="sg-level-chips">
+            <div class="sg-chip" data-val="A1">A1</div>
+            <div class="sg-chip" data-val="A2">A2</div>
+            <div class="sg-chip" data-val="B1">B1</div>
+            <div class="sg-chip selected" data-val="B2">B2</div>
+            <div class="sg-chip" data-val="C1">C1</div>
+            <div class="sg-chip" data-val="C2">C2</div>
+            <div class="sg-chip" data-val="Band 5">Band 5</div>
+            <div class="sg-chip" data-val="Band 6">Band 6</div>
+            <div class="sg-chip" data-val="Band 7">Band 7</div>
+            <div class="sg-chip" data-val="Band 8">Band 8</div>
+          </div>
+          <div class="sg-hint">💡 AI adjusts vocabulary, complexity and question difficulty to match the level</div>
+        </div>
+
+        <!-- Topic -->
+        <div class="sg-field">
+          <label class="sg-label">Topic / Theme</label>
+          <input class="sg-input" id="sg-topic-input"
+            placeholder="e.g. Climate Change, Technology, Health, Education, Urban Life…"
+            value="">
+          <div class="sg-hint">💡 Leave blank to let AI choose a topic appropriate for the exam type</div>
+        </div>
+
+        <!-- ——— READING OPTIONS ——— -->
+        <div id="sg-reading-options">
+          <div class="sg-divider">Reading Options</div>
+          <div class="sg-row" style="margin-top:10px;">
+            <div class="sg-field">
+              <label class="sg-label">Passage Length</label>
+              <div class="sg-chips" id="sg-passage-len-chips">
+                <div class="sg-chip" data-val="short" data-reading>Short (~150w)</div>
+                <div class="sg-chip selected" data-val="medium" data-reading>Medium (~300w)</div>
+                <div class="sg-chip" data-val="long" data-reading>Long (~600w)</div>
+              </div>
+            </div>
+            <div class="sg-field">
+              <label class="sg-label">Question Count</label>
+              <div class="sg-chips" id="sg-reading-q-chips">
+                <div class="sg-chip" data-val="3" data-reading>3</div>
+                <div class="sg-chip selected" data-val="5" data-reading>5</div>
+                <div class="sg-chip" data-val="8" data-reading>8</div>
+                <div class="sg-chip" data-val="10" data-reading>10</div>
+              </div>
+            </div>
+          </div>
+          <div class="sg-field" style="margin-top:10px;">
+            <label class="sg-label">Question Types</label>
+            <div class="sg-chips" id="sg-reading-qtype-chips">
+              <div class="sg-chip selected" data-val="mixed" data-reading>Mixed</div>
+              <div class="sg-chip" data-val="mcq" data-reading>MCQ Only</div>
+              <div class="sg-chip" data-val="true_false" data-reading>True/False</div>
+              <div class="sg-chip" data-val="short_answer" data-reading>Short Answer</div>
+              <div class="sg-chip" data-val="fill_blank" data-reading>Fill Blank</div>
+            </div>
+            <div class="sg-hint">💡 IELTS Academic typically uses T/F/NG, MCQ, and Short Answer</div>
+          </div>
+        </div>
+
+        <!-- ——— WRITING OPTIONS ——— -->
+        <div id="sg-writing-options" style="display:none;">
+          <div class="sg-divider">Writing Options</div>
+          <div class="sg-row" style="margin-top:10px;">
+            <div class="sg-field">
+              <label class="sg-label">Task Type</label>
+              <div class="sg-chips" id="sg-task-type-chips">
+                <div class="sg-chip" data-val="task1" data-writing>Task 1</div>
+                <div class="sg-chip selected" data-val="task2" data-writing>Task 2</div>
+                <div class="sg-chip" data-val="essay" data-writing>Essay</div>
+                <div class="sg-chip" data-val="letter" data-writing>Letter</div>
+                <div class="sg-chip" data-val="report" data-writing>Report</div>
+              </div>
+            </div>
+            <div class="sg-field">
+              <label class="sg-label">Word Limit</label>
+              <div class="sg-chips" id="sg-wordlimit-chips">
+                <div class="sg-chip" data-val="150" data-writing>150</div>
+                <div class="sg-chip selected" data-val="250" data-writing>250</div>
+                <div class="sg-chip" data-val="350" data-writing>350</div>
+              </div>
+            </div>
+          </div>
+          <div class="sg-field" style="margin-top:10px;">
+            <label class="sg-label">Include Rubric</label>
+            <div class="sg-chips">
+              <div class="sg-chip selected" data-val="yes" id="sg-rubric-yes" data-writing onclick="sgToggleRubric(this)">✓ Include IELTS Rubric</div>
+              <div class="sg-chip" data-val="no" id="sg-rubric-no" data-writing onclick="sgToggleRubric(this)">No Rubric</div>
+            </div>
+            <div class="sg-hint">💡 Task 1 focuses on describing data; Task 2 requires argument/opinion</div>
+          </div>
+        </div>
+
+        <!-- ——— SPEAKING OPTIONS ——— -->
+        <div id="sg-speaking-options" style="display:none;">
+          <div class="sg-divider">Speaking Options</div>
+          <div class="sg-row" style="margin-top:10px;">
+            <div class="sg-field">
+              <label class="sg-label">Part</label>
+              <div class="sg-chips" id="sg-part-chips">
+                <div class="sg-chip" data-val="part1" data-speaking>Part 1</div>
+                <div class="sg-chip selected" data-val="part2" data-speaking>Part 2</div>
+                <div class="sg-chip" data-val="part3" data-speaking>Part 3</div>
+              </div>
+            </div>
+            <div class="sg-field">
+              <label class="sg-label">Question Count</label>
+              <div class="sg-chips" id="sg-speaking-q-chips">
+                <div class="sg-chip" data-val="3" data-speaking>3</div>
+                <div class="sg-chip selected" data-val="5" data-speaking>5</div>
+                <div class="sg-chip" data-val="7" data-speaking>7</div>
+              </div>
+            </div>
+          </div>
+          <div class="sg-field" style="margin-top:10px;">
+            <label class="sg-label">Include Scoring Rubric</label>
+            <div class="sg-chips">
+              <div class="sg-chip selected" data-val="yes" id="sg-sp-rubric-yes" data-speaking onclick="sgToggleSpRubric(this)">✓ IELTS Speaking Criteria</div>
+              <div class="sg-chip" data-val="no" id="sg-sp-rubric-no" data-speaking onclick="sgToggleSpRubric(this)">No Rubric</div>
+            </div>
+            <div class="sg-hint">💡 Part 2 includes a cue card; Part 3 requires discussion and opinion</div>
+          </div>
+        </div>
+
+      </div><!-- end sg-form-panel -->
+
+      <!-- LOADING PANEL -->
+      <div class="sg-loading" id="sg-loading">
+        <div class="sg-loading-ring" id="sg-loading-ring"></div>
+        <div class="sg-loading-title" id="sg-loading-title">Generating content…</div>
+        <div class="sg-loading-sub" id="sg-loading-sub">AI is crafting professional exam content for you</div>
+        <div class="sg-loading-steps" id="sg-loading-steps"></div>
+      </div>
+
+      <!-- RESULT PANEL -->
+      <div class="sg-result" id="sg-result">
+        <div class="sg-result-header">
+          <div class="sg-result-title" id="sg-result-title">Generated Content</div>
+          <div class="sg-ai-badge" id="sg-result-badge">✦ AI Generated</div>
+        </div>
+        <div class="sg-result-preview" id="sg-result-preview"></div>
+      </div>
+
+    </div><!-- end sg-body -->
+
+    <!-- Footer -->
+    <div class="sg-footer">
+      <div class="sg-footer-info" id="sg-footer-info">✦ Groq · llama-3.1-8b-instant</div>
+      <div class="sg-footer-actions">
+        <button class="btn-sg-cancel" onclick="closeSG()">Cancel</button>
+        <button class="btn-sg-generate" id="btn-sg-generate" onclick="runSG()">
+          ✦ Generate
+        </button>
+        <button class="btn-sg-regen"   id="btn-sg-regen"   style="display:none;" onclick="resetSGToForm()">← Redo</button>
+        <button class="btn-sg-insert"  id="btn-sg-insert"  style="display:none;" onclick="insertSGContent()">Insert into Block</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <!-- Toast container -->
 <div id="toast-container"></div>
 
@@ -6361,10 +6602,17 @@ function buildReadingTaskContent(block, secId) {
     <div class="block-reading">
       <div class="block-reading-header">
         <span class="block-reading-label">Reading Task</span>
-        <div class="reading-para-toggle"
-             onclick="toggleReadingPara('${secId}','${block.id}')">
-          <div class="reading-para-checkbox ${paraOn?'checked':''}">${paraOn?'✓':''}</div>
-          <span style="font-size:11px;">Paragraph numbers</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="btn-block-generate reading" id="gen-btn-${block.id}"
+            onclick="openSG('reading','${secId}','${block.id}');event.stopPropagation()">
+            <div class="btn-gen-spinner"></div>
+            <span class="btn-gen-text">✦ Generate</span>
+          </button>
+          <div class="reading-para-toggle"
+               onclick="toggleReadingPara('${secId}','${block.id}')">
+            <div class="reading-para-checkbox ${paraOn?'checked':''}">${paraOn?'✓':''}</div>
+            <span style="font-size:11px;">Paragraphs</span>
+          </div>
         </div>
       </div>
       <div class="block-reading-body">
@@ -6456,7 +6704,12 @@ function buildSpeakingTaskContent(block, secId) {
     <div class="block-speaking">
       <div class="block-speaking-header">
         <span class="block-speaking-label">Speaking Task</span>
-        <div style="display:flex;align-items:center;gap:10px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <button class="btn-block-generate speaking" id="gen-btn-${block.id}"
+            onclick="openSG('speaking','${secId}','${block.id}');event.stopPropagation()">
+            <div class="btn-gen-spinner"></div>
+            <span class="btn-gen-text">✦ Generate</span>
+          </button>
           <select class="speaking-part-select"
             onchange="updateBlockField('${secId}','${block.id}','part',this.value)">
             ${partOptions}
@@ -6580,6 +6833,11 @@ function buildWritingTaskContent(block, secId) {
       <div class="block-writing-header">
         <span class="block-writing-label">Writing Task</span>
         <div class="block-writing-meta">
+          <button class="btn-block-generate writing" id="gen-btn-${block.id}"
+            onclick="openSG('writing','${secId}','${block.id}');event.stopPropagation()">
+            <div class="btn-gen-spinner"></div>
+            <span class="btn-gen-text">✦ Generate</span>
+          </button>
           <select class="writing-task-select"
             onchange="updateBlockField('${secId}','${block.id}','task_type',this.value)">
             ${taskOptions}
@@ -7966,6 +8224,351 @@ body{font-family:'Inter',sans-serif;font-size:10.5pt;line-height:1.65;color:var(
 /* Footer */
 .pdf-footer{position:fixed;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:6pt 18mm;border-top:.5pt solid var(--border);font-family:'DM Mono',monospace;font-size:7.5pt;color:var(--light);background:white;}
 @media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}.pdf-question{page-break-inside:avoid;}.pdf-section-header{page-break-after:avoid;}}
+
+/* ============================================================
+   SKILL GENERATOR MODAL
+   ============================================================ */
+.sg-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 5000; display: none;
+  align-items: center; justify-content: center;
+  padding: 16px;
+}
+.sg-overlay.open { display: flex; }
+
+.sg-modal {
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-radius: 16px;
+  width: 100%; max-width: 580px;
+  max-height: 92vh;
+  display: flex; flex-direction: column;
+  animation: modal-in 0.22s ease;
+  overflow: hidden;
+}
+
+/* Header */
+.sg-header {
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--black-border);
+  flex-shrink: 0;
+}
+.sg-header-top {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 14px;
+}
+.sg-title {
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  color: var(--white);
+  display: flex; align-items: center; gap: 8px;
+}
+.sg-title-badge {
+  font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--gold); padding: 2px 9px;
+  border: 1px solid rgba(201,168,76,.3);
+  border-radius: 10px; background: rgba(201,168,76,.06);
+}
+
+/* Skill tabs */
+.sg-tabs {
+  display: flex; gap: 4px;
+  background: var(--black-soft);
+  border-radius: 10px; padding: 4px;
+}
+.sg-tab {
+  flex: 1; background: none; border: none;
+  color: var(--white-dim); font-family: var(--font-ui);
+  font-size: 13px; font-weight: var(--weight-medium);
+  cursor: pointer; padding: 8px 10px;
+  border-radius: 7px; transition: all var(--transition);
+  display: flex; align-items: center;
+  justify-content: center; gap: 6px;
+}
+.sg-tab.active {
+  color: var(--white);
+  box-shadow: 0 1px 4px rgba(0,0,0,.4);
+}
+.sg-tab[data-skill="reading"].active  { background: rgba(91,155,213,.15);  color: #5B9BD5; }
+.sg-tab[data-skill="writing"].active  { background: rgba(109,191,126,.15); color: #6DBF7E; }
+.sg-tab[data-skill="speaking"].active { background: rgba(176,127,212,.15); color: #B07FD4; }
+
+/* Body */
+.sg-body {
+  flex: 1; overflow-y: auto;
+  padding: 20px 22px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+
+/* Field group */
+.sg-field { display: flex; flex-direction: column; gap: 5px; }
+
+.sg-label {
+  font-size: 12px; font-weight: var(--weight-semibold);
+  color: var(--white-dim); letter-spacing: .07em;
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 6px;
+}
+
+.sg-hint {
+  font-size: 11px; color: var(--white-muted);
+  font-style: italic; margin-top: 2px;
+}
+
+/* Chip selector */
+.sg-chips {
+  display: flex; flex-wrap: wrap; gap: 7px; margin-top: 2px;
+}
+.sg-chip {
+  background: var(--black-soft);
+  border: 1.5px solid var(--black-border);
+  border-radius: 20px; color: var(--white-dim);
+  font-family: var(--font-ui); font-size: 13px;
+  cursor: pointer; padding: 6px 14px;
+  transition: all var(--transition);
+  white-space: nowrap; user-select: none;
+}
+.sg-chip:hover { border-color: var(--gold-dim); color: var(--white); }
+.sg-chip.selected {
+  border-color: var(--gold);
+  background: rgba(201,168,76,.1);
+  color: var(--gold); font-weight: var(--weight-medium);
+}
+.sg-chip[data-reading].selected  { border-color:#5B9BD5; background:rgba(91,155,213,.1);  color:#5B9BD5; }
+.sg-chip[data-writing].selected  { border-color:#6DBF7E; background:rgba(109,191,126,.1); color:#6DBF7E; }
+.sg-chip[data-speaking].selected { border-color:#B07FD4; background:rgba(176,127,212,.1); color:#B07FD4; }
+
+/* Input */
+.sg-input {
+  background: var(--black-soft);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: var(--radius); color: var(--white);
+  font-family: var(--font-ui); font-size: 14px;
+  padding: 10px 13px; outline: none; width: 100%;
+  transition: border-color var(--transition);
+  line-height: var(--leading-normal);
+}
+.sg-input:focus { border-color: var(--gold-dim); }
+.sg-input::placeholder { color: rgba(155,150,144,.45); }
+
+/* Divider */
+.sg-divider {
+  font-family: var(--font-mono); font-size: 9.5px;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--gold-dim); padding: 2px 0;
+  border-bottom: 1px solid var(--black-border);
+  padding-bottom: 6px; margin-top: 2px;
+}
+
+/* Skill-specific row */
+.sg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.sg-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+/* Metadata hint banner */
+.sg-meta-banner {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: rgba(201,168,76,.06);
+  border: 1px solid rgba(201,168,76,.2);
+  border-radius: var(--radius); padding: 10px 14px;
+  font-size: 12.5px; color: var(--gold-dim);
+  line-height: 1.5;
+}
+.sg-meta-banner-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+.sg-meta-banner.hidden { display: none; }
+
+/* ——— LOADING ——— */
+.sg-loading {
+  display: none; flex-direction: column;
+  align-items: center; gap: 20px;
+  padding: 40px 20px; text-align: center;
+}
+.sg-loading.visible { display: flex; }
+
+.sg-loading-ring {
+  width: 52px; height: 52px;
+  border: 3px solid rgba(201,168,76,.15);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin .9s linear infinite;
+}
+.sg-loading-ring.reading  { border-top-color: #5B9BD5; border-color: rgba(91,155,213,.15); }
+.sg-loading-ring.writing  { border-top-color: #6DBF7E; border-color: rgba(109,191,126,.15); }
+.sg-loading-ring.speaking { border-top-color: #B07FD4; border-color: rgba(176,127,212,.15); }
+
+.sg-loading-title {
+  font-family: var(--font-display);
+  font-size: var(--text-h3); font-weight: var(--weight-semibold);
+  color: var(--white);
+}
+.sg-loading-sub {
+  font-size: var(--text-body-sm); color: var(--white-dim);
+  max-width: 300px; line-height: var(--leading-relaxed);
+}
+.sg-loading-steps {
+  display: flex; flex-direction: column; gap: 8px;
+  width: 100%; max-width: 320px; text-align: left;
+}
+.sg-load-step {
+  display: flex; align-items: center; gap: 10px;
+  font-size: var(--text-caption); color: var(--white-muted);
+  transition: color var(--transition);
+}
+.sg-load-step.active { color: var(--white); }
+.sg-load-step.done   { color: var(--green); }
+.sg-load-step-dot {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--black-border); border: 1px solid var(--black-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; flex-shrink: 0; transition: all var(--transition);
+}
+.sg-load-step.active .sg-load-step-dot { background: var(--gold); border-color: var(--gold); color: var(--black); animation: spin .7s linear infinite; }
+.sg-load-step.done .sg-load-step-dot   { background: var(--green); border-color: var(--green); color: var(--black); }
+
+/* ——— RESULT PREVIEW ——— */
+.sg-result { display: none; flex-direction: column; gap: 14px; }
+.sg-result.visible { display: flex; }
+
+.sg-result-header {
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 10px;
+}
+.sg-result-title {
+  font-family: var(--font-display);
+  font-size: var(--text-h3); font-weight: var(--weight-semibold);
+  color: var(--white);
+}
+.sg-ai-badge {
+  font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: .12em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 10px;
+  display: flex; align-items: center; gap: 5px;
+}
+.sg-ai-badge.reading  { color:#5B9BD5; background:rgba(91,155,213,.1);  border:1px solid rgba(91,155,213,.3); }
+.sg-ai-badge.writing  { color:#6DBF7E; background:rgba(109,191,126,.1); border:1px solid rgba(109,191,126,.3); }
+.sg-ai-badge.speaking { color:#B07FD4; background:rgba(176,127,212,.1); border:1px solid rgba(176,127,212,.3); }
+
+.sg-result-preview {
+  background: var(--black-soft);
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius); padding: 14px 16px;
+  max-height: 260px; overflow-y: auto;
+  font-size: var(--text-body-sm); color: var(--white);
+  line-height: var(--leading-relaxed);
+}
+.sg-result-preview h4 {
+  font-family: var(--font-display); font-size: 15px;
+  color: var(--white); margin-bottom: 8px;
+}
+.sg-result-preview p { color: var(--white-dim); margin-bottom: 8px; }
+.sg-result-preview .sg-q-item {
+  padding: 6px 0; border-bottom: 1px solid var(--black-border);
+  display: flex; gap: 8px;
+}
+.sg-result-preview .sg-q-num {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--gold-dim); flex-shrink: 0; margin-top: 2px;
+}
+
+/* ——— FOOTER ——— */
+.sg-footer {
+  padding: 14px 22px;
+  border-top: 1px solid var(--black-border);
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 10px;
+  flex-shrink: 0;
+}
+.sg-footer-info {
+  font-size: var(--text-caption);
+  color: var(--white-muted); font-family: var(--font-mono);
+}
+.sg-footer-actions { display: flex; gap: 8px; }
+
+.btn-sg-cancel {
+  background: none; border: 1px solid var(--black-border);
+  color: var(--white-dim); font-family: var(--font-ui);
+  font-size: var(--text-body-sm); cursor: pointer;
+  padding: 9px 18px; border-radius: var(--radius);
+  transition: all var(--transition);
+}
+.btn-sg-cancel:hover { border-color: var(--white-dim); color: var(--white); }
+
+.btn-sg-generate {
+  background: var(--gold); border: none; color: var(--black);
+  font-family: var(--font-ui); font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold); cursor: pointer;
+  padding: 9px 20px; border-radius: var(--radius);
+  transition: all var(--transition); letter-spacing: var(--tracking-wide);
+  display: flex; align-items: center; gap: 7px;
+}
+.btn-sg-generate:hover { background: var(--gold-light); }
+.btn-sg-generate:disabled { opacity: .45; cursor: not-allowed; }
+
+.btn-sg-regen {
+  background: none;
+  border: 1px solid var(--black-border);
+  color: var(--white-dim); font-family: var(--font-ui);
+  font-size: var(--text-body-sm); cursor: pointer;
+  padding: 9px 16px; border-radius: var(--radius);
+  transition: all var(--transition);
+}
+.btn-sg-regen:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+.btn-sg-insert {
+  background: var(--gold); border: none; color: var(--black);
+  font-family: var(--font-ui); font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold); cursor: pointer;
+  padding: 9px 20px; border-radius: var(--radius);
+  transition: all var(--transition); letter-spacing: var(--tracking-wide);
+}
+.btn-sg-insert:hover { background: var(--gold-light); }
+
+/* Generate buttons inside blocks */
+.btn-block-generate {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(201,168,76,.08);
+  border: 1px solid rgba(201,168,76,.25);
+  border-radius: var(--radius); color: var(--gold);
+  font-family: var(--font-ui); font-size: 12px;
+  font-weight: var(--weight-medium); cursor: pointer;
+  padding: 6px 13px; transition: all var(--transition);
+  letter-spacing: .02em; white-space: nowrap;
+}
+.btn-block-generate:hover {
+  background: rgba(201,168,76,.15);
+  border-color: var(--gold); box-shadow: 0 0 12px rgba(201,168,76,.15);
+}
+.btn-block-generate.reading  { color:#5B9BD5; background:rgba(91,155,213,.08);  border-color:rgba(91,155,213,.25); }
+.btn-block-generate.reading:hover  { background:rgba(91,155,213,.15); border-color:#5B9BD5; }
+.btn-block-generate.writing  { color:#6DBF7E; background:rgba(109,191,126,.08); border-color:rgba(109,191,126,.25); }
+.btn-block-generate.writing:hover  { background:rgba(109,191,126,.15); border-color:#6DBF7E; }
+.btn-block-generate.speaking { color:#B07FD4; background:rgba(176,127,212,.08); border-color:rgba(176,127,212,.25); }
+.btn-block-generate.speaking:hover { background:rgba(176,127,212,.15); border-color:#B07FD4; }
+
+.btn-block-generate .btn-gen-spinner {
+  display: none; width: 12px; height: 12px;
+  border: 1.5px solid currentColor; border-top-color: transparent;
+  border-radius: 50%; animation: spin .7s linear infinite;
+}
+.btn-block-generate.loading .btn-gen-spinner { display: block; }
+.btn-block-generate.loading .btn-gen-text { display: none; }
+
+/* AI generated fade-in */
+@keyframes sg-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.sg-generated { animation: sg-fade-in .4s ease both; }
+
+/* Mobile */
+@media (max-width: 600px) {
+  .sg-modal { max-width: 100%; border-radius: 16px 16px 0 0; max-height: 94vh; }
+  .sg-overlay { align-items: flex-end; padding: 0; }
+  .sg-row, .sg-row-3 { grid-template-columns: 1fr 1fr; }
+  .sg-footer { padding: 12px 16px 28px; }
+}
 </style>
 </head>
 <body>
@@ -8720,6 +9323,374 @@ async function saveProfile() {
     btn.classList.remove('loading');
     btn.disabled = false;
   }
+}
+
+// ============================================================
+// SKILL GENERATOR
+// ============================================================
+const sg = {
+  skill:    'reading',
+  secId:    null,
+  blockId:  null,
+  result:   null,
+  examType: 'IELTS Academic',
+  level:    'B2',
+  topic:    '',
+  // Reading
+  passageLen: 'medium',
+  readingQCount: '5',
+  readingQType:  'mixed',
+  // Writing
+  taskType:   'task2',
+  wordLimit:  '250',
+  rubricYes:  true,
+  // Speaking
+  part:       'part2',
+  speakingQCount: '5',
+  spRubricYes: true,
+};
+
+function openSG(skill, secId, blockId) {
+  sg.skill   = skill;
+  sg.secId   = secId;
+  sg.blockId = blockId;
+
+  // Pre-fill from metadata
+  const meta = builder.meta;
+  if (meta.topic)   document.getElementById('sg-topic-input').value = meta.topic;
+  if (meta.level)   sgSelectChip('sg-level-chips', meta.level);
+  if (meta.subject) {
+    // Map subject to exam type chip
+    const subj = meta.subject.toUpperCase();
+    if (subj.includes('IELTS'))    sgSelectChip('sg-exam-type-chips', subj.includes('GENERAL')?'IELTS General':'IELTS Academic');
+    else if (subj.includes('TOEFL')) sgSelectChip('sg-exam-type-chips','TOEFL iBT');
+    else if (subj.includes('CAMBRIDGE')) sgSelectChip('sg-exam-type-chips','Cambridge C1');
+  }
+
+  // Check if metadata is filled
+  const hasMeta = !!(meta.subject || meta.level || meta.topic);
+  const banner  = document.getElementById('sg-meta-banner');
+  banner.classList.toggle('hidden', hasMeta);
+  if (!hasMeta) {
+    document.getElementById('sg-meta-banner-text').textContent =
+      '💡 Fill in Subject, Level, and Topic in the sidebar for best results — or customize below.';
+  }
+
+  sgSwitchSkill(skill);
+  resetSGToForm();
+  document.getElementById('sg-modal').classList.add('open');
+}
+
+function closeSG() {
+  document.getElementById('sg-modal').classList.remove('open');
+}
+
+function sgSwitchSkill(skill) {
+  sg.skill = skill;
+  // Tab styles
+  document.querySelectorAll('.sg-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.skill === skill);
+  });
+  // Options panels
+  document.getElementById('sg-reading-options').style.display  = skill==='reading'  ? 'block' : 'none';
+  document.getElementById('sg-writing-options').style.display  = skill==='writing'  ? 'block' : 'none';
+  document.getElementById('sg-speaking-options').style.display = skill==='speaking' ? 'block' : 'none';
+
+  // Loading ring color
+  const ring = document.getElementById('sg-loading-ring');
+  ring.className = `sg-loading-ring ${skill}`;
+
+  // Result badge color
+  const badge = document.getElementById('sg-result-badge');
+  badge.className = `sg-ai-badge ${skill}`;
+
+  // Footer hint
+  const hints = {
+    reading:  '📖 Generates passage + comprehension questions',
+    writing:  '✍️ Generates task prompt + instructions + rubric',
+    speaking: '🎤 Generates prompt card + discussion questions'
+  };
+  document.getElementById('sg-footer-info').textContent = hints[skill];
+}
+
+function sgSelectChip(groupId, val) {
+  const group = document.getElementById(groupId);
+  if (!group) return;
+  group.querySelectorAll('.sg-chip').forEach(c => {
+    c.classList.toggle('selected', c.dataset.val === val);
+  });
+}
+
+function sgGetChip(groupId) {
+  const group = document.getElementById(groupId);
+  if (!group) return '';
+  const sel = group.querySelector('.sg-chip.selected');
+  return sel ? sel.dataset.val : '';
+}
+
+// Make chips clickable
+document.addEventListener('click', e => {
+  const chip = e.target.closest('.sg-chip');
+  if (!chip) return;
+  const group = chip.parentElement;
+  if (!group?.classList.contains('sg-chips')) return;
+  // Single select within group
+  group.querySelectorAll('.sg-chip').forEach(c => c.classList.remove('selected'));
+  chip.classList.add('selected');
+});
+
+function sgToggleRubric(el) {
+  const yes = document.getElementById('sg-rubric-yes');
+  const no  = document.getElementById('sg-rubric-no');
+  yes.classList.toggle('selected', el.dataset.val==='yes');
+  no.classList.toggle('selected',  el.dataset.val==='no');
+  sg.rubricYes = el.dataset.val==='yes';
+}
+function sgToggleSpRubric(el) {
+  const yes = document.getElementById('sg-sp-rubric-yes');
+  const no  = document.getElementById('sg-sp-rubric-no');
+  yes.classList.toggle('selected', el.dataset.val==='yes');
+  no.classList.toggle('selected',  el.dataset.val==='no');
+  sg.spRubricYes = el.dataset.val==='yes';
+}
+
+function resetSGToForm() {
+  document.getElementById('sg-form-panel').style.display  = 'block';
+  document.getElementById('sg-loading').classList.remove('visible');
+  document.getElementById('sg-result').classList.remove('visible');
+  document.getElementById('btn-sg-generate').style.display = '';
+  document.getElementById('btn-sg-regen').style.display    = 'none';
+  document.getElementById('btn-sg-insert').style.display   = 'none';
+  sg.result = null;
+}
+
+function setSGLoadStep(steps, activeIdx) {
+  steps.forEach((s,i) => {
+    const el = document.getElementById('sg-step-'+i);
+    if (!el) return;
+    el.classList.remove('active','done');
+    if (i < activeIdx)  el.classList.add('done');
+    if (i === activeIdx) el.classList.add('active');
+  });
+}
+
+async function runSG() {
+  // Collect settings
+  sg.examType = sgGetChip('sg-exam-type-chips') || 'IELTS Academic';
+  sg.level    = sgGetChip('sg-level-chips')    || 'B2';
+  sg.topic    = document.getElementById('sg-topic-input').value.trim();
+  sg.passageLen      = sgGetChip('sg-passage-len-chips')   || 'medium';
+  sg.readingQCount   = sgGetChip('sg-reading-q-chips')     || '5';
+  sg.readingQType    = sgGetChip('sg-reading-qtype-chips') || 'mixed';
+  sg.taskType        = sgGetChip('sg-task-type-chips')     || 'task2';
+  sg.wordLimit       = sgGetChip('sg-wordlimit-chips')     || '250';
+  sg.part            = sgGetChip('sg-part-chips')          || 'part2';
+  sg.speakingQCount  = sgGetChip('sg-speaking-q-chips')   || '5';
+
+  // Show loading
+  document.getElementById('sg-form-panel').style.display = 'none';
+  document.getElementById('sg-loading').classList.add('visible');
+  document.getElementById('btn-sg-generate').style.display = 'none';
+
+  const loadStepDefs = {
+    reading:  ['Analyzing exam format','Generating passage','Creating questions','Quality check'],
+    writing:  ['Analyzing task type','Crafting prompt','Adding instructions','Quality check'],
+    speaking: ['Analyzing format','Building prompt card','Creating questions','Quality check'],
+  };
+  const steps = loadStepDefs[sg.skill];
+
+  // Render steps
+  const stepsEl = document.getElementById('sg-loading-steps');
+  stepsEl.innerHTML = steps.map((s,i)=>`
+    <div class="sg-load-step" id="sg-step-${i}">
+      <div class="sg-load-step-dot">${i+1}</div>
+      <span>${s}</span>
+    </div>`).join('');
+
+  document.getElementById('sg-loading-title').textContent = 'Generating ' + sg.skill + ' content…';
+  document.getElementById('sg-loading-sub').textContent   =
+    `Creating ${sg.examType} ${sg.level} content${sg.topic ? ' on "'+sg.topic+'"' : ''}`;
+
+  try {
+    for (let i=0; i<steps.length-1; i++) {
+      setSGLoadStep(steps, i);
+      await delay(350);
+    }
+    setSGLoadStep(steps, steps.length-1);
+
+    // Generate
+    const content = await sgGenerate();
+    sg.result = content;
+
+    await delay(300);
+
+    // Show result
+    document.getElementById('sg-loading').classList.remove('visible');
+    document.getElementById('sg-result').classList.add('visible');
+    document.getElementById('sg-result-title').textContent =
+      {reading:'Reading Passage + Questions',writing:'Writing Task',speaking:'Speaking Task'}[sg.skill];
+    document.getElementById('sg-result-preview').innerHTML = buildSGPreview(content);
+
+    document.getElementById('btn-sg-regen').style.display  = '';
+    document.getElementById('btn-sg-insert').style.display = '';
+
+  } catch (err) {
+    console.error('SG error:', err);
+    showToast('Generation failed. Try again.', 'error');
+    resetSGToForm();
+    document.getElementById('sg-form-panel').style.display = 'block';
+    document.getElementById('btn-sg-generate').style.display = '';
+  }
+}
+
+async function sgGenerate() {
+  const sys = `You are an expert ${sg.examType} exam content creator. Generate professional, accurate exam content. Return ONLY valid JSON, no markdown, no explanation.`;
+
+  let prompt = '';
+
+  if (sg.skill === 'reading') {
+    const lenMap = { short:'150-200 words', medium:'280-320 words', long:'550-650 words' };
+    const qtypeMap = {
+      mixed:        'Mix: MCQ (40%), True/False (30%), Short Answer (30%)',
+      mcq:          'All MCQ with 4 options each',
+      true_false:   'All True/False (use "true"/"false")',
+      short_answer: 'All Short Answer',
+      fill_blank:   'All Fill in the Blank'
+    };
+    prompt = `Create an ${sg.examType} reading passage at ${sg.level} level.
+Topic: ${sg.topic || 'choose an appropriate academic topic'}
+Passage length: ${lenMap[sg.passageLen]}
+Question count: ${sg.readingQCount}
+Question types: ${qtypeMap[sg.readingQType]}
+
+Return JSON:
+{
+  "title": "Passage title",
+  "passage": "Full passage text with natural paragraphs separated by \\n",
+  "questions": [
+    { "text": "Question text", "qtype": "mcq|true_false|short_answer|fill_blank",
+      "options": ["A","B","C","D"], "correct_index": 0,
+      "correct_answer": "for tf/short/fill" }
+  ]
+}`;
+
+  } else if (sg.skill === 'writing') {
+    const taskMap = {
+      task1: `IELTS Academic Task 1 (describe a graph/chart/diagram)`,
+      task2: `IELTS Task 2 / Essay (argue, discuss, or give opinion)`,
+      essay: `Academic Essay`,
+      letter: `Formal/Semi-formal Letter`,
+      report: `Formal Report`
+    };
+    prompt = `Create an ${sg.examType} ${taskMap[sg.taskType]} at ${sg.level} level.
+Topic: ${sg.topic || 'choose an appropriate academic topic'}
+Word limit: ${sg.wordLimit} words
+
+Return JSON:
+{
+  "task_type": "${sg.taskType}",
+  "prompt": "Full task prompt text",
+  "instructions": "Clear instructions for the student",
+  "word_limit": ${sg.wordLimit}
+}`;
+
+  } else if (sg.skill === 'speaking') {
+    const partMap = {
+      part1: 'Part 1 (familiar topics, short answers)',
+      part2: 'Part 2 (individual long turn with cue card, 2 min)',
+      part3: 'Part 3 (abstract discussion, longer answers)'
+    };
+    prompt = `Create an ${sg.examType} Speaking ${partMap[sg.part]} at ${sg.level} level.
+Topic: ${sg.topic || 'choose an appropriate topic'}
+Total questions: ${sg.speakingQCount} (mix of main and follow-up)
+
+Return JSON:
+{
+  "part": "${sg.part}",
+  "prompt": "The cue card or main question prompt",
+  "questions": [
+    { "text": "Question text", "type": "main|followup" }
+  ],
+  "timer": 60
+}`;
+  }
+
+  const raw = await groqChat(sys, prompt);
+  return parseAIJson(raw);
+}
+
+function buildSGPreview(content) {
+  if (!content) return '';
+  if (sg.skill === 'reading') {
+    const qs = (content.questions||[]).map((q,i)=>
+      `<div class="sg-q-item"><span class="sg-q-num">Q${i+1}</span><span>${escHtml(q.text||'')}</span></div>`
+    ).join('');
+    return `<h4>${escHtml(content.title||'Reading Passage')}</h4>
+      <p style="font-size:12px;line-height:1.7;color:var(--white-dim);">${escHtml((content.passage||'').substring(0,300))}${content.passage?.length>300?'…':''}</p>
+      <div style="margin-top:10px;font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#5B9BD5;margin-bottom:6px;">Questions (${content.questions?.length||0})</div>
+      ${qs}`;
+
+  } else if (sg.skill === 'writing') {
+    return `<div style="font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#6DBF7E;margin-bottom:8px;">${(content.task_type||'').replace('_',' ').toUpperCase()} · ${content.word_limit||250} words</div>
+      <h4 style="font-size:14px;margin-bottom:8px;">${escHtml(content.prompt||'')}</h4>
+      ${content.instructions?`<p style="font-size:12px;font-style:italic;">${escHtml(content.instructions)}</p>`:''}`;
+
+  } else if (sg.skill === 'speaking') {
+    const qs = (content.questions||[]).map((q,i)=>
+      `<div class="sg-q-item"><span class="sg-q-num">${i+1}.</span><span>${escHtml(q.text||'')} ${q.type==='followup'?'<span style="font-size:10px;color:var(--white-muted);">(follow-up)</span>':''}</span></div>`
+    ).join('');
+    return `<div style="font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#B07FD4;margin-bottom:8px;">${(content.part||'').replace('part','Part ')}</div>
+      <h4 style="font-size:14px;margin-bottom:10px;">${escHtml(content.prompt||'')}</h4>
+      ${qs}`;
+  }
+  return JSON.stringify(content, null, 2);
+}
+
+function insertSGContent() {
+  if (!sg.result || !sg.blockId || !sg.secId) return;
+  const b = getBlock(sg.secId, sg.blockId);
+  if (!b) return;
+
+  if (sg.skill === 'reading') {
+    b.title    = sg.result.title   || '';
+    b.passage  = sg.result.passage || '';
+    b.questions = (sg.result.questions||[]).map((q,i) => ({
+      id:    'rq_'+Date.now()+'_'+i,
+      text:  q.text  || '',
+      qtype: q.qtype || 'mcq'
+    }));
+
+  } else if (sg.skill === 'writing') {
+    b.task_type    = sg.result.task_type    || 'task2';
+    b.prompt       = sg.result.prompt       || '';
+    b.instructions = sg.result.instructions || '';
+    b.word_limit   = sg.result.word_limit   || 250;
+    if (sg.rubricYes) b.rubric_on = true;
+
+  } else if (sg.skill === 'speaking') {
+    b.part      = sg.result.part   || 'part2';
+    b.prompt    = sg.result.prompt || '';
+    b.timer     = sg.result.timer  || 60;
+    b.questions = (sg.result.questions||[]).map((q,i)=>({
+      id:   'sq_'+Date.now()+'_'+i,
+      text: q.text || '',
+      type: q.type || 'main'
+    }));
+    if (sg.spRubricYes) b.rubric_on = true;
+  }
+
+  closeSG();
+  renderBuilder();
+  triggerAutosave();
+
+  const color = {reading:'#5B9BD5',writing:'#6DBF7E',speaking:'#B07FD4'}[sg.skill];
+  showToast(`✦ ${sg.skill.charAt(0).toUpperCase()+sg.skill.slice(1)} content inserted`, 'success');
+
+  // Scroll to block
+  setTimeout(() => {
+    const el = document.getElementById('block-'+sg.blockId);
+    if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 150);
 }
 
 // ============================================================
