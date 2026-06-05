@@ -3,7 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NIRAS AI — Nir Academy</title>
+<title>NIRAS AI — Professional Exam Builder</title>
+
+<!-- SEO -->
+<meta name="description" content="NIRAS AI is a professional exam authoring system that enables educators to design, structure, and export high-quality assessments with a fully flexible, block-based editor.">
+<meta name="keywords" content="exam builder, IELTS, TOEFL, ELT, exam authoring, question generator, AI, Nir Academy">
+<meta name="author" content="Nir Academy">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="NIRAS AI — Professional Exam Builder">
+<meta property="og:description" content="Build world-class exams in minutes with a fully flexible, block-based editor designed for professional educators.">
+<meta property="og:site_name" content="NIRAS AI">
+
+<!-- Favicon (SVG inline) -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230A0A0A'/><text x='16' y='22' text-anchor='middle' font-family='Georgia,serif' font-size='18' font-weight='600' fill='%23C9A84C'>N</text></svg>">
+
+<!-- PWA -->
+<meta name="theme-color" content="#0A0A0A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NIRAS AI">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
@@ -1121,12 +1141,17 @@ body::after {
   .dash-body { padding: 32px 20px; }
   .dash-stats { grid-template-columns: 1fr 1fr; }
   .auth-card { padding: 36px 28px; }
+  .preview-topbar { padding: 12px 16px; flex-wrap: wrap; }
+  .preview-body { padding: 20px 12px 60px; }
 }
 @media (max-width: 600px) {
   .landing-nav { padding: 16px 20px; }
   .nav-badge { display: none; }
   .dash-stats { grid-template-columns: 1fr; }
   .dash-topbar { padding: 14px 20px; }
+  .builder-sidebar { display: none; }
+  .builder-canvas { padding: 24px 16px 60px; }
+  .preview-mode-tabs { display: none; }
 }
 
 /* ============================================================
@@ -2531,8 +2556,440 @@ body::after {
 .btn-ai-regen:hover { border-color: var(--gold-dim); color: var(--gold); }
 
 /* ============================================================
-   PDF EXPORT — Modal + Print Styles
+   PREVIEW MODE
    ============================================================ */
+#page-preview {
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--black);
+}
+
+.preview-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 32px;
+  border-bottom: 1px solid var(--black-border);
+  background: var(--black-soft);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  gap: 16px;
+}
+
+.preview-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.btn-preview-back {
+  background: none;
+  border: none;
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  transition: color var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-preview-back:hover { color: var(--white); }
+
+.preview-title {
+  font-family: var(--font-display);
+  font-size: var(--text-h4);
+  font-weight: var(--weight-semibold);
+  color: var(--white);
+}
+
+.preview-mode-tabs {
+  display: flex;
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius);
+  padding: 3px;
+  gap: 3px;
+}
+
+.preview-mode-tab {
+  background: none;
+  border: none;
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  padding: 5px 14px;
+  border-radius: 5px;
+  transition: all var(--transition);
+  letter-spacing: var(--tracking-normal);
+}
+.preview-mode-tab.active {
+  background: var(--black-soft);
+  color: var(--gold);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.preview-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 40px 24px 80px;
+  display: flex;
+  justify-content: center;
+}
+
+.preview-paper {
+  width: 100%;
+  max-width: 720px;
+  background: #FAFAF8;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.4);
+  overflow: hidden;
+  color: #1A1A1A;
+}
+
+/* Preview cover */
+.preview-cover {
+  padding: 36px 40px 28px;
+  border-bottom: 2px solid #1A1A1A;
+  background: white;
+}
+
+.preview-cover-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.preview-exam-title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 600;
+  color: #0D0D0D;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.preview-version-badge {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 3px;
+  white-space: nowrap;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+.preview-version-badge.student {
+  background: #0D0D0D;
+  color: white;
+}
+.preview-version-badge.teacher {
+  background: #8A6E30;
+  color: white;
+}
+
+.preview-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: #666;
+  margin-bottom: 6px;
+}
+
+.preview-meta-sep { color: #CCC; }
+
+.preview-context {
+  font-size: 11px;
+  color: #999;
+}
+
+.preview-info-row {
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #E5E5E5;
+}
+
+.preview-info-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.preview-info-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #AAA;
+}
+
+.preview-info-line {
+  border-bottom: 1px solid #DDD;
+  height: 20px;
+}
+
+/* Preview sections */
+.preview-sections {
+  padding: 0 40px 40px;
+  background: white;
+}
+
+.preview-section { margin-top: 28px; }
+
+.preview-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #F5F5F3;
+  border-left: 3px solid #1A1A1A;
+  margin-bottom: 16px;
+}
+
+.preview-section-icon { font-size: 12px; }
+
+.preview-section-name {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #1A1A1A;
+}
+
+/* Preview blocks */
+.preview-instruction {
+  padding: 10px 14px;
+  background: #FFFDF5;
+  border: 1px solid #E8DFC0;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #444;
+  font-style: italic;
+  line-height: 1.6;
+}
+
+.preview-passage {
+  border: 1px solid #E5E5E5;
+  border-left: 3px solid #8A6E30;
+  border-radius: 4px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+
+.preview-passage-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: #0D0D0D;
+  margin-bottom: 10px;
+}
+
+.preview-passage-text {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #333;
+  white-space: pre-wrap;
+}
+
+.preview-divider {
+  border: none;
+  border-top: 1px solid #E5E5E5;
+  margin: 14px 0;
+}
+
+.preview-question {
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #F0F0F0;
+}
+.preview-question:last-child { border-bottom: none; }
+
+.preview-q-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.preview-q-num {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: #8A6E30;
+  min-width: 22px;
+  margin-top: 2px;
+}
+
+.preview-q-stem {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #0D0D0D;
+  font-weight: 500;
+  flex: 1;
+}
+
+.preview-q-pts {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: #AAA;
+  flex-shrink: 0;
+}
+
+.preview-options {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 10px 0 10px 32px;
+}
+
+.preview-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: #333;
+  line-height: 1.5;
+}
+
+.preview-option-letter {
+  width: 20px; height: 20px;
+  min-width: 20px;
+  border: 1px solid #DDD;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.preview-option.correct .preview-option-letter {
+  background: #2E7D47;
+  border-color: #2E7D47;
+  color: white;
+}
+.preview-option.correct .preview-option-text {
+  color: #2E7D47;
+  font-weight: 500;
+}
+
+.preview-tf-options {
+  display: flex;
+  gap: 12px;
+  margin: 10px 0 10px 32px;
+}
+
+.preview-tf-btn {
+  padding: 6px 20px;
+  border: 1px solid #DDD;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #888;
+}
+.preview-tf-btn.correct-true { border-color: #2E7D47; color: #2E7D47; font-weight: 500; }
+.preview-tf-btn.correct-false { border-color: #B03030; color: #B03030; font-weight: 500; }
+
+.preview-answer-line {
+  margin: 10px 0 4px 32px;
+  border-bottom: 1px solid #DDD;
+  height: 22px;
+}
+
+.preview-answer-key {
+  font-size: 12px;
+  color: #2E7D47;
+  font-style: italic;
+  margin-left: 32px;
+  margin-top: 2px;
+}
+
+.preview-matching {
+  margin: 10px 0 10px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preview-match-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.preview-match-col {
+  flex: 1;
+  padding: 5px 10px;
+  background: #F5F5F3;
+  border: 1px solid #E5E5E5;
+  border-radius: 4px;
+}
+
+.preview-match-blank {
+  flex: 1;
+  border-bottom: 1px solid #DDD;
+  height: 18px;
+}
+
+.preview-match-answer {
+  flex: 1;
+  color: #2E7D47;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 8px;
+}
+
+.preview-match-arrow { color: #CCC; font-size: 11px; }
+
+.preview-explanation {
+  margin: 8px 0 0 32px;
+  padding: 7px 12px;
+  background: #F0FFF4;
+  border-left: 2px solid #2E7D47;
+  font-size: 12px;
+  color: #2E7D47;
+  font-style: italic;
+  border-radius: 0 4px 4px 0;
+}
+
+.preview-explanation-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 2px;
+  font-style: normal;
+}
+
+/* Empty preview */
+.preview-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 80px 40px;
+  text-align: center;
+  color: var(--white-dim);
+}
+
+
 .export-modal-overlay {
   position: fixed;
   inset: 0;
@@ -2938,6 +3395,31 @@ body::after {
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- ============================================================
+     PREVIEW PAGE
+     ============================================================ -->
+<div id="page-preview" class="page">
+  <header class="preview-topbar">
+    <div class="preview-topbar-left">
+      <button class="btn-preview-back" onclick="closePreview()">← Back to Editor</button>
+      <div style="width:1px;height:20px;background:var(--black-border);"></div>
+      <span class="preview-title" id="preview-topbar-title">Preview</span>
+    </div>
+    <div class="preview-mode-tabs">
+      <button class="preview-mode-tab active" id="preview-tab-student"
+              onclick="switchPreviewMode('student')">Student</button>
+      <button class="preview-mode-tab" id="preview-tab-teacher"
+              onclick="switchPreviewMode('teacher')">Teacher Key</button>
+    </div>
+    <button class="btn-builder-action primary" onclick="closePreview();builderExport()">📄 Export PDF</button>
+  </header>
+  <div class="preview-body">
+    <div class="preview-paper" id="preview-paper">
+      <!-- Populated by JS -->
+    </div>
   </div>
 </div>
 
@@ -4425,8 +4907,192 @@ function closeModal(id) {
 // ============================================================
 // BUILDER ACTIONS (Stubs for later steps)
 // ============================================================
+// ============================================================
+// PREVIEW MODE
+// ============================================================
+let _previewMode = 'student'; // 'student' | 'teacher'
+
 function builderPreview() {
-  showToast('Preview coming soon', 'info');
+  if (!builder.sections.length) {
+    showToast('Add at least one section first', 'error');
+    return;
+  }
+  _previewMode = 'student';
+  switchPreviewMode('student');
+  renderPreview();
+  showPage('preview');
+}
+
+function closePreview() {
+  showPage('builder');
+}
+
+function switchPreviewMode(mode) {
+  _previewMode = mode;
+  document.getElementById('preview-tab-student').classList.toggle('active', mode === 'student');
+  document.getElementById('preview-tab-teacher').classList.toggle('active', mode === 'teacher');
+  renderPreview();
+}
+
+function renderPreview() {
+  const isTeacher = _previewMode === 'teacher';
+  const letters   = ['A','B','C','D','E','F'];
+  const meta      = builder.meta || {};
+  const title     = builder.title || 'Untitled Exam';
+
+  document.getElementById('preview-topbar-title').textContent = title;
+
+  const metaParts = [
+    meta.subject && `<span>${escHtml(meta.subject)}</span>`,
+    meta.level   && `<span>${escHtml(meta.level)}</span>`,
+    meta.topic   && `<span>${escHtml(meta.topic)}</span>`
+  ].filter(Boolean).join('<span class="preview-meta-sep">·</span>');
+
+  const contextParts = [
+    meta.book && `Book: ${escHtml(meta.book)}`,
+    meta.unit && escHtml(meta.unit)
+  ].filter(Boolean).join('  |  ');
+
+  let qCounter = 0;
+  const sectionsHtml = builder.sections.map(sec => {
+    const blocksHtml = (sec.blocks || []).map(block => {
+      if (block.type === 'question') qCounter++;
+      return buildPreviewBlock(block, isTeacher, letters, qCounter);
+    }).join('');
+
+    return `
+      <div class="preview-section">
+        <div class="preview-section-header">
+          <span class="preview-section-icon">${getSectionIcon(sec.type)}</span>
+          <span class="preview-section-name">${escHtml(sec.title || '')}</span>
+        </div>
+        ${blocksHtml || '<div style="color:#AAA;font-size:12px;padding:8px 0;">No blocks in this section</div>'}
+      </div>`;
+  }).join('');
+
+  document.getElementById('preview-paper').innerHTML = `
+    <div class="preview-cover">
+      <div class="preview-cover-top">
+        <div class="preview-exam-title">${escHtml(title)}</div>
+        <div class="preview-version-badge ${isTeacher ? 'teacher' : 'student'}">
+          ${isTeacher ? 'Teacher Key' : 'Student Copy'}
+        </div>
+      </div>
+      ${metaParts ? `<div class="preview-meta-row">${metaParts}</div>` : ''}
+      ${contextParts ? `<div class="preview-context">${contextParts}</div>` : ''}
+      ${!isTeacher ? `
+      <div class="preview-info-row">
+        <div class="preview-info-field">
+          <span class="preview-info-label">Name</span>
+          <div class="preview-info-line"></div>
+        </div>
+        <div class="preview-info-field">
+          <span class="preview-info-label">Date</span>
+          <div class="preview-info-line"></div>
+        </div>
+        <div class="preview-info-field">
+          <span class="preview-info-label">Score</span>
+          <div class="preview-info-line"></div>
+        </div>
+      </div>` : ''}
+    </div>
+    <div class="preview-sections">${sectionsHtml}</div>`;
+}
+
+function buildPreviewBlock(block, isTeacher, letters, qNum) {
+  switch(block.type) {
+    case 'instruction':
+      return `<div class="preview-instruction">${escHtml(block.text || '')}</div>`;
+
+    case 'passage':
+      return `
+        <div class="preview-passage">
+          ${block.title ? `<div class="preview-passage-title">${escHtml(block.title)}</div>` : ''}
+          <div class="preview-passage-text">${escHtml(block.text || '')}</div>
+        </div>`;
+
+    case 'divider':
+      return `<hr class="preview-divider">`;
+
+    case 'question':
+      return buildPreviewQuestion(block, isTeacher, letters, qNum);
+
+    default: return '';
+  }
+}
+
+function buildPreviewQuestion(block, isTeacher, letters, qNum) {
+  const qtype = block.qtype || 'mcq';
+  let answerHtml = '';
+
+  if (qtype === 'mcq') {
+    answerHtml = `<div class="preview-options">` +
+      (block.options || []).map((opt, i) => `
+        <div class="preview-option ${isTeacher && i === block.correct_index ? 'correct' : ''}">
+          <div class="preview-option-letter">${letters[i]}</div>
+          <div class="preview-option-text">${escHtml(opt)}</div>
+        </div>`).join('') + `</div>`;
+
+  } else if (qtype === 'true_false') {
+    const ca = block.correct_answer;
+    answerHtml = `
+      <div class="preview-tf-options">
+        <div class="preview-tf-btn ${isTeacher && ca==='true' ? 'correct-true' : ''}">✓ True</div>
+        <div class="preview-tf-btn ${isTeacher && ca==='false' ? 'correct-false' : ''}">✗ False</div>
+      </div>`;
+
+  } else if (qtype === 'short_answer' || qtype === 'fill_blank') {
+    answerHtml = `<div class="preview-answer-line"></div>`;
+    if (isTeacher && block.correct_answer)
+      answerHtml += `<div class="preview-answer-key">▸ ${escHtml(block.correct_answer)}</div>`;
+
+  } else if (qtype === 'matching') {
+    answerHtml = `<div class="preview-matching">` +
+      (block.pairs || []).map(p => `
+        <div class="preview-match-row">
+          <div class="preview-match-col">${escHtml(p[0] || '')}</div>
+          <span class="preview-match-arrow">→</span>
+          ${isTeacher
+            ? `<div class="preview-match-answer">${escHtml(p[1] || '')}</div>`
+            : `<div class="preview-match-blank"></div>`}
+        </div>`).join('') + `</div>`;
+
+  } else if (qtype === 'ordering') {
+    const items = block.items || [];
+    const display = isTeacher ? items : [...items].sort(() => Math.random() - 0.5);
+    answerHtml = `<div class="preview-matching">` +
+      display.map((item, i) => `
+        <div class="preview-match-row">
+          <span style="font-family:var(--font-mono);font-size:10px;color:#AAA;min-width:16px;">${i+1}.</span>
+          <div class="preview-match-col">${escHtml(item)}</div>
+        </div>`).join('') + `</div>`;
+
+  } else if (qtype === 'multiple_select') {
+    const correct = block.correct_indices || [];
+    answerHtml = `<div class="preview-options">` +
+      (block.options || []).map((opt, i) => `
+        <div class="preview-option ${isTeacher && correct.includes(i) ? 'correct' : ''}">
+          <div class="preview-option-letter" style="border-radius:3px;">${letters[i]}</div>
+          <div class="preview-option-text">${escHtml(opt)}</div>
+        </div>`).join('') + `</div>`;
+  }
+
+  const expHtml = isTeacher && block.explanation
+    ? `<div class="preview-explanation">
+        <span class="preview-explanation-label">Explanation</span>
+        ${escHtml(block.explanation)}
+       </div>` : '';
+
+  return `
+    <div class="preview-question">
+      <div class="preview-q-header">
+        <span class="preview-q-num">Q${qNum}</span>
+        <span class="preview-q-stem">${escHtml(block.stem || '')}</span>
+        <span class="preview-q-pts">${block.points || 1}pt</span>
+      </div>
+      ${answerHtml}
+      ${expHtml}
+    </div>`;
 }
 function builderExport() {
   if (!builder.sections.length) {
