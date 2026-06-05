@@ -5738,10 +5738,26 @@ function openBlockPicker(e, secId) {
   e.stopPropagation();
   _pickerTargetSection = secId;
   const picker = document.getElementById('block-type-picker');
-  const rect = e.target.getBoundingClientRect();
-  picker.style.top  = (rect.bottom + 8) + 'px';
-  picker.style.left = rect.left + 'px';
   picker.classList.add('open');
+
+  const rect        = e.target.getBoundingClientRect();
+  const pickerH     = picker.offsetHeight || 280;
+  const pickerW     = picker.offsetWidth  || 210;
+  const vw          = window.innerWidth;
+  const vh          = window.innerHeight;
+
+  // Vertical: open below unless not enough space
+  let top = rect.bottom + 8;
+  if (top + pickerH > vh - 16) top = rect.top - pickerH - 8;
+  if (top < 8) top = 8;
+
+  // Horizontal: don't overflow right edge
+  let left = rect.left;
+  if (left + pickerW > vw - 16) left = vw - pickerW - 16;
+  if (left < 8) left = 8;
+
+  picker.style.top  = top  + 'px';
+  picker.style.left = left + 'px';
 }
 
 function closeAllPickers() {
