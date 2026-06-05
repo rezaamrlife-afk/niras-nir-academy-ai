@@ -2277,7 +2277,231 @@ body::after {
 }
 .explanation-input::placeholder { color: rgba(158,154,148,0.3); }
 
-/* ——— ADD BLOCK BAR ——— */
+/* ——— BLOCK: WRITING TASK ——— */
+.block-writing {
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-left: 3px solid #6DBF7E;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.block-writing-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--black-border);
+  background: rgba(109,191,126,0.04);
+}
+
+.block-writing-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6DBF7E;
+}
+
+.block-writing-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.writing-wordlimit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--white-dim);
+}
+
+.writing-wordlimit-input {
+  width: 70px;
+  background: var(--black-soft);
+  border: 1px solid var(--black-border);
+  border-radius: 5px;
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 4px 8px;
+  outline: none;
+  text-align: center;
+}
+.writing-wordlimit-input:focus { border-color: var(--gold-dim); }
+
+.writing-task-select {
+  background: var(--black-soft);
+  border: 1px solid var(--black-border);
+  border-radius: 5px;
+  color: var(--white-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 4px 8px;
+  outline: none;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.writing-task-select option { background: var(--black-card); text-transform: none; }
+
+.block-writing-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.writing-prompt-textarea {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: var(--text-body-lg);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-relaxed);
+  width: 100%;
+  resize: none;
+  min-height: 60px;
+}
+.writing-prompt-textarea::placeholder { color: rgba(155,150,144,0.4); }
+
+.writing-instructions-textarea {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--black-border);
+  border-radius: 6px;
+  outline: none;
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  line-height: var(--leading-relaxed);
+  width: 100%;
+  resize: none;
+  min-height: 48px;
+  padding: 8px 10px;
+}
+.writing-instructions-textarea::placeholder { color: rgba(155,150,144,0.35); }
+.writing-instructions-textarea:focus { border-color: var(--black-border); outline: none; }
+
+/* Rubric */
+.writing-rubric-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 0 4px;
+  border-top: 1px solid var(--black-border);
+}
+
+.rubric-toggle-btn {
+  width: 32px; height: 18px;
+  background: var(--black-border);
+  border-radius: 10px;
+  position: relative;
+  transition: background var(--transition);
+  flex-shrink: 0;
+}
+.rubric-toggle-btn::after {
+  content: '';
+  position: absolute;
+  width: 12px; height: 12px;
+  background: var(--white-dim);
+  border-radius: 50%;
+  top: 3px; left: 3px;
+  transition: all var(--transition);
+}
+.rubric-toggle-btn.on { background: #6DBF7E; }
+.rubric-toggle-btn.on::after { left: 17px; background: white; }
+
+.rubric-toggle-label {
+  font-size: var(--text-body-sm);
+  color: var(--white-dim);
+  font-weight: var(--weight-medium);
+}
+
+.writing-rubric {
+  background: rgba(109,191,126,0.04);
+  border: 1px solid rgba(109,191,126,0.2);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+.writing-rubric.visible { display: flex; }
+
+.rubric-header {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6DBF7E;
+  margin-bottom: 4px;
+}
+
+.rubric-criterion-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rubric-criterion-name {
+  flex: 1;
+  font-size: var(--text-body-sm);
+  color: var(--white);
+  font-weight: var(--weight-medium);
+}
+
+.rubric-criterion-score {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.rubric-score-input {
+  width: 52px;
+  background: var(--black-soft);
+  border: 1px solid var(--black-border);
+  border-radius: 5px;
+  color: #6DBF7E;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: center;
+  padding: 4px 6px;
+  outline: none;
+}
+.rubric-score-input:focus { border-color: #6DBF7E; }
+
+.rubric-score-label {
+  font-size: 11px;
+  color: var(--white-muted);
+}
+
+.rubric-total-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid rgba(109,191,126,0.2);
+  font-size: var(--text-body-sm);
+}
+.rubric-total-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--white-muted);
+}
+.rubric-total-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: #6DBF7E;
+  font-weight: var(--weight-medium);
+}
 .add-block-bar {
   display: flex;
   align-items: center;
@@ -4402,6 +4626,13 @@ body::after {
       <div class="picker-item-desc">MCQ, T/F, Short Answer…</div>
     </div>
   </div>
+  <div class="picker-item" onclick="pickerAddBlock('writing_task')">
+    <div class="picker-item-icon">✍️</div>
+    <div class="picker-item-info">
+      <div class="picker-item-name">Writing Task</div>
+      <div class="picker-item-desc">Prompt + rubric + word limit</div>
+    </div>
+  </div>
   <div class="picker-item" onclick="pickerAddBlock('instruction')">
     <div class="picker-item-icon">📌</div>
     <div class="picker-item-info">
@@ -5600,6 +5831,9 @@ function buildBlockContent(block, secId, bi, qNum) {
           <div class="block-divider-line"></div>
         </div>`;
 
+    case 'writing_task':
+      return buildWritingTaskContent(block, secId);
+
     case 'question':
       return buildQuestionContent(block, secId, qNum);
 
@@ -5611,6 +5845,110 @@ function buildBlockContent(block, secId, bi, qNum) {
 // ============================================================
 // QUESTION BLOCK CONTENT
 // ============================================================
+// ============================================================
+// WRITING TASK BLOCK
+// ============================================================
+function buildWritingTaskContent(block, secId) {
+  const rubricOn = block.rubric_on || false;
+  const rubric   = block.rubric || [
+    { name: 'Task Achievement',     score: 9 },
+    { name: 'Coherence & Cohesion', score: 9 },
+    { name: 'Lexical Resource',     score: 9 },
+    { name: 'Grammatical Range',    score: 9 }
+  ];
+  const rubricTotal = rubric.reduce((s, r) => s + (r.score || 0), 0);
+
+  const taskTypes = [
+    { value: 'task1',    label: 'Task 1' },
+    { value: 'task2',    label: 'Task 2' },
+    { value: 'essay',    label: 'Essay' },
+    { value: 'letter',   label: 'Letter' },
+    { value: 'report',   label: 'Report' },
+    { value: 'custom',   label: 'Custom' },
+  ];
+  const taskOptions = taskTypes.map(t =>
+    `<option value="${t.value}" ${block.task_type===t.value?'selected':''}>${t.label}</option>`
+  ).join('');
+
+  const rubricRows = rubric.map((r, i) => `
+    <div class="rubric-criterion-row">
+      <span class="rubric-criterion-name">${escHtml(r.name)}</span>
+      <div class="rubric-criterion-score">
+        <input class="rubric-score-input" type="number" min="0" max="100"
+          value="${r.score}"
+          oninput="updateRubricScore('${secId}','${block.id}',${i},+this.value)"
+          title="Score for ${escHtml(r.name)}">
+        <span class="rubric-score-label">pts</span>
+      </div>
+    </div>`).join('');
+
+  return `
+    <div class="block-writing">
+      <div class="block-writing-header">
+        <span class="block-writing-label">Writing Task</span>
+        <div class="block-writing-meta">
+          <select class="writing-task-select"
+            onchange="updateBlockField('${secId}','${block.id}','task_type',this.value)">
+            ${taskOptions}
+          </select>
+          <div class="writing-wordlimit-row">
+            <input class="writing-wordlimit-input" type="number" min="0" max="2000"
+              value="${block.word_limit || 250}"
+              oninput="updateBlockField('${secId}','${block.id}','word_limit',+this.value)"
+              title="Word limit">
+            <span>words</span>
+          </div>
+        </div>
+      </div>
+      <div class="block-writing-body">
+        <textarea class="writing-prompt-textarea" rows="3"
+          placeholder="Write the task prompt here…"
+          oninput="updateBlockField('${secId}','${block.id}','prompt',this.value);autoResize(this)"
+        >${escHtml(block.prompt || '')}</textarea>
+        <textarea class="writing-instructions-textarea" rows="2"
+          placeholder="Additional instructions (optional)…"
+          oninput="updateBlockField('${secId}','${block.id}','instructions',this.value);autoResize(this)"
+        >${escHtml(block.instructions || '')}</textarea>
+
+        <!-- Rubric toggle -->
+        <div class="writing-rubric-toggle" onclick="toggleRubric('${secId}','${block.id}')">
+          <div class="rubric-toggle-btn ${rubricOn?'on':''}"></div>
+          <span class="rubric-toggle-label">Scoring Rubric</span>
+          ${rubricOn ? `<span style="font-family:var(--font-mono);font-size:10px;color:#6DBF7E;margin-left:auto;">${rubricTotal}pts total</span>` : ''}
+        </div>
+
+        <!-- Rubric criteria -->
+        <div class="writing-rubric ${rubricOn?'visible':''}">
+          <div class="rubric-header">Scoring Criteria</div>
+          ${rubricRows}
+          <div class="rubric-total-row">
+            <span class="rubric-total-label">Total</span>
+            <span class="rubric-total-value" id="rubric-total-${block.id}">${rubricTotal}pts</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function toggleRubric(secId, blockId) {
+  const b = getBlock(secId, blockId);
+  if (!b) return;
+  b.rubric_on = !b.rubric_on;
+  renderBuilder();
+  triggerAutosave();
+}
+
+function updateRubricScore(secId, blockId, idx, val) {
+  const b = getBlock(secId, blockId);
+  if (!b?.rubric) return;
+  b.rubric[idx].score = val;
+  // Update total live
+  const total = b.rubric.reduce((s, r) => s + (r.score || 0), 0);
+  const el = document.getElementById(`rubric-total-${blockId}`);
+  if (el) el.textContent = total + 'pts';
+  triggerAutosave();
+}
+
 function buildQuestionContent(block, secId, qNum) {
   const qTypes = ['mcq','true_false','short_answer','fill_blank','matching','ordering','multiple_select'];
   const qTypeLabels = { mcq:'MCQ', true_false:'True/False', short_answer:'Short Answer',
@@ -5918,6 +6256,20 @@ function addBlock(secId, type) {
     block.points        = 1;
     block.difficulty    = '';
   }
+  if (type === 'writing_task') {
+    block.task_type   = 'task2';
+    block.prompt      = '';
+    block.instructions= '';
+    block.word_limit  = 250;
+    block.rubric_on   = false;
+    block.rubric      = [
+      { name: 'Task Achievement',        score: 9 },
+      { name: 'Coherence & Cohesion',    score: 9 },
+      { name: 'Lexical Resource',        score: 9 },
+      { name: 'Grammatical Range',       score: 9 }
+    ];
+  }
+
   if (type === 'matching')  block.pairs = [['',''],['',''],['','']];
   if (type === 'ordering')  block.items = ['','',''];
   if (type === 'multiple_select') {
@@ -6234,11 +6586,36 @@ function buildPreviewBlock(block, isTeacher, letters, qNum) {
     case 'divider':
       return `<hr class="preview-divider">`;
 
+    case 'writing_task':
+      return buildPreviewWritingTask(block, isTeacher);
     case 'question':
       return buildPreviewQuestion(block, isTeacher, letters, qNum);
 
     default: return '';
   }
+}
+
+function buildPreviewWritingTask(block, isTeacher) {
+  const taskLabel = {task1:'Task 1',task2:'Task 2',essay:'Essay',letter:'Letter',report:'Report',custom:'Writing Task'}[block.task_type||'task2']||'Writing Task';
+  const rubric    = block.rubric || [];
+  const rubricOn  = block.rubric_on && rubric.length > 0;
+  const total     = rubric.reduce((s,r) => s+(r.score||0), 0);
+
+  return `
+    <div class="preview-passage" style="border-left-color:#2E7D47;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#2E7D47;">${taskLabel}</span>
+        ${block.word_limit ? `<span style="font-size:11px;color:#AAA;">Min. ${block.word_limit} words</span>` : ''}
+      </div>
+      <div style="font-size:14px;line-height:1.65;color:#0D0D0D;font-weight:500;margin-bottom:${block.instructions?'8px':'0'};">${escHtml(block.prompt||'[No prompt entered]')}</div>
+      ${block.instructions ? `<div style="font-size:13px;color:#666;font-style:italic;margin-top:6px;">${escHtml(block.instructions)}</div>` : ''}
+      ${rubricOn && isTeacher ? `
+        <div style="margin-top:12px;border:1px solid #E0F0E8;border-radius:6px;overflow:hidden;">
+          <div style="padding:6px 12px;background:#F0FFF4;font-size:10px;font-family:var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:#2E7D47;border-bottom:1px solid #E0F0E8;">Rubric — ${total}pts total</div>
+          ${rubric.map(r=>`<div style="display:flex;padding:7px 12px;border-bottom:0.5px solid #EEE;font-size:12px;"><span style="flex:1;color:#1A1A1A;">${escHtml(r.name)}</span><span style="color:#2E7D47;font-family:var(--font-mono);font-size:11px;">${r.score}pts</span></div>`).join('')}
+        </div>` : ''}
+      ${!isTeacher ? `<div style="margin-top:12px;border:1px dashed #DDD;border-radius:4px;height:100px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#CCC;">Student answer area</div>` : ''}
+    </div>`;
 }
 
 function buildPreviewQuestion(block, isTeacher, letters, qNum) {
@@ -6841,10 +7218,45 @@ function buildPrintBlock(block, isTeacher, letters, getQNum) {
       return `<div class="pdf-passage">${block.title?`<div class="pdf-passage-title">${escHtml(block.title)}</div>`:''}<div class="pdf-passage-text">${escHtml(block.text||'')}</div></div>`;
     case 'divider':
       return `<hr class="pdf-divider">`;
+    case 'writing_task':
+      return buildPrintWritingTask(block, isTeacher);
     case 'question':
       return buildPrintQuestion(block, isTeacher, letters, getQNum());
     default: return '';
   }
+}
+
+function buildPrintWritingTask(block, isTeacher) {
+  const taskLabel = {task1:'Task 1',task2:'Task 2',essay:'Essay',letter:'Letter',report:'Report',custom:'Writing Task'}[block.task_type||'task2']||'Writing Task';
+  const rubric    = block.rubric || [];
+  const rubricOn  = block.rubric_on && rubric.length > 0;
+  const total     = rubric.reduce((s,r) => s+(r.score||0), 0);
+
+  const rubricHtml = rubricOn && isTeacher ? `
+    <div style="margin-top:12pt;border:1pt solid #DDD;border-radius:4pt;overflow:hidden;">
+      <div style="padding:6pt 10pt;background:#F7F7F5;font-family:'DM Mono',monospace;font-size:8pt;letter-spacing:.1em;text-transform:uppercase;color:#666;border-bottom:1pt solid #DDD;">Scoring Rubric</div>
+      ${rubric.map(r=>`
+        <div style="display:flex;align-items:center;padding:6pt 10pt;border-bottom:0.5pt solid #EEE;font-size:9.5pt;">
+          <span style="flex:1;color:#1A1A1A;">${escHtml(r.name)}</span>
+          <span style="font-family:'DM Mono',monospace;font-size:9pt;color:#2E7D47;">${r.score}pts</span>
+        </div>`).join('')}
+      <div style="display:flex;justify-content:space-between;padding:7pt 10pt;background:#F7F7F5;font-family:'DM Mono',monospace;font-size:9pt;">
+        <span style="color:#666;letter-spacing:.08em;text-transform:uppercase;">Total</span>
+        <span style="color:#2E7D47;font-weight:500;">${total}pts</span>
+      </div>
+    </div>` : '';
+
+  return `
+    <div style="border:1pt solid #DDD;border-left:3pt solid #2E7D47;border-radius:3pt;padding:14pt 16pt;margin-bottom:16pt;page-break-inside:avoid;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10pt;">
+        <span style="font-family:'DM Mono',monospace;font-size:8.5pt;letter-spacing:.12em;text-transform:uppercase;color:#2E7D47;">${taskLabel}</span>
+        ${block.word_limit ? `<span style="font-family:'DM Mono',monospace;font-size:8pt;color:#AAA;">Min. ${block.word_limit} words</span>` : ''}
+      </div>
+      <div style="font-size:11pt;line-height:1.65;color:#0D0D0D;font-weight:500;margin-bottom:${block.instructions?'8pt':'0'};">${escHtml(block.prompt||'')}</div>
+      ${block.instructions ? `<div style="font-size:10pt;color:#555;font-style:italic;line-height:1.6;">${escHtml(block.instructions)}</div>` : ''}
+      ${rubricHtml}
+      ${!isTeacher ? `<div style="margin-top:14pt;border:1pt dashed #DDD;border-radius:3pt;height:180pt;"></div>` : ''}
+    </div>`;
 }
 
 function buildPrintQuestion(block, isTeacher, letters, qNum) {
