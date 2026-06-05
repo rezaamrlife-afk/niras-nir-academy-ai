@@ -2359,8 +2359,8 @@ body::after {
 // ============================================================
 // CONFIG — Supabase
 // ============================================================
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://bvwudwvikijmzbutpdtw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2d3Vkd3Zpa2lqbXpidXRwZHR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NDQ5MDgsImV4cCI6MjA5NjIyMDkwOH0.fv_hLbC10KB635C0mZi_lmjwniOtALAwgeK-nwaDtF0';
 
 // ============================================================
 // SUPABASE REST CLIENT (no CDN dependency)
@@ -2431,20 +2431,94 @@ const sb = {
     } catch { return false; }
   },
 
-  // Exams CRUD (will connect to Supabase table in Step 2)
+  // Exams CRUD
   async getExams() {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/exams?order=created_at.desc`, {
-      headers: this._headers()
-    });
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/exams?select=id,title,subject,level,export_count,created_at,updated_at&order=updated_at.desc`,
+      { headers: this._headers() }
+    );
     if (!r.ok) return [];
     return r.json();
   },
 
-  async deleteExam(id) {
+  async getExam(id) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/exams?id=eq.${id}&select=*`,
+      { headers: this._headers() }
+    );
+    if (!r.ok) return null;
+    const data = await r.json();
+    return data[0] || null;
+  },
+
+  async createExam(examData) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/exams`, {
+      method: 'POST',
+      headers: { ...this._headers(), 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        user_id:    this._user.id,
+        title:      examData.title      || 'Untitled Exam',
+        subject:    examData.subject    || null,
+        level:      examData.level      || null,
+        book_name:  examData.book_name  || null,
+        unit_lesson:examData.unit_lesson|| null,
+        topic:      examData.topic      || null,
+        content:    examData.content    || { sections: [] }
+      })
+    });
+    if (!r.ok) return null;
+    const data = await r.json();
+    return data[0] || null;
+  },
+
+  async updateExam(id, examData) {
+    const body = {};
+    if (examData.title      !== undefined) body.title       = examData.title;
+    if (examData.subject    !== undefined) body.subject     = examData.subject || null;
+    if (examData.level      !== undefined) body.level       = examData.level   || null;
+    if (examData.book_name  !== undefined) body.book_name   = examData.book_name  || null;
+    if (examData.unit_lesson!== undefined) body.unit_lesson = examData.unit_lesson|| null;
+    if (examData.topic      !== undefined) body.topic       = examData.topic   || null;
+    if (examData.content    !== undefined) body.content     = examData.content;
+
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/exams?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { ...this._headers(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify(body)
+    });
+    return r.ok;
+  },
+
+  async incrementExportCount(id) {
+    // Use rpc or a direct update — simple increment via PATCH
+    const exam = await this.getExam(id);
+    if (!exam) return;
     await fetch(`${SUPABASE_URL}/rest/v1/exams?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { ...this._headers(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        export_count: (exam.export_count || 0) + 1,
+        last_exported_at: new Date().toISOString()
+      })
+    });
+  },
+
+  async deleteExam(id) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/exams?id=eq.${id}`, {
       method: 'DELETE',
       headers: this._headers()
     });
+    return r.ok;
+  },
+
+  async getProfile() {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/profiles?id=eq.${this._user?.id}&select=*`,
+      { headers: this._headers() }
+    );
+    if (!r.ok) return null;
+    const data = await r.json();
+    return data[0] || null;
   }
 };
 
@@ -2568,12 +2642,20 @@ function renderExams(exams) {
   const list = document.getElementById('exam-list');
   document.getElementById('stat-total').textContent = exams.length;
 
+  const totalExports = exams.reduce((sum, e) => sum + (e.export_count || 0), 0);
+  document.getElementById('stat-exported').textContent = totalExports;
+
+  const lastDate = exams.length
+    ? formatDate(exams[0].updated_at)
+    : '—';
+  document.getElementById('stat-last').textContent = lastDate;
+
   if (exams.length === 0) {
     list.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">📋</div>
         <div class="empty-title">No exams yet</div>
-        <p class="empty-sub">Create your first exam to get started. Everything is block-based and fully flexible.</p>
+        <p class="empty-sub">Create your first exam. Everything is block-based and fully flexible.</p>
         <button class="btn-primary" onclick="showNewExamModal()">+ Create First Exam</button>
       </div>`;
     return;
@@ -2586,7 +2668,8 @@ function renderExams(exams) {
         <div class="exam-card-meta">
           ${ex.subject ? `<span class="meta-pill gold">${escHtml(ex.subject)}</span>` : ''}
           ${ex.level   ? `<span class="meta-pill">${escHtml(ex.level)}</span>` : ''}
-          <span class="meta-pill">${formatDate(ex.created_at)}</span>
+          <span class="meta-pill">${formatDate(ex.updated_at)}</span>
+          ${ex.export_count ? `<span class="meta-pill">📄 ${ex.export_count} export${ex.export_count>1?'s':''}</span>` : ''}
         </div>
       </div>
       <div class="exam-card-actions">
@@ -2733,18 +2816,57 @@ function triggerAutosave() {
   builder._dirty = true;
   clearTimeout(builder._autosaveTimer);
   builder._autosaveTimer = setTimeout(() => {
-    saveToMemory();
-  }, 800);
+    saveExam();
+  }, 900);
 }
 
-function saveToMemory() {
-  // In-memory save (Supabase in Step 3)
+async function saveExam() {
   const autosaveEl = document.getElementById('builder-autosave');
-  autosaveEl.textContent = 'Saved';
+  autosaveEl.textContent = 'Saving…';
   autosaveEl.classList.add('visible');
-  setTimeout(() => autosaveEl.classList.remove('visible'), 2000);
-  builder._dirty = false;
+
+  const payload = {
+    title:       builder.title || 'Untitled Exam',
+    subject:     builder.meta.subject    || null,
+    level:       builder.meta.level      || null,
+    book_name:   builder.meta.book      || null,
+    unit_lesson: builder.meta.unit       || null,
+    topic:       builder.meta.topic      || null,
+    content:     { sections: builder.sections }
+  };
+
+  // If Supabase not configured, skip silently
+  if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+    autosaveEl.textContent = 'Saved (local)';
+    setTimeout(() => autosaveEl.classList.remove('visible'), 2000);
+    builder._dirty = false;
+    return;
+  }
+
+  let ok = false;
+  if (builder.examId && builder.examId.includes('-')) {
+    // existing exam — update
+    ok = await sb.updateExam(builder.examId, payload);
+  } else {
+    // new exam — create
+    const created = await sb.createExam(payload);
+    if (created) {
+      builder.examId = created.id;
+      ok = true;
+    }
+  }
+
+  if (ok) {
+    autosaveEl.textContent = 'Saved';
+    builder._dirty = false;
+  } else {
+    autosaveEl.textContent = 'Save failed';
+  }
+  setTimeout(() => autosaveEl.classList.remove('visible'), 2200);
 }
+
+// Legacy alias
+function saveToMemory() { saveExam(); }
 
 // ============================================================
 // RENDER FULL BUILDER
@@ -3460,9 +3582,28 @@ function showNewExamModal() {
   openExamBuilder(null, { title: '', meta: {}, sections: [] });
 }
 
-function openExam(id) {
-  // In Step 3 this will load from Supabase
-  showToast('Loading from Supabase in Step 3 🔗', 'info');
+async function openExam(id) {
+  if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+    showToast('Add Supabase credentials first', 'error');
+    return;
+  }
+  showToast('Loading…', 'info');
+  const exam = await sb.getExam(id);
+  if (!exam) {
+    showToast('Could not load exam', 'error');
+    return;
+  }
+  openExamBuilder(exam.id, {
+    title:    exam.title,
+    meta: {
+      subject: exam.subject    || '',
+      level:   exam.level      || '',
+      book:    exam.book_name  || '',
+      unit:    exam.unit_lesson|| '',
+      topic:   exam.topic      || ''
+    },
+    sections: exam.content?.sections || []
+  });
 }
 
 // ============================================================
