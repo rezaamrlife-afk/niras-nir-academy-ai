@@ -1,0 +1,3620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIRAS AI — Nir Academy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+:root {
+  --black:       #0A0A0A;
+  --black-soft:  #111111;
+  --black-card:  #161616;
+  --black-border:#222222;
+  --gold:        #C9A84C;
+  --gold-light:  #E2C47A;
+  --gold-dim:    #8A6E30;
+  --white:       #F5F0E8;
+  --white-dim:   #9E9A94;
+  --blush:       #E8A0A0;
+  --red-err:     #E07070;
+
+  --font-display: 'Cormorant Garamond', serif;
+  --font-ui:      'Outfit', sans-serif;
+  --font-mono:    'DM Mono', monospace;
+
+  --radius:  8px;
+  --radius-lg: 14px;
+  --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   PAGES — show/hide
+   ============================================================ */
+.page { display: none; min-height: 100vh; }
+.page.active { display: flex; flex-direction: column; }
+
+/* ============================================================
+   GRAIN OVERLAY
+   ============================================================ */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.35;
+}
+
+/* ============================================================
+   ——————————————  LANDING PAGE  ——————————————
+   ============================================================ */
+#page-landing {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Background geometric */
+.landing-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.landing-bg::before {
+  content: '';
+  position: absolute;
+  top: -200px; right: -200px;
+  width: 700px; height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(201,168,76,0.07) 0%, transparent 70%);
+}
+.landing-bg::after {
+  content: '';
+  position: absolute;
+  bottom: -100px; left: -150px;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232,160,160,0.05) 0%, transparent 70%);
+}
+
+/* Grid lines decoration */
+.grid-lines {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(201,168,76,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(201,168,76,0.03) 1px, transparent 1px);
+  background-size: 80px 80px;
+  pointer-events: none;
+}
+
+/* ——— NAV ——— */
+.landing-nav {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 60px;
+  border-bottom: 1px solid rgba(201,168,76,0.1);
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.nav-logo-mark {
+  width: 36px; height: 36px;
+  border: 1.5px solid var(--gold);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.nav-logo-text {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--white);
+  letter-spacing: 0.02em;
+}
+
+.nav-logo-text span {
+  color: var(--gold);
+}
+
+.nav-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--gold-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border: 1px solid var(--black-border);
+  border-radius: 20px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.btn-ghost {
+  background: none;
+  border: none;
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  transition: color var(--transition);
+  letter-spacing: 0.02em;
+}
+.btn-ghost:hover { color: var(--white); }
+
+.btn-gold {
+  background: var(--gold);
+  border: none;
+  color: var(--black);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 9px 22px;
+  border-radius: var(--radius);
+  transition: background var(--transition), transform var(--transition);
+  letter-spacing: 0.03em;
+}
+.btn-gold:hover {
+  background: var(--gold-light);
+  transform: translateY(-1px);
+}
+
+/* ——— HERO ——— */
+.landing-hero {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 80px 40px 60px;
+  gap: 32px;
+}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+  padding: 6px 16px;
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 20px;
+  background: rgba(201,168,76,0.05);
+}
+
+.hero-eyebrow::before {
+  content: '';
+  width: 6px; height: 6px;
+  background: var(--gold);
+  border-radius: 50%;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(52px, 7vw, 96px);
+  font-weight: 300;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--white);
+  max-width: 900px;
+}
+
+.hero-title em {
+  font-style: italic;
+  color: var(--gold);
+}
+
+.hero-sub {
+  font-size: 16px;
+  color: var(--white-dim);
+  max-width: 520px;
+  line-height: 1.7;
+  font-weight: 300;
+}
+
+.hero-cta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn-primary {
+  background: var(--gold);
+  border: none;
+  color: var(--black);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 14px 32px;
+  border-radius: var(--radius);
+  transition: all var(--transition);
+  letter-spacing: 0.03em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-primary:hover {
+  background: var(--gold-light);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(201,168,76,0.25);
+}
+
+.btn-outline {
+  background: none;
+  border: 1px solid var(--black-border);
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 14px 32px;
+  border-radius: var(--radius);
+  transition: all var(--transition);
+  letter-spacing: 0.02em;
+}
+.btn-outline:hover {
+  border-color: var(--gold-dim);
+  color: var(--white);
+}
+
+/* ——— FEATURE CARDS ——— */
+.landing-features {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  border-top: 1px solid var(--black-border);
+  background: var(--black-border);
+}
+
+.feature-card {
+  background: var(--black-soft);
+  padding: 40px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: background var(--transition);
+}
+.feature-card:hover { background: var(--black-card); }
+
+.feature-icon {
+  width: 42px; height: 42px;
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+
+.feature-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--white);
+  letter-spacing: 0.01em;
+}
+
+.feature-desc {
+  font-size: 13.5px;
+  color: var(--white-dim);
+  line-height: 1.65;
+  font-weight: 300;
+}
+
+/* ============================================================
+   ——————————————  AUTH PAGE  ——————————————
+   ============================================================ */
+#page-auth {
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 60% at 50% 0%, rgba(201,168,76,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.auth-card {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 420px;
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius-lg);
+  padding: 48px 44px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  animation: auth-in 0.4s ease;
+}
+
+@keyframes auth-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.auth-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 36px;
+}
+
+.auth-logo-mark {
+  width: 48px; height: 48px;
+  border: 1.5px solid var(--gold);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.auth-logo-name {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--white);
+  letter-spacing: 0.02em;
+}
+
+/* Tab switcher */
+.auth-tabs {
+  display: flex;
+  background: var(--black-soft);
+  border-radius: var(--radius);
+  padding: 4px;
+  margin-bottom: 32px;
+  gap: 4px;
+}
+
+.auth-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all var(--transition);
+  letter-spacing: 0.02em;
+}
+.auth-tab.active {
+  background: var(--black-card);
+  color: var(--gold);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+/* Form */
+.auth-form { display: flex; flex-direction: column; gap: 18px; }
+
+.form-group { display: flex; flex-direction: column; gap: 7px; }
+
+.form-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--white-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.form-input {
+  background: var(--black-soft);
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius);
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: 14.5px;
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  width: 100%;
+}
+.form-input::placeholder { color: rgba(158,154,148,0.5); }
+.form-input:focus {
+  border-color: var(--gold-dim);
+  box-shadow: 0 0 0 3px rgba(201,168,76,0.1);
+}
+
+.form-error {
+  font-size: 12px;
+  color: var(--red-err);
+  display: none;
+}
+.form-error.visible { display: block; }
+
+.btn-auth {
+  background: var(--gold);
+  border: none;
+  color: var(--black);
+  font-family: var(--font-ui);
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 13px;
+  border-radius: var(--radius);
+  transition: all var(--transition);
+  letter-spacing: 0.04em;
+  margin-top: 6px;
+  width: 100%;
+  position: relative;
+}
+.btn-auth:hover {
+  background: var(--gold-light);
+  transform: translateY(-1px);
+}
+.btn-auth:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-auth .btn-loader {
+  display: none;
+  width: 16px; height: 16px;
+  border: 2px solid rgba(0,0,0,0.3);
+  border-top-color: var(--black);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.btn-auth.loading .btn-loader { display: block; }
+
+@keyframes spin {
+  to { transform: translateY(-50%) rotate(360deg); }
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--white-dim);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  margin: 4px 0;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--black-border);
+}
+
+/* Success message */
+.auth-success {
+  display: none;
+  text-align: center;
+  padding: 24px 0;
+}
+.auth-success.visible { display: block; }
+.auth-success-icon { font-size: 36px; margin-bottom: 12px; }
+.auth-success-text {
+  font-size: 14px;
+  color: var(--white-dim);
+  line-height: 1.6;
+}
+.auth-success-text strong { color: var(--gold); }
+
+/* Back link */
+.auth-back {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--white-dim);
+  cursor: pointer;
+  transition: color var(--transition);
+  z-index: 20;
+  background: none;
+  border: none;
+}
+.auth-back:hover { color: var(--white); }
+
+/* ============================================================
+   ——————————————  DASHBOARD PAGE  ——————————————
+   ============================================================ */
+#page-dashboard {
+  flex-direction: column;
+}
+
+/* Top bar */
+.dash-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 40px;
+  border-bottom: 1px solid var(--black-border);
+  background: var(--black-soft);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.dash-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.dash-logo-mark {
+  width: 30px; height: 30px;
+  border: 1px solid var(--gold);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--gold);
+  font-weight: 600;
+}
+.dash-logo-text {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--white);
+}
+.dash-logo-text span { color: var(--gold); }
+
+.dash-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dash-user-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 8px;
+  border: 1px solid var(--black-border);
+  border-radius: 20px;
+  font-size: 13px;
+  color: var(--white-dim);
+}
+
+.dash-avatar {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold-dim), var(--blush));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--black);
+}
+
+.btn-signout {
+  background: none;
+  border: 1px solid var(--black-border);
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  transition: all var(--transition);
+}
+.btn-signout:hover {
+  border-color: var(--red-err);
+  color: var(--red-err);
+}
+
+/* Dashboard body */
+.dash-body {
+  flex: 1;
+  padding: 48px 40px;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Header row */
+.dash-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 40px;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.dash-greeting {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dash-greeting-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--gold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.dash-greeting-title {
+  font-family: var(--font-display);
+  font-size: 38px;
+  font-weight: 400;
+  color: var(--white);
+  line-height: 1.1;
+}
+
+/* Stats row */
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.stat-card {
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--white-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 42px;
+  font-weight: 300;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.stat-sub {
+  font-size: 12px;
+  color: var(--white-dim);
+}
+
+/* Section header */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--white);
+}
+
+/* Exam list */
+.exam-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 80px 40px;
+  border: 1px dashed var(--black-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 48px;
+  opacity: 0.4;
+}
+
+.empty-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 400;
+  color: var(--white-dim);
+}
+
+.empty-sub {
+  font-size: 14px;
+  color: rgba(158,154,148,0.6);
+  max-width: 340px;
+  line-height: 1.6;
+}
+
+/* Exam card */
+.exam-card {
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius-lg);
+  padding: 22px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  transition: border-color var(--transition), background var(--transition);
+  cursor: pointer;
+}
+.exam-card:hover {
+  border-color: var(--gold-dim);
+  background: #1a1a1a;
+}
+
+.exam-card-info { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+
+.exam-card-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--white);
+  letter-spacing: 0.01em;
+}
+
+.exam-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.meta-pill {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--white-dim);
+  padding: 2px 10px;
+  border: 1px solid var(--black-border);
+  border-radius: 10px;
+  letter-spacing: 0.06em;
+}
+.meta-pill.gold { border-color: rgba(201,168,76,0.3); color: var(--gold-dim); }
+
+.exam-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.exam-card:hover .exam-card-actions { opacity: 1; }
+
+.btn-icon {
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  background: none;
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius);
+  color: var(--white-dim);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all var(--transition);
+}
+.btn-icon:hover {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+}
+.btn-icon.danger:hover {
+  border-color: var(--red-err);
+  color: var(--red-err);
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+#toast-container {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 12px 18px;
+  font-size: 13.5px;
+  color: var(--white);
+  max-width: 320px;
+  animation: toast-in 0.3s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.toast.error { border-left-color: var(--red-err); }
+.toast.success { border-left-color: #6DBF7E; }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+.hidden { display: none !important; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 900px) {
+  .landing-nav { padding: 20px 24px; }
+  .landing-features { grid-template-columns: 1fr; }
+  .dash-body { padding: 32px 20px; }
+  .dash-stats { grid-template-columns: 1fr 1fr; }
+  .auth-card { padding: 36px 28px; }
+}
+@media (max-width: 600px) {
+  .landing-nav { padding: 16px 20px; }
+  .nav-badge { display: none; }
+  .dash-stats { grid-template-columns: 1fr; }
+  .dash-topbar { padding: 14px 20px; }
+}
+
+/* ============================================================
+   ——————————————  EXAM BUILDER PAGE  ——————————————
+   ============================================================ */
+#page-builder {
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ——— BUILDER TOP BAR ——— */
+.builder-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 52px;
+  min-height: 52px;
+  border-bottom: 1px solid var(--black-border);
+  background: var(--black-soft);
+  z-index: 200;
+  gap: 16px;
+}
+
+.builder-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.builder-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  transition: color var(--transition);
+  white-space: nowrap;
+}
+.builder-back:hover { color: var(--white); }
+
+.builder-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--black-border);
+}
+
+.builder-exam-title-input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--white);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  min-width: 0;
+  flex: 1;
+  letter-spacing: 0.01em;
+}
+.builder-exam-title-input::placeholder { color: var(--white-dim); }
+
+.builder-autosave {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--white-dim);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.builder-autosave.visible { opacity: 1; }
+
+.builder-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-builder-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid var(--black-border);
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.btn-builder-action:hover {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+}
+.btn-builder-action.primary {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--black);
+  font-weight: 600;
+}
+.btn-builder-action.primary:hover {
+  background: var(--gold-light);
+  border-color: var(--gold-light);
+  color: var(--black);
+}
+
+/* ——— BUILDER LAYOUT ——— */
+.builder-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ——— SIDEBAR (METADATA) ——— */
+.builder-sidebar {
+  width: 260px;
+  min-width: 260px;
+  background: var(--black-soft);
+  border-right: 1px solid var(--black-border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar-section {
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid var(--black-border);
+}
+
+.sidebar-section-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  margin-bottom: 14px;
+}
+
+.sidebar-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+.sidebar-field:last-child { margin-bottom: 0; }
+
+.sidebar-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--white-dim);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.sidebar-input {
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-radius: 6px;
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+  width: 100%;
+  transition: border-color var(--transition);
+}
+.sidebar-input::placeholder { color: rgba(158,154,148,0.4); }
+.sidebar-input:focus { border-color: var(--gold-dim); }
+
+.sidebar-select {
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-radius: 6px;
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+  width: 100%;
+  cursor: pointer;
+  transition: border-color var(--transition);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239E9A94' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+.sidebar-select:focus { border-color: var(--gold-dim); }
+.sidebar-select option { background: var(--black-card); }
+
+/* Sections list in sidebar */
+.sidebar-sections-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar-section-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--transition);
+  font-size: 13px;
+  color: var(--white-dim);
+}
+.sidebar-section-item:hover { background: var(--black-card); color: var(--white); }
+.sidebar-section-item.active {
+  background: rgba(201,168,76,0.1);
+  color: var(--gold);
+}
+
+.sidebar-section-item-icon { font-size: 14px; }
+
+.btn-add-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: none;
+  border: 1px dashed var(--black-border);
+  border-radius: 6px;
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 8px 10px;
+  margin-top: 8px;
+  transition: all var(--transition);
+  text-align: left;
+}
+.btn-add-section:hover {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+}
+
+/* ——— EDITOR CANVAS ——— */
+.builder-canvas {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--black);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 24px 80px;
+}
+
+.canvas-inner {
+  width: 100%;
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Section header in canvas */
+.canvas-section {
+  margin-bottom: 8px;
+}
+
+.canvas-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0 8px;
+  border-bottom: 1px solid var(--black-border);
+  margin-bottom: 4px;
+  cursor: pointer;
+}
+
+.canvas-section-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  flex: 1;
+}
+
+.canvas-section-title-input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  flex: 1;
+  padding: 0;
+}
+.canvas-section-title-input::placeholder { color: var(--gold-dim); opacity: 0.5; }
+
+.canvas-section-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.canvas-section-header:hover .canvas-section-actions { opacity: 1; }
+
+.btn-section-action {
+  background: none;
+  border: none;
+  color: var(--white-dim);
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: color var(--transition);
+}
+.btn-section-action:hover { color: var(--white); }
+.btn-section-action.danger:hover { color: var(--red-err); }
+
+/* ——— BLOCKS ——— */
+.block-wrapper {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  padding: 3px 0;
+  border-radius: var(--radius);
+}
+
+.block-drag-handle {
+  width: 24px;
+  min-width: 24px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12px;
+  cursor: grab;
+  color: var(--black-border);
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity var(--transition), color var(--transition);
+}
+.block-wrapper:hover .block-drag-handle { opacity: 1; }
+.block-wrapper:hover .block-drag-handle:hover { color: var(--white-dim); }
+
+.block-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Block hover controls */
+.block-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 10px;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.block-wrapper:hover .block-controls { opacity: 1; }
+
+.btn-block-ctrl {
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  background: none;
+  border: 1px solid var(--black-border);
+  border-radius: 5px;
+  color: var(--white-dim);
+  cursor: pointer;
+  font-size: 11px;
+  transition: all var(--transition);
+}
+.btn-block-ctrl:hover { border-color: var(--gold-dim); color: var(--gold); }
+.btn-block-ctrl.danger:hover { border-color: var(--red-err); color: var(--red-err); }
+
+/* ——— BLOCK: INSTRUCTION ——— */
+.block-instruction {
+  background: rgba(201,168,76,0.05);
+  border: 1px solid rgba(201,168,76,0.15);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.block-instruction-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  margin-bottom: 6px;
+}
+
+.block-instruction-text {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.65;
+  width: 100%;
+  resize: none;
+  min-height: 36px;
+  font-weight: 300;
+}
+.block-instruction-text::placeholder { color: rgba(158,154,148,0.4); }
+
+/* ——— BLOCK: PASSAGE ——— */
+.block-passage {
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-left: 3px solid var(--gold-dim);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+}
+
+.block-passage-title-input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--gold);
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  width: 100%;
+  margin-bottom: 10px;
+  letter-spacing: 0.01em;
+}
+.block-passage-title-input::placeholder { color: rgba(201,168,76,0.3); }
+
+.block-passage-text {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  line-height: 1.8;
+  width: 100%;
+  resize: none;
+  min-height: 80px;
+  font-weight: 300;
+}
+.block-passage-text::placeholder { color: rgba(158,154,148,0.35); }
+
+/* ——— BLOCK: DIVIDER ——— */
+.block-divider {
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: default;
+}
+.block-divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--black-border);
+}
+.block-divider-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--black-border);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ——— BLOCK: QUESTION ——— */
+.block-question {
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color var(--transition);
+}
+.block-question:focus-within { border-color: rgba(201,168,76,0.3); }
+
+.block-question-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--black-border);
+  background: rgba(255,255,255,0.02);
+}
+
+.question-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--gold-dim);
+  min-width: 24px;
+  letter-spacing: 0.06em;
+}
+
+.question-type-badge {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--white-dim);
+  padding: 2px 8px;
+  border: 1px solid var(--black-border);
+  border-radius: 10px;
+}
+
+.question-type-select {
+  background: none;
+  border: none;
+  color: var(--white-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  cursor: pointer;
+  outline: none;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.question-type-select option { background: var(--black-card); text-transform: none; }
+
+.question-points-input {
+  margin-left: auto;
+  width: 52px;
+  background: none;
+  border: 1px solid var(--black-border);
+  border-radius: 5px;
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: center;
+  padding: 3px 6px;
+  outline: none;
+}
+.question-points-input:focus { border-color: var(--gold-dim); }
+
+.question-diff-select {
+  background: none;
+  border: 1px solid var(--black-border);
+  border-radius: 5px;
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  padding: 3px 6px;
+  outline: none;
+  cursor: pointer;
+}
+.question-diff-select option { background: var(--black-card); }
+
+.block-question-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+
+.question-stem {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: 14.5px;
+  line-height: 1.6;
+  width: 100%;
+  resize: none;
+  min-height: 38px;
+  font-weight: 400;
+}
+.question-stem::placeholder { color: rgba(158,154,148,0.4); }
+
+/* MCQ Options */
+.mcq-options { display: flex; flex-direction: column; gap: 6px; }
+
+.mcq-option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mcq-option-letter {
+  width: 26px; height: 26px;
+  min-width: 26px;
+  border: 1.5px solid var(--black-border);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--white-dim);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.mcq-option-letter.correct {
+  border-color: #6DBF7E;
+  color: #6DBF7E;
+  background: rgba(109,191,126,0.1);
+}
+
+.mcq-option-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  border-bottom: 1px solid transparent;
+  padding: 4px 0;
+  transition: border-color var(--transition);
+}
+.mcq-option-input:focus { border-bottom-color: var(--black-border); }
+.mcq-option-input::placeholder { color: rgba(158,154,148,0.35); }
+
+.btn-remove-option {
+  background: none;
+  border: none;
+  color: var(--black-border);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  transition: color var(--transition);
+  line-height: 1;
+}
+.btn-remove-option:hover { color: var(--red-err); }
+
+.btn-add-option {
+  background: none;
+  border: 1px dashed var(--black-border);
+  border-radius: 5px;
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 5px 12px;
+  margin-top: 4px;
+  align-self: flex-start;
+  transition: all var(--transition);
+}
+.btn-add-option:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+/* True/False */
+.tf-options { display: flex; gap: 10px; }
+
+.tf-option {
+  flex: 1;
+  padding: 9px;
+  border: 1.5px solid var(--black-border);
+  border-radius: var(--radius);
+  text-align: center;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: all var(--transition);
+  color: var(--white-dim);
+}
+.tf-option:hover { border-color: var(--gold-dim); color: var(--gold); }
+.tf-option.correct-true { border-color: #6DBF7E; color: #6DBF7E; background: rgba(109,191,126,0.08); }
+.tf-option.correct-false { border-color: var(--red-err); color: var(--red-err); background: rgba(224,112,112,0.08); }
+
+/* Short Answer */
+.short-answer-box {
+  background: var(--black-soft);
+  border: 1px dashed var(--black-border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  color: var(--white-dim);
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.short-answer-field {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-style: italic;
+  flex: 1;
+}
+.short-answer-field::placeholder { color: rgba(158,154,148,0.35); }
+
+/* Fill in blank */
+.fib-answer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fib-label {
+  font-size: 11.5px;
+  color: var(--white-dim);
+  white-space: nowrap;
+}
+.fib-answer-input {
+  flex: 1;
+  background: var(--black-soft);
+  border: 1px solid var(--black-border);
+  border-radius: 5px;
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  padding: 6px 10px;
+  outline: none;
+}
+.fib-answer-input:focus { border-color: var(--gold-dim); }
+.fib-answer-input::placeholder { color: rgba(158,154,148,0.35); }
+
+/* Matching */
+.matching-rows { display: flex; flex-direction: column; gap: 6px; }
+.matching-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.matching-col-input {
+  flex: 1;
+  background: var(--black-soft);
+  border: 1px solid var(--black-border);
+  border-radius: 5px;
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  padding: 6px 10px;
+  outline: none;
+}
+.matching-col-input:focus { border-color: var(--gold-dim); }
+.matching-arrow { color: var(--gold-dim); font-size: 14px; }
+
+/* Ordering */
+.ordering-items { display: flex; flex-direction: column; gap: 6px; }
+.ordering-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ordering-handle {
+  color: var(--black-border);
+  font-size: 12px;
+  cursor: grab;
+}
+.ordering-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--gold-dim);
+  min-width: 18px;
+}
+.ordering-item-input {
+  flex: 1;
+  background: var(--black-soft);
+  border: 1px solid var(--black-border);
+  border-radius: 5px;
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  padding: 6px 10px;
+  outline: none;
+}
+.ordering-item-input:focus { border-color: var(--gold-dim); }
+
+/* Multiple select */
+.ms-options { display: flex; flex-direction: column; gap: 6px; }
+.ms-option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ms-checkbox {
+  width: 16px; height: 16px;
+  min-width: 16px;
+  border: 1.5px solid var(--black-border);
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition);
+  font-size: 10px;
+}
+.ms-checkbox.checked { border-color: #6DBF7E; background: rgba(109,191,126,0.15); color: #6DBF7E; }
+
+/* Explanation row */
+.question-explanation-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--black-border);
+}
+.explanation-label {
+  font-size: 11px;
+  color: var(--gold-dim);
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding-top: 6px;
+}
+.explanation-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-style: italic;
+  resize: none;
+  min-height: 28px;
+  line-height: 1.5;
+}
+.explanation-input::placeholder { color: rgba(158,154,148,0.3); }
+
+/* ——— ADD BLOCK BAR ——— */
+.add-block-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0 4px;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.add-block-bar:hover { opacity: 1; }
+.canvas-section:hover .add-block-bar { opacity: 0.6; }
+.canvas-section:hover .add-block-bar:hover { opacity: 1; }
+
+.add-block-bar-line {
+  flex: 1;
+  height: 1px;
+  background: var(--black-border);
+}
+
+.btn-add-block {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius);
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  cursor: pointer;
+  padding: 5px 12px;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.btn-add-block:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+/* ——— BLOCK TYPE PICKER ——— */
+.block-type-picker {
+  position: fixed;
+  z-index: 500;
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+  padding: 8px;
+  min-width: 200px;
+  animation: picker-in 0.15s ease;
+  display: none;
+}
+.block-type-picker.open { display: block; }
+
+@keyframes picker-in {
+  from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.picker-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  padding: 4px 10px 8px;
+}
+
+.picker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--transition);
+  color: var(--white-dim);
+  font-size: 13px;
+}
+.picker-item:hover { background: var(--black-soft); color: var(--white); }
+
+.picker-item-icon {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--black-soft);
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.picker-item-info { display: flex; flex-direction: column; gap: 1px; }
+.picker-item-name { font-size: 13px; color: var(--white); font-weight: 500; }
+.picker-item-desc { font-size: 11px; color: var(--white-dim); }
+
+/* ——— SECTION TYPE PICKER ——— */
+.section-type-picker {
+  position: fixed;
+  z-index: 500;
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+  padding: 8px;
+  min-width: 220px;
+  animation: picker-in 0.15s ease;
+  display: none;
+}
+.section-type-picker.open { display: block; }
+
+/* ——— EMPTY CANVAS ——— */
+.canvas-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 80px 40px;
+  text-align: center;
+  color: var(--white-dim);
+}
+.canvas-empty-icon { font-size: 40px; opacity: 0.3; }
+.canvas-empty-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--white-dim);
+  font-weight: 400;
+}
+.canvas-empty-sub { font-size: 13px; color: rgba(158,154,148,0.5); }
+
+/* ——— SECTION TYPE MODAL ——— */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fade-in 0.2s ease;
+  display: none;
+}
+.modal-overlay.open { display: flex; }
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal-box {
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  max-width: 480px;
+  width: 90%;
+  animation: modal-in 0.2s ease;
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.96) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 6px;
+}
+.modal-sub {
+  font-size: 13px;
+  color: var(--white-dim);
+  margin-bottom: 24px;
+}
+
+.modal-section-types {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.modal-section-type {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 14px;
+  border: 1.5px solid var(--black-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.modal-section-type:hover {
+  border-color: var(--gold-dim);
+  background: rgba(201,168,76,0.05);
+}
+.modal-section-type.selected {
+  border-color: var(--gold);
+  background: rgba(201,168,76,0.08);
+}
+
+.modal-type-icon { font-size: 22px; }
+.modal-type-name { font-size: 13.5px; font-weight: 500; color: var(--white); }
+.modal-type-desc { font-size: 11.5px; color: var(--white-dim); line-height: 1.4; }
+
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.btn-modal-cancel {
+  background: none;
+  border: 1px solid var(--black-border);
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  cursor: pointer;
+  padding: 9px 20px;
+  border-radius: var(--radius);
+  transition: all var(--transition);
+}
+.btn-modal-cancel:hover { border-color: var(--white-dim); color: var(--white); }
+
+.btn-modal-confirm {
+  background: var(--gold);
+  border: none;
+  color: var(--black);
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 9px 20px;
+  border-radius: var(--radius);
+  transition: all var(--transition);
+}
+.btn-modal-confirm:hover { background: var(--gold-light); }
+
+@media (max-width: 768px) {
+  .builder-sidebar { display: none; }
+  .builder-canvas { padding: 24px 16px 60px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     LANDING PAGE
+     ============================================================ -->
+<div id="page-landing" class="page active">
+  <div class="landing-bg"></div>
+  <div class="grid-lines"></div>
+
+  <!-- Nav -->
+  <nav class="landing-nav">
+    <a href="#" class="nav-logo">
+      <div class="nav-logo-mark">N</div>
+      <span class="nav-logo-text">NIRAS <span>AI</span></span>
+      <span class="nav-badge">Beta</span>
+    </a>
+    <div class="nav-actions">
+      <span style="font-size:11px;color:var(--white-dim);font-family:var(--font-mono);letter-spacing:0.1em;text-transform:uppercase;opacity:0.6;">by Nir Academy</span>
+      <button class="btn-ghost" onclick="showPage('auth','login')">Sign In</button>
+      <button class="btn-gold" onclick="showPage('auth','signup')">Get Started</button>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="landing-hero">
+    <div class="hero-eyebrow">Professional Exam Authoring System</div>
+
+    <h1 class="hero-title">
+      Build world-class exams<br>
+      in <em>minutes</em>
+    </h1>
+
+    <p class="hero-sub">
+      NIRAS AI is a professional exam authoring system that enables educators to design,
+      structure, and export high-quality assessments with a fully flexible, block-based editor.
+    </p>
+
+    <div class="hero-cta">
+      <button class="btn-primary" onclick="showPage('auth','signup')">
+        Start Building
+        <span>→</span>
+      </button>
+      <button class="btn-outline" onclick="showPage('auth','login')">
+        Sign In
+      </button>
+    </div>
+  </section>
+
+  <!-- Feature strip -->
+  <div class="landing-features">
+    <div class="feature-card">
+      <div class="feature-icon">⬛</div>
+      <div class="feature-title">Block-Based Editor</div>
+      <p class="feature-desc">Every element — questions, passages, instructions — is a block. Arrange, reorder, and edit freely with a document-style interface.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📄</div>
+      <div class="feature-title">Professional PDF Export</div>
+      <p class="feature-desc">Generate student and teacher versions with clean typography, structured layout, and full print control.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎯</div>
+      <div class="feature-title">International Standards</div>
+      <p class="feature-desc">Reading, Writing, Speaking, and custom sections designed for IELTS, TOEFL, and institutional exam formats.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     AUTH PAGE
+     ============================================================ -->
+<div id="page-auth" class="page">
+  <div class="auth-bg"></div>
+
+  <button class="auth-back" onclick="showPage('landing')">
+    ← Back
+  </button>
+
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-mark">N</div>
+      <div class="auth-logo-name">NIRAS AI</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">Create Account</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="auth-login" class="auth-form">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="login-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-input" id="login-password" placeholder="••••••••" autocomplete="current-password">
+        <span class="form-error" id="login-error">Invalid email or password.</span>
+      </div>
+      <button class="btn-auth" id="btn-login" onclick="handleLogin()">
+        Sign In
+        <div class="btn-loader"></div>
+      </button>
+    </div>
+
+    <!-- Signup Form -->
+    <div id="auth-signup" class="auth-form hidden">
+      <div id="signup-success" class="auth-success">
+        <div class="auth-success-icon">✉️</div>
+        <div class="auth-success-text">
+          Check your email!<br>
+          <strong>Confirm your account</strong> to get started.
+        </div>
+      </div>
+      <div id="signup-fields">
+        <div class="auth-form">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" class="form-input" id="signup-name" placeholder="Dr. Niki Majidi" autocomplete="name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-input" id="signup-email" placeholder="you@example.com" autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-input" id="signup-password" placeholder="Min. 8 characters" autocomplete="new-password">
+            <span class="form-error" id="signup-error">Please check your details.</span>
+          </div>
+          <button class="btn-auth" id="btn-signup" onclick="handleSignup()">
+            Create Account
+            <div class="btn-loader"></div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     DASHBOARD PAGE
+     ============================================================ -->
+<div id="page-dashboard" class="page">
+  <!-- Top bar -->
+  <header class="dash-topbar">
+    <div class="dash-logo">
+      <div class="dash-logo-mark">N</div>
+      <span class="dash-logo-text">NIRAS <span>AI</span></span>
+    </div>
+    <div class="dash-topbar-right">
+      <div class="dash-user-pill">
+        <div class="dash-avatar" id="dash-avatar-letter">N</div>
+        <span id="dash-user-email">teacher@nir.ac</span>
+      </div>
+      <button class="btn-signout" onclick="handleSignOut()">Sign Out</button>
+    </div>
+  </header>
+
+  <!-- Body -->
+  <main class="dash-body">
+    <!-- Header -->
+    <div class="dash-header">
+      <div class="dash-greeting">
+        <span class="dash-greeting-eyebrow">Nir Academy — NIRAS AI</span>
+        <h1 class="dash-greeting-title">Your Exams</h1>
+      </div>
+      <button class="btn-primary" onclick="showNewExamModal()">
+        + New Exam
+      </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="dash-stats">
+      <div class="stat-card">
+        <span class="stat-label">Total Exams</span>
+        <span class="stat-value" id="stat-total">0</span>
+        <span class="stat-sub">created by you</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Exported</span>
+        <span class="stat-value" id="stat-exported">0</span>
+        <span class="stat-sub">PDF exports</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Last Active</span>
+        <span class="stat-value" style="font-size:22px;padding-top:8px;" id="stat-last">—</span>
+        <span class="stat-sub">most recent edit</span>
+      </div>
+    </div>
+
+    <!-- Exam list -->
+    <div class="section-header">
+      <h2 class="section-title">All Exams</h2>
+    </div>
+    <div class="exam-list" id="exam-list">
+      <!-- Populated by JS -->
+    </div>
+  </main>
+</div>
+
+<!-- ============================================================
+     EXAM BUILDER PAGE
+     ============================================================ -->
+<div id="page-builder" class="page">
+
+  <!-- Top bar -->
+  <header class="builder-topbar">
+    <div class="builder-topbar-left">
+      <button class="builder-back" onclick="exitBuilder()">← Dashboard</button>
+      <div class="builder-divider"></div>
+      <input class="builder-exam-title-input" id="builder-title-input"
+             placeholder="Untitled Exam" oninput="onExamTitleChange(this.value)">
+      <span class="builder-autosave" id="builder-autosave">Saved</span>
+    </div>
+    <div class="builder-topbar-right">
+      <button class="btn-builder-action" onclick="builderPreview()">👁 Preview</button>
+      <button class="btn-builder-action primary" onclick="builderExport()">📄 Export PDF</button>
+    </div>
+  </header>
+
+  <!-- Layout -->
+  <div class="builder-layout">
+
+    <!-- Sidebar: Metadata -->
+    <aside class="builder-sidebar">
+
+      <!-- Basic Info -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Exam Info</div>
+        <div class="sidebar-field">
+          <label class="sidebar-label">Subject</label>
+          <input class="sidebar-input" id="meta-subject" placeholder="e.g. English, IELTS" oninput="onMetaChange()">
+        </div>
+        <div class="sidebar-field">
+          <label class="sidebar-label">Level</label>
+          <select class="sidebar-select" id="meta-level" onchange="onMetaChange()">
+            <option value="">— Select —</option>
+            <option value="Beginner">Beginner</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+            <option value="Mixed">Mixed</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Educational Context -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Context (Optional)</div>
+        <div class="sidebar-field">
+          <label class="sidebar-label">Book Name</label>
+          <input class="sidebar-input" id="meta-book" placeholder="e.g. Headway Upper" oninput="onMetaChange()">
+        </div>
+        <div class="sidebar-field">
+          <label class="sidebar-label">Unit / Lesson</label>
+          <input class="sidebar-input" id="meta-unit" placeholder="e.g. Unit 4, Lesson 2" oninput="onMetaChange()">
+        </div>
+        <div class="sidebar-field">
+          <label class="sidebar-label">Topic</label>
+          <input class="sidebar-input" id="meta-topic" placeholder="e.g. Present Perfect" oninput="onMetaChange()">
+        </div>
+      </div>
+
+      <!-- Sections list -->
+      <div class="sidebar-section" style="flex:1;">
+        <div class="sidebar-section-title">Sections</div>
+        <div class="sidebar-sections-list" id="sidebar-sections-list">
+          <!-- populated by JS -->
+        </div>
+        <button class="btn-add-section" onclick="openAddSectionModal()">+ Add Section</button>
+      </div>
+
+    </aside>
+
+    <!-- Canvas -->
+    <div class="builder-canvas" id="builder-canvas">
+      <div class="canvas-inner" id="canvas-inner">
+        <div class="canvas-empty" id="canvas-empty">
+          <div class="canvas-empty-icon">📋</div>
+          <div class="canvas-empty-title">Start building your exam</div>
+          <p class="canvas-empty-sub">Add a section from the sidebar to begin</p>
+          <button class="btn-primary" style="margin-top:8px;" onclick="openAddSectionModal()">+ Add First Section</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Block type picker (floating) -->
+<div class="block-type-picker" id="block-type-picker">
+  <div class="picker-label">Add Block</div>
+  <div class="picker-item" onclick="pickerAddBlock('question')">
+    <div class="picker-item-icon">❓</div>
+    <div class="picker-item-info">
+      <div class="picker-item-name">Question</div>
+      <div class="picker-item-desc">MCQ, T/F, Short Answer…</div>
+    </div>
+  </div>
+  <div class="picker-item" onclick="pickerAddBlock('instruction')">
+    <div class="picker-item-icon">📌</div>
+    <div class="picker-item-info">
+      <div class="picker-item-name">Instruction</div>
+      <div class="picker-item-desc">Directions for students</div>
+    </div>
+  </div>
+  <div class="picker-item" onclick="pickerAddBlock('passage')">
+    <div class="picker-item-icon">📖</div>
+    <div class="picker-item-info">
+      <div class="picker-item-name">Passage</div>
+      <div class="picker-item-desc">Reading text with title</div>
+    </div>
+  </div>
+  <div class="picker-item" onclick="pickerAddBlock('divider')">
+    <div class="picker-item-icon">—</div>
+    <div class="picker-item-info">
+      <div class="picker-item-name">Divider</div>
+      <div class="picker-item-desc">Visual separator</div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Section Modal -->
+<div class="modal-overlay" id="modal-add-section">
+  <div class="modal-box">
+    <div class="modal-title">Add Section</div>
+    <p class="modal-sub">Choose the type of section to add to your exam.</p>
+    <div class="modal-section-types">
+      <div class="modal-section-type selected" data-type="questions" onclick="selectSectionType(this)">
+        <div class="modal-type-icon">❓</div>
+        <div class="modal-type-name">Questions</div>
+        <div class="modal-type-desc">General question section</div>
+      </div>
+      <div class="modal-section-type" data-type="reading" onclick="selectSectionType(this)">
+        <div class="modal-type-icon">📖</div>
+        <div class="modal-type-name">Reading</div>
+        <div class="modal-type-desc">Passage + linked questions</div>
+      </div>
+      <div class="modal-section-type" data-type="writing" onclick="selectSectionType(this)">
+        <div class="modal-type-icon">✍️</div>
+        <div class="modal-type-name">Writing</div>
+        <div class="modal-type-desc">Prompt, task, word limit</div>
+      </div>
+      <div class="modal-section-type" data-type="speaking" onclick="selectSectionType(this)">
+        <div class="modal-type-icon">🎤</div>
+        <div class="modal-type-name">Speaking</div>
+        <div class="modal-type-desc">Prompt card + questions</div>
+      </div>
+      <div class="modal-section-type" data-type="custom" onclick="selectSectionType(this)">
+        <div class="modal-type-icon">⚙️</div>
+        <div class="modal-type-name">Custom</div>
+        <div class="modal-type-desc">Flexible free section</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeModal('modal-add-section')">Cancel</button>
+      <button class="btn-modal-confirm" onclick="confirmAddSection()">Add Section</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+// ============================================================
+// CONFIG — Supabase
+// ============================================================
+const SUPABASE_URL = 'https://bvwudwvikijmzbutpdtw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2d3Vkd3Zpa2lqbXpidXRwZHR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NDQ5MDgsImV4cCI6MjA5NjIyMDkwOH0.fv_hLbC10KB635C0mZi_lmjwniOtALAwgeK-nwaDtF0';
+
+// ============================================================
+// SUPABASE REST CLIENT (no CDN dependency)
+// ============================================================
+const sb = {
+  _headers() {
+    const h = {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${this._token || SUPABASE_ANON_KEY}`
+    };
+    return h;
+  },
+
+  _token: null,
+  _user: null,
+
+  async signUp(email, password, name) {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+      method: 'POST',
+      headers: this._headers(),
+      body: JSON.stringify({ email, password, data: { full_name: name } })
+    });
+    return r.json();
+  },
+
+  async signIn(email, password) {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: this._headers(),
+      body: JSON.stringify({ email, password })
+    });
+    const data = await r.json();
+    if (data.access_token) {
+      this._token = data.access_token;
+      this._user = data.user;
+      localStorage.setItem('nir_exam_session', JSON.stringify({
+        token: data.access_token,
+        user: data.user,
+        expires_at: Date.now() + (data.expires_in * 1000)
+      }));
+    }
+    return data;
+  },
+
+  async signOut() {
+    await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+      method: 'POST',
+      headers: this._headers()
+    });
+    this._token = null;
+    this._user = null;
+    localStorage.removeItem('nir_exam_session');
+  },
+
+  restoreSession() {
+    try {
+      const raw = localStorage.getItem('nir_exam_session');
+      if (!raw) return false;
+      const s = JSON.parse(raw);
+      if (s.expires_at < Date.now()) {
+        localStorage.removeItem('nir_exam_session');
+        return false;
+      }
+      this._token = s.token;
+      this._user = s.user;
+      return true;
+    } catch { return false; }
+  },
+
+  // Exams CRUD
+  async getExams() {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/exams?select=id,title,subject,level,export_count,created_at,updated_at&order=updated_at.desc`,
+      { headers: this._headers() }
+    );
+    if (!r.ok) return [];
+    return r.json();
+  },
+
+  async getExam(id) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/exams?id=eq.${id}&select=*`,
+      { headers: this._headers() }
+    );
+    if (!r.ok) return null;
+    const data = await r.json();
+    return data[0] || null;
+  },
+
+  async createExam(examData) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/exams`, {
+      method: 'POST',
+      headers: { ...this._headers(), 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        user_id:    this._user.id,
+        title:      examData.title      || 'Untitled Exam',
+        subject:    examData.subject    || null,
+        level:      examData.level      || null,
+        book_name:  examData.book_name  || null,
+        unit_lesson:examData.unit_lesson|| null,
+        topic:      examData.topic      || null,
+        content:    examData.content    || { sections: [] }
+      })
+    });
+    if (!r.ok) return null;
+    const data = await r.json();
+    return data[0] || null;
+  },
+
+  async updateExam(id, examData) {
+    const body = {};
+    if (examData.title      !== undefined) body.title       = examData.title;
+    if (examData.subject    !== undefined) body.subject     = examData.subject || null;
+    if (examData.level      !== undefined) body.level       = examData.level   || null;
+    if (examData.book_name  !== undefined) body.book_name   = examData.book_name  || null;
+    if (examData.unit_lesson!== undefined) body.unit_lesson = examData.unit_lesson|| null;
+    if (examData.topic      !== undefined) body.topic       = examData.topic   || null;
+    if (examData.content    !== undefined) body.content     = examData.content;
+
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/exams?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { ...this._headers(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify(body)
+    });
+    return r.ok;
+  },
+
+  async incrementExportCount(id) {
+    // Use rpc or a direct update — simple increment via PATCH
+    const exam = await this.getExam(id);
+    if (!exam) return;
+    await fetch(`${SUPABASE_URL}/rest/v1/exams?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { ...this._headers(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        export_count: (exam.export_count || 0) + 1,
+        last_exported_at: new Date().toISOString()
+      })
+    });
+  },
+
+  async deleteExam(id) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/exams?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: this._headers()
+    });
+    return r.ok;
+  },
+
+  async getProfile() {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/profiles?id=eq.${this._user?.id}&select=*`,
+      { headers: this._headers() }
+    );
+    if (!r.ok) return null;
+    const data = await r.json();
+    return data[0] || null;
+  }
+};
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showPage(name, authTab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  if (name === 'auth' && authTab) switchAuthTab(authTab);
+  window.scrollTo(0, 0);
+}
+
+function switchAuthTab(tab) {
+  ['login','signup'].forEach(t => {
+    document.getElementById(`auth-${t}`).classList.toggle('hidden', t !== tab);
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+  });
+}
+
+// ============================================================
+// AUTH HANDLERS
+// ============================================================
+async function handleLogin() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const btn      = document.getElementById('btn-login');
+  const err      = document.getElementById('login-error');
+
+  if (!email || !password) {
+    err.textContent = 'Please enter email and password.';
+    err.classList.add('visible');
+    return;
+  }
+
+  err.classList.remove('visible');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  const data = await sb.signIn(email, password);
+
+  btn.classList.remove('loading');
+  btn.disabled = false;
+
+  if (data.access_token) {
+    showToast('Welcome back!', 'success');
+    enterDashboard();
+  } else {
+    err.textContent = data.error_description || data.msg || 'Invalid email or password.';
+    err.classList.add('visible');
+  }
+}
+
+async function handleSignup() {
+  const name     = document.getElementById('signup-name').value.trim();
+  const email    = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  const btn      = document.getElementById('btn-signup');
+  const err      = document.getElementById('signup-error');
+
+  if (!email || !password || password.length < 8) {
+    err.textContent = 'Please fill all fields. Password min. 8 characters.';
+    err.classList.add('visible');
+    return;
+  }
+
+  err.classList.remove('visible');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  const data = await sb.signUp(email, password, name);
+
+  btn.classList.remove('loading');
+  btn.disabled = false;
+
+  if (data.id || data.user) {
+    document.getElementById('signup-fields').classList.add('hidden');
+    document.getElementById('signup-success').classList.add('visible');
+  } else {
+    err.textContent = data.error_description || data.msg || 'Something went wrong.';
+    err.classList.add('visible');
+  }
+}
+
+async function handleSignOut() {
+  await sb.signOut();
+  showToast('Signed out.', 'info');
+  showPage('landing');
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function enterDashboard() {
+  const user = sb._user;
+  const email = user?.email || '';
+  const letter = email.charAt(0).toUpperCase() || 'N';
+
+  document.getElementById('dash-user-email').textContent = email;
+  document.getElementById('dash-avatar-letter').textContent = letter;
+
+  showPage('dashboard');
+  loadExams();
+}
+
+async function loadExams() {
+  const list = document.getElementById('exam-list');
+  list.innerHTML = `<div style="color:var(--white-dim);font-size:14px;padding:20px 0;">Loading...</div>`;
+
+  // If Supabase not configured yet, show empty state
+  if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+    renderExams([]);
+    return;
+  }
+
+  const exams = await sb.getExams();
+  renderExams(exams);
+}
+
+function renderExams(exams) {
+  const list = document.getElementById('exam-list');
+  document.getElementById('stat-total').textContent = exams.length;
+
+  const totalExports = exams.reduce((sum, e) => sum + (e.export_count || 0), 0);
+  document.getElementById('stat-exported').textContent = totalExports;
+
+  const lastDate = exams.length
+    ? formatDate(exams[0].updated_at)
+    : '—';
+  document.getElementById('stat-last').textContent = lastDate;
+
+  if (exams.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">No exams yet</div>
+        <p class="empty-sub">Create your first exam. Everything is block-based and fully flexible.</p>
+        <button class="btn-primary" onclick="showNewExamModal()">+ Create First Exam</button>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = exams.map(ex => `
+    <div class="exam-card" onclick="openExam('${ex.id}')">
+      <div class="exam-card-info">
+        <div class="exam-card-title">${escHtml(ex.title || 'Untitled Exam')}</div>
+        <div class="exam-card-meta">
+          ${ex.subject ? `<span class="meta-pill gold">${escHtml(ex.subject)}</span>` : ''}
+          ${ex.level   ? `<span class="meta-pill">${escHtml(ex.level)}</span>` : ''}
+          <span class="meta-pill">${formatDate(ex.updated_at)}</span>
+          ${ex.export_count ? `<span class="meta-pill">📄 ${ex.export_count} export${ex.export_count>1?'s':''}</span>` : ''}
+        </div>
+      </div>
+      <div class="exam-card-actions">
+        <button class="btn-icon" title="Edit" onclick="openExam('${ex.id}');event.stopPropagation()">✏️</button>
+        <button class="btn-icon" title="Export PDF" onclick="exportExam('${ex.id}');event.stopPropagation()">📄</button>
+        <button class="btn-icon danger" title="Delete" onclick="deleteExam('${ex.id}');event.stopPropagation()">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function exportExam(id) {
+  showToast('PDF Export coming in Step 4 📄', 'info');
+}
+
+async function deleteExam(id) {
+  if (!confirm('Delete this exam? This cannot be undone.')) return;
+  await sb.deleteExam(id);
+  showToast('Exam deleted.', 'success');
+  loadExams();
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(message, type = 'info') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = message;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function escHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+}
+
+// ============================================================
+// KEYBOARD SHORTCUTS
+// ============================================================
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const activePage = document.querySelector('.page.active')?.id;
+    if (activePage === 'page-auth') {
+      const activeTab = document.getElementById('tab-login').classList.contains('active');
+      if (activeTab) handleLogin();
+      else handleSignup();
+    }
+  }
+  if (e.key === 'Escape') {
+    const activePage = document.querySelector('.page.active')?.id;
+    if (activePage === 'page-auth') showPage('landing');
+  }
+});
+
+
+// ============================================================
+// ——————————  EXAM BUILDER STATE  ——————————
+// ============================================================
+const builder = {
+  examId:   null,
+  title:    '',
+  meta:     { subject:'', level:'', book:'', unit:'', topic:'' },
+  sections: [],          // [{ id, type, title, blocks:[] }]
+  _blockCounters: {},    // sectionId -> question counter
+  _dirty: false,
+  _autosaveTimer: null
+};
+
+const SECTION_ICONS = {
+  questions: '❓',
+  reading:   '📖',
+  writing:   '✍️',
+  speaking:  '🎤',
+  custom:    '⚙️'
+};
+
+const SECTION_DEFAULTS = {
+  questions: 'Questions',
+  reading:   'Reading',
+  writing:   'Writing',
+  speaking:  'Speaking',
+  custom:    'Custom Section'
+};
+
+// ============================================================
+// ENTRY POINT
+// ============================================================
+function openExamBuilder(examId, examData) {
+  // Reset state
+  builder.examId   = examId || ('exam_' + Date.now());
+  builder.title    = examData?.title   || '';
+  builder.meta     = examData?.meta    || { subject:'', level:'', book:'', unit:'', topic:'' };
+  builder.sections = examData?.sections || [];
+  builder._dirty   = false;
+
+  // Populate UI
+  document.getElementById('builder-title-input').value = builder.title;
+  document.getElementById('meta-subject').value = builder.meta.subject || '';
+  document.getElementById('meta-level').value   = builder.meta.level   || '';
+  document.getElementById('meta-book').value    = builder.meta.book    || '';
+  document.getElementById('meta-unit').value    = builder.meta.unit    || '';
+  document.getElementById('meta-topic').value   = builder.meta.topic   || '';
+
+  renderBuilder();
+  showPage('builder');
+}
+
+function exitBuilder() {
+  closeAllPickers();
+  showPage('dashboard');
+  loadExams();
+}
+
+// ============================================================
+// METADATA HANDLERS
+// ============================================================
+function onExamTitleChange(val) {
+  builder.title = val;
+  triggerAutosave();
+}
+
+function onMetaChange() {
+  builder.meta.subject = document.getElementById('meta-subject').value;
+  builder.meta.level   = document.getElementById('meta-level').value;
+  builder.meta.book    = document.getElementById('meta-book').value;
+  builder.meta.unit    = document.getElementById('meta-unit').value;
+  builder.meta.topic   = document.getElementById('meta-topic').value;
+  triggerAutosave();
+}
+
+function triggerAutosave() {
+  builder._dirty = true;
+  clearTimeout(builder._autosaveTimer);
+  builder._autosaveTimer = setTimeout(() => {
+    saveExam();
+  }, 900);
+}
+
+async function saveExam() {
+  const autosaveEl = document.getElementById('builder-autosave');
+  autosaveEl.textContent = 'Saving…';
+  autosaveEl.classList.add('visible');
+
+  const payload = {
+    title:       builder.title || 'Untitled Exam',
+    subject:     builder.meta.subject    || null,
+    level:       builder.meta.level      || null,
+    book_name:   builder.meta.book      || null,
+    unit_lesson: builder.meta.unit       || null,
+    topic:       builder.meta.topic      || null,
+    content:     { sections: builder.sections }
+  };
+
+  // If Supabase not configured, skip silently
+  if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+    autosaveEl.textContent = 'Saved (local)';
+    setTimeout(() => autosaveEl.classList.remove('visible'), 2000);
+    builder._dirty = false;
+    return;
+  }
+
+  let ok = false;
+  if (builder.examId && builder.examId.includes('-')) {
+    // existing exam — update
+    ok = await sb.updateExam(builder.examId, payload);
+  } else {
+    // new exam — create
+    const created = await sb.createExam(payload);
+    if (created) {
+      builder.examId = created.id;
+      ok = true;
+    }
+  }
+
+  if (ok) {
+    autosaveEl.textContent = 'Saved';
+    builder._dirty = false;
+  } else {
+    autosaveEl.textContent = 'Save failed';
+  }
+  setTimeout(() => autosaveEl.classList.remove('visible'), 2200);
+}
+
+// Legacy alias
+function saveToMemory() { saveExam(); }
+
+// ============================================================
+// RENDER FULL BUILDER
+// ============================================================
+function renderBuilder() {
+  renderSidebarSections();
+  renderCanvas();
+}
+
+// ============================================================
+// SIDEBAR — sections list
+// ============================================================
+function renderSidebarSections() {
+  const list = document.getElementById('sidebar-sections-list');
+  if (!builder.sections.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--white-dim);opacity:0.5;padding:4px 0;">No sections yet</div>';
+    return;
+  }
+  list.innerHTML = builder.sections.map((sec, i) => `
+    <div class="sidebar-section-item" onclick="scrollToSection('${sec.id}')">
+      <span class="sidebar-section-item-icon">${SECTION_ICONS[sec.type] || '📄'}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(sec.title)}</span>
+      <span style="font-family:var(--font-mono);font-size:10px;color:var(--gold-dim);">${sec.blocks.length}</span>
+    </div>
+  `).join('');
+}
+
+function scrollToSection(secId) {
+  const el = document.getElementById('section-' + secId);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ============================================================
+// CANVAS — full render
+// ============================================================
+function renderCanvas() {
+  const inner = document.getElementById('canvas-inner');
+  const empty = document.getElementById('canvas-empty');
+
+  if (!builder.sections.length) {
+    empty.style.display = 'flex';
+    inner.querySelectorAll('.canvas-section').forEach(e => e.remove());
+    setTimeout(autoResizeAll, 50);
+    return;
+  }
+
+  empty.style.display = 'none';
+  inner.querySelectorAll('.canvas-section').forEach(e => e.remove());
+
+  builder.sections.forEach((sec, si) => {
+    const el = buildSectionEl(sec, si);
+    inner.appendChild(el);
+  });
+
+  setTimeout(autoResizeAll, 50);
+}
+
+// ============================================================
+// BUILD SECTION ELEMENT
+// ============================================================
+function buildSectionEl(sec, si) {
+  const div = document.createElement('div');
+  div.className = 'canvas-section';
+  div.id = 'section-' + sec.id;
+
+  // Section header
+  div.innerHTML = `
+    <div class="canvas-section-header">
+      <span style="font-size:14px;">${SECTION_ICONS[sec.type] || '📄'}</span>
+      <input class="canvas-section-title-input" value="${escHtml(sec.title)}"
+             placeholder="Section title"
+             onchange="updateSectionTitle('${sec.id}', this.value)"
+             onclick="event.stopPropagation()">
+      <div class="canvas-section-actions">
+        <button class="btn-section-action" title="Move up" onclick="moveSectionUp('${sec.id}')">↑</button>
+        <button class="btn-section-action" title="Move down" onclick="moveSectionDown('${sec.id}')">↓</button>
+        <button class="btn-section-action danger" title="Delete section" onclick="deleteSection('${sec.id}')">✕</button>
+      </div>
+    </div>
+  `;
+
+  // Render blocks
+  const blocksContainer = document.createElement('div');
+  blocksContainer.id = 'blocks-' + sec.id;
+  blocksContainer.style.cssText = 'display:flex;flex-direction:column;gap:6px;padding:4px 0 8px;';
+
+  let qNum = 0;
+  sec.blocks.forEach((block, bi) => {
+    if (block.type === 'question') qNum++;
+    const blockEl = buildBlockEl(block, sec.id, bi, qNum);
+    blocksContainer.appendChild(blockEl);
+  });
+
+  div.appendChild(blocksContainer);
+
+  // Add block bar
+  div.innerHTML += `
+    <div class="add-block-bar">
+      <div class="add-block-bar-line"></div>
+      <button class="btn-add-block" onclick="openBlockPicker(event, '${sec.id}')">+ Add Block</button>
+      <div class="add-block-bar-line"></div>
+    </div>
+  `;
+
+  // Re-append blocks container (innerHTML reset above)
+  const placeholder = div.querySelector('.add-block-bar');
+  div.insertBefore(blocksContainer, placeholder);
+
+  return div;
+}
+
+// ============================================================
+// BUILD BLOCK ELEMENT
+// ============================================================
+function buildBlockEl(block, secId, bi, qNum) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'block-wrapper';
+  wrapper.id = 'block-' + block.id;
+
+  // Drag handle
+  const handle = document.createElement('div');
+  handle.className = 'block-drag-handle';
+  handle.innerHTML = '⠿';
+  handle.title = 'Drag to reorder';
+  wrapper.appendChild(handle);
+
+  // Content
+  const content = document.createElement('div');
+  content.className = 'block-content';
+  content.innerHTML = buildBlockContent(block, secId, bi, qNum);
+  wrapper.appendChild(content);
+
+  // Controls
+  const controls = document.createElement('div');
+  controls.className = 'block-controls';
+  controls.innerHTML = `
+    <button class="btn-block-ctrl" title="Move up" onclick="moveBlockUp('${secId}','${block.id}')">↑</button>
+    <button class="btn-block-ctrl" title="Move down" onclick="moveBlockDown('${secId}','${block.id}')">↓</button>
+    <button class="btn-block-ctrl" title="Duplicate" onclick="duplicateBlock('${secId}','${block.id}')">⧉</button>
+    <button class="btn-block-ctrl danger" title="Delete" onclick="deleteBlock('${secId}','${block.id}')">✕</button>
+  `;
+  wrapper.appendChild(controls);
+
+  return wrapper;
+}
+
+// ============================================================
+// BUILD BLOCK CONTENT (HTML string per type)
+// ============================================================
+function buildBlockContent(block, secId, bi, qNum) {
+  switch(block.type) {
+
+    case 'instruction':
+      return `
+        <div class="block-instruction">
+          <div class="block-instruction-label">Instruction</div>
+          <textarea class="block-instruction-text" rows="2"
+            placeholder="Write instruction for students…"
+            oninput="updateBlockField('${secId}','${block.id}','text',this.value);autoResize(this)"
+          >${escHtml(block.text || '')}</textarea>
+        </div>`;
+
+    case 'passage':
+      return `
+        <div class="block-passage">
+          <input class="block-passage-title-input" placeholder="Passage Title (optional)"
+            value="${escHtml(block.title || '')}"
+            oninput="updateBlockField('${secId}','${block.id}','title',this.value)">
+          <textarea class="block-passage-text" rows="5"
+            placeholder="Paste or type the reading passage here…"
+            oninput="updateBlockField('${secId}','${block.id}','text',this.value);autoResize(this)"
+          >${escHtml(block.text || '')}</textarea>
+        </div>`;
+
+    case 'divider':
+      return `
+        <div class="block-divider">
+          <div class="block-divider-line"></div>
+          <div class="block-divider-label">Section Break</div>
+          <div class="block-divider-line"></div>
+        </div>`;
+
+    case 'question':
+      return buildQuestionContent(block, secId, qNum);
+
+    default:
+      return `<div style="color:var(--white-dim);font-size:13px;padding:10px;">Unknown block</div>`;
+  }
+}
+
+// ============================================================
+// QUESTION BLOCK CONTENT
+// ============================================================
+function buildQuestionContent(block, secId, qNum) {
+  const qTypes = ['mcq','true_false','short_answer','fill_blank','matching','ordering','multiple_select'];
+  const qTypeLabels = { mcq:'MCQ', true_false:'True/False', short_answer:'Short Answer',
+    fill_blank:'Fill Blank', matching:'Matching', ordering:'Ordering', multiple_select:'Multi Select' };
+
+  const typeOptions = qTypes.map(t =>
+    `<option value="${t}" ${block.qtype===t?'selected':''}>${qTypeLabels[t]}</option>`
+  ).join('');
+
+  const diffOptions = ['Easy','Medium','Hard'].map(d =>
+    `<option value="${d.toLowerCase()}" ${block.difficulty===d.toLowerCase()?'selected':''}>${d}</option>`
+  ).join('');
+
+  let answerArea = '';
+  switch(block.qtype || 'mcq') {
+    case 'mcq':
+      answerArea = buildMCQOptions(block, secId); break;
+    case 'true_false':
+      answerArea = buildTFOptions(block, secId); break;
+    case 'short_answer':
+      answerArea = buildShortAnswer(block, secId); break;
+    case 'fill_blank':
+      answerArea = buildFillBlank(block, secId); break;
+    case 'matching':
+      answerArea = buildMatching(block, secId); break;
+    case 'ordering':
+      answerArea = buildOrdering(block, secId); break;
+    case 'multiple_select':
+      answerArea = buildMultiSelect(block, secId); break;
+  }
+
+  return `
+    <div class="block-question">
+      <div class="block-question-header">
+        <span class="question-num">Q${qNum}</span>
+        <select class="question-type-select"
+          onchange="changeQuestionType('${secId}','${block.id}',this.value)">
+          ${typeOptions}
+        </select>
+        <select class="question-diff-select"
+          onchange="updateBlockField('${secId}','${block.id}','difficulty',this.value)">
+          <option value="">Difficulty</option>
+          ${diffOptions}
+        </select>
+        <input class="question-points-input" type="number" min="0" max="100"
+          value="${block.points ?? 1}" title="Points"
+          oninput="updateBlockField('${secId}','${block.id}','points',+this.value)">
+      </div>
+      <div class="block-question-body">
+        <textarea class="question-stem" rows="2"
+          placeholder="Write your question here…"
+          oninput="updateBlockField('${secId}','${block.id}','stem',this.value);autoResize(this)"
+        >${escHtml(block.stem || '')}</textarea>
+        ${answerArea}
+        <div class="question-explanation-row">
+          <span class="explanation-label">Explanation</span>
+          <textarea class="explanation-input" rows="1"
+            placeholder="Optional explanation / answer key note…"
+            oninput="updateBlockField('${secId}','${block.id}','explanation',this.value);autoResize(this)"
+          >${escHtml(block.explanation || '')}</textarea>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ——— MCQ ———
+function buildMCQOptions(block, secId) {
+  const opts = block.options?.length ? block.options : ['','','',''];
+  const letters = ['A','B','C','D','E','F'];
+  const rows = opts.map((opt, i) => `
+    <div class="mcq-option-row">
+      <div class="mcq-option-letter ${block.correct_index===i?'correct':''}"
+           onclick="setMCQCorrect('${secId}','${block.id}',${i})"
+           title="Mark as correct">${letters[i]}</div>
+      <input class="mcq-option-input" placeholder="Option ${letters[i]}"
+        value="${escHtml(opt)}"
+        oninput="updateMCQOption('${secId}','${block.id}',${i},this.value)">
+      ${opts.length > 2 ? `<button class="btn-remove-option" onclick="removeMCQOption('${secId}','${block.id}',${i})" title="Remove">×</button>` : ''}
+    </div>`).join('');
+
+  return `
+    <div class="mcq-options" id="mcq-opts-${block.id}">
+      ${rows}
+      ${opts.length < 6 ? `<button class="btn-add-option" onclick="addMCQOption('${secId}','${block.id}')">+ Add Option</button>` : ''}
+    </div>`;
+}
+
+// ——— TRUE/FALSE ———
+function buildTFOptions(block, secId) {
+  const ca = block.correct_answer;
+  return `
+    <div class="tf-options">
+      <div class="tf-option ${ca==='true'?'correct-true':''}"
+           onclick="setTFAnswer('${secId}','${block.id}','true')">✓ True</div>
+      <div class="tf-option ${ca==='false'?'correct-false':''}"
+           onclick="setTFAnswer('${secId}','${block.id}','false')">✗ False</div>
+    </div>`;
+}
+
+// ——— SHORT ANSWER ———
+function buildShortAnswer(block, secId) {
+  return `
+    <div class="short-answer-box">
+      <span>Answer:</span>
+      <input class="short-answer-field" placeholder="Expected answer (for teacher key)…"
+        value="${escHtml(block.correct_answer||'')}"
+        oninput="updateBlockField('${secId}','${block.id}','correct_answer',this.value)">
+    </div>`;
+}
+
+// ——— FILL IN BLANK ———
+function buildFillBlank(block, secId) {
+  return `
+    <div class="fib-answer-row">
+      <span class="fib-label">Answer:</span>
+      <input class="fib-answer-input" placeholder="Correct word / phrase…"
+        value="${escHtml(block.correct_answer||'')}"
+        oninput="updateBlockField('${secId}','${block.id}','correct_answer',this.value)">
+    </div>`;
+}
+
+// ——— MATCHING ———
+function buildMatching(block, secId) {
+  const pairs = block.pairs?.length ? block.pairs : [['',''],['',''],['','']];
+  const rows = pairs.map((p, i) => `
+    <div class="matching-row">
+      <input class="matching-col-input" placeholder="Item ${i+1}"
+        value="${escHtml(p[0]||'')}"
+        oninput="updateMatchingPair('${secId}','${block.id}',${i},0,this.value)">
+      <span class="matching-arrow">→</span>
+      <input class="matching-col-input" placeholder="Match ${i+1}"
+        value="${escHtml(p[1]||'')}"
+        oninput="updateMatchingPair('${secId}','${block.id}',${i},1,this.value)">
+      ${pairs.length > 2 ? `<button class="btn-remove-option" onclick="removeMatchingPair('${secId}','${block.id}',${i})">×</button>` : ''}
+    </div>`).join('');
+  return `
+    <div class="matching-rows">${rows}</div>
+    <button class="btn-add-option" onclick="addMatchingPair('${secId}','${block.id}')">+ Add Pair</button>`;
+}
+
+// ——— ORDERING ———
+function buildOrdering(block, secId) {
+  const items = block.items?.length ? block.items : ['','',''];
+  const rows = items.map((item, i) => `
+    <div class="ordering-item-row">
+      <span class="ordering-handle">⠿</span>
+      <span class="ordering-num">${i+1}.</span>
+      <input class="ordering-item-input" placeholder="Item ${i+1}"
+        value="${escHtml(item)}"
+        oninput="updateOrderingItem('${secId}','${block.id}',${i},this.value)">
+      ${items.length > 2 ? `<button class="btn-remove-option" onclick="removeOrderingItem('${secId}','${block.id}',${i})">×</button>` : ''}
+    </div>`).join('');
+  return `
+    <div class="ordering-items">${rows}</div>
+    <button class="btn-add-option" onclick="addOrderingItem('${secId}','${block.id}')">+ Add Item</button>`;
+}
+
+// ——— MULTIPLE SELECT ———
+function buildMultiSelect(block, secId) {
+  const opts = block.options?.length ? block.options : ['','','',''];
+  const correct = block.correct_indices || [];
+  const letters = ['A','B','C','D','E','F'];
+  const rows = opts.map((opt, i) => `
+    <div class="ms-option-row">
+      <div class="ms-checkbox ${correct.includes(i)?'checked':''}"
+           onclick="toggleMSOption('${secId}','${block.id}',${i})">${correct.includes(i)?'✓':''}</div>
+      <input class="mcq-option-input" placeholder="Option ${letters[i]}"
+        value="${escHtml(opt)}"
+        oninput="updateMSOption('${secId}','${block.id}',${i},this.value)">
+      ${opts.length > 2 ? `<button class="btn-remove-option" onclick="removeMSOption('${secId}','${block.id}',${i})">×</button>` : ''}
+    </div>`).join('');
+  return `
+    <div class="ms-options">${rows}</div>
+    ${opts.length < 6 ? `<button class="btn-add-option" onclick="addMSOption('${secId}','${block.id}')">+ Add Option</button>` : ''}`;
+}
+
+// ============================================================
+// SECTION OPERATIONS
+// ============================================================
+let _pendingSectionType = 'questions';
+
+function openAddSectionModal() {
+  _pendingSectionType = 'questions';
+  document.querySelectorAll('.modal-section-type').forEach(el => {
+    el.classList.toggle('selected', el.dataset.type === 'questions');
+  });
+  openModal('modal-add-section');
+}
+
+function selectSectionType(el) {
+  document.querySelectorAll('.modal-section-type').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  _pendingSectionType = el.dataset.type;
+}
+
+function confirmAddSection() {
+  const type = _pendingSectionType;
+  const sec = {
+    id:     'sec_' + Date.now(),
+    type,
+    title:  SECTION_DEFAULTS[type] || 'New Section',
+    blocks: []
+  };
+  builder.sections.push(sec);
+  closeModal('modal-add-section');
+  renderBuilder();
+  triggerAutosave();
+  setTimeout(() => scrollToSection(sec.id), 100);
+}
+
+function updateSectionTitle(secId, val) {
+  const sec = builder.sections.find(s => s.id === secId);
+  if (sec) { sec.title = val; renderSidebarSections(); triggerAutosave(); }
+}
+
+function deleteSection(secId) {
+  if (!confirm('Delete this section and all its blocks?')) return;
+  builder.sections = builder.sections.filter(s => s.id !== secId);
+  renderBuilder();
+  triggerAutosave();
+}
+
+function moveSectionUp(secId) {
+  const i = builder.sections.findIndex(s => s.id === secId);
+  if (i > 0) {
+    [builder.sections[i-1], builder.sections[i]] = [builder.sections[i], builder.sections[i-1]];
+    renderBuilder();
+    triggerAutosave();
+  }
+}
+
+function moveSectionDown(secId) {
+  const i = builder.sections.findIndex(s => s.id === secId);
+  if (i < builder.sections.length-1) {
+    [builder.sections[i], builder.sections[i+1]] = [builder.sections[i+1], builder.sections[i]];
+    renderBuilder();
+    triggerAutosave();
+  }
+}
+
+// ============================================================
+// BLOCK PICKER
+// ============================================================
+let _pickerTargetSection = null;
+
+function openBlockPicker(e, secId) {
+  e.stopPropagation();
+  _pickerTargetSection = secId;
+  const picker = document.getElementById('block-type-picker');
+  const rect = e.target.getBoundingClientRect();
+  picker.style.top  = (rect.bottom + 8) + 'px';
+  picker.style.left = rect.left + 'px';
+  picker.classList.add('open');
+}
+
+function closeAllPickers() {
+  document.getElementById('block-type-picker').classList.remove('open');
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#block-type-picker') && !e.target.closest('.btn-add-block')) {
+    closeAllPickers();
+  }
+});
+
+function pickerAddBlock(type) {
+  closeAllPickers();
+  if (!_pickerTargetSection) return;
+  addBlock(_pickerTargetSection, type);
+}
+
+// ============================================================
+// BLOCK OPERATIONS
+// ============================================================
+function addBlock(secId, type) {
+  const sec = builder.sections.find(s => s.id === secId);
+  if (!sec) return;
+
+  const block = { id: 'blk_' + Date.now(), type };
+
+  // Defaults per type
+  if (type === 'question') {
+    block.qtype         = 'mcq';
+    block.stem          = '';
+    block.options       = ['', '', '', ''];
+    block.correct_index = null;
+    block.correct_answer= '';
+    block.explanation   = '';
+    block.points        = 1;
+    block.difficulty    = '';
+  }
+  if (type === 'matching')  block.pairs = [['',''],['',''],['','']];
+  if (type === 'ordering')  block.items = ['','',''];
+  if (type === 'multiple_select') {
+    block.options = ['','','',''];
+    block.correct_indices = [];
+  }
+
+  sec.blocks.push(block);
+  renderBuilder();
+  triggerAutosave();
+
+  // Focus first input in new block
+  setTimeout(() => {
+    const blockEl = document.getElementById('block-' + block.id);
+    if (blockEl) {
+      const input = blockEl.querySelector('textarea, input');
+      if (input) input.focus();
+    }
+  }, 80);
+}
+
+function deleteBlock(secId, blockId) {
+  const sec = builder.sections.find(s => s.id === secId);
+  if (!sec) return;
+  sec.blocks = sec.blocks.filter(b => b.id !== blockId);
+  renderBuilder();
+  triggerAutosave();
+}
+
+function duplicateBlock(secId, blockId) {
+  const sec = builder.sections.find(s => s.id === secId);
+  if (!sec) return;
+  const idx = sec.blocks.findIndex(b => b.id === blockId);
+  if (idx === -1) return;
+  const clone = JSON.parse(JSON.stringify(sec.blocks[idx]));
+  clone.id = 'blk_' + Date.now();
+  sec.blocks.splice(idx+1, 0, clone);
+  renderBuilder();
+  triggerAutosave();
+  showToast('Block duplicated', 'success');
+}
+
+function moveBlockUp(secId, blockId) {
+  const sec = builder.sections.find(s => s.id === secId);
+  const i = sec?.blocks.findIndex(b => b.id === blockId);
+  if (i > 0) {
+    [sec.blocks[i-1], sec.blocks[i]] = [sec.blocks[i], sec.blocks[i-1]];
+    renderBuilder(); triggerAutosave();
+  }
+}
+
+function moveBlockDown(secId, blockId) {
+  const sec = builder.sections.find(s => s.id === secId);
+  const i = sec?.blocks.findIndex(b => b.id === blockId);
+  if (i < sec.blocks.length-1) {
+    [sec.blocks[i], sec.blocks[i+1]] = [sec.blocks[i+1], sec.blocks[i]];
+    renderBuilder(); triggerAutosave();
+  }
+}
+
+// ============================================================
+// BLOCK FIELD UPDATES
+// ============================================================
+function getBlock(secId, blockId) {
+  return builder.sections.find(s => s.id===secId)?.blocks.find(b => b.id===blockId);
+}
+
+function updateBlockField(secId, blockId, field, value) {
+  const b = getBlock(secId, blockId);
+  if (b) { b[field] = value; triggerAutosave(); }
+}
+
+// MCQ
+function setMCQCorrect(secId, blockId, idx) {
+  const b = getBlock(secId, blockId);
+  if (!b) return;
+  b.correct_index = (b.correct_index === idx) ? null : idx;
+  // Re-render just this block's options area
+  const letters = ['A','B','C','D','E','F'];
+  const container = document.getElementById('mcq-opts-' + blockId);
+  if (container) {
+    container.querySelectorAll('.mcq-option-letter').forEach((el, i) => {
+      el.classList.toggle('correct', i === b.correct_index);
+    });
+  }
+  triggerAutosave();
+}
+
+function updateMCQOption(secId, blockId, idx, val) {
+  const b = getBlock(secId, blockId);
+  if (b && b.options) { b.options[idx] = val; triggerAutosave(); }
+}
+
+function addMCQOption(secId, blockId) {
+  const b = getBlock(secId, blockId);
+  if (b && b.options && b.options.length < 6) {
+    b.options.push('');
+    renderBuilder(); triggerAutosave();
+  }
+}
+
+function removeMCQOption(secId, blockId, idx) {
+  const b = getBlock(secId, blockId);
+  if (b && b.options && b.options.length > 2) {
+    b.options.splice(idx, 1);
+    if (b.correct_index >= b.options.length) b.correct_index = null;
+    renderBuilder(); triggerAutosave();
+  }
+}
+
+// True/False
+function setTFAnswer(secId, blockId, val) {
+  const b = getBlock(secId, blockId);
+  if (!b) return;
+  b.correct_answer = (b.correct_answer === val) ? '' : val;
+  renderBuilder(); triggerAutosave();
+}
+
+// Matching
+function updateMatchingPair(secId, blockId, pairIdx, col, val) {
+  const b = getBlock(secId, blockId);
+  if (!b?.pairs) return;
+  b.pairs[pairIdx][col] = val; triggerAutosave();
+}
+function addMatchingPair(secId, blockId) {
+  const b = getBlock(secId, blockId);
+  if (b?.pairs) { b.pairs.push(['','']); renderBuilder(); triggerAutosave(); }
+}
+function removeMatchingPair(secId, blockId, idx) {
+  const b = getBlock(secId, blockId);
+  if (b?.pairs && b.pairs.length > 2) { b.pairs.splice(idx,1); renderBuilder(); triggerAutosave(); }
+}
+
+// Ordering
+function updateOrderingItem(secId, blockId, idx, val) {
+  const b = getBlock(secId, blockId);
+  if (b?.items) { b.items[idx] = val; triggerAutosave(); }
+}
+function addOrderingItem(secId, blockId) {
+  const b = getBlock(secId, blockId);
+  if (b?.items) { b.items.push(''); renderBuilder(); triggerAutosave(); }
+}
+function removeOrderingItem(secId, blockId, idx) {
+  const b = getBlock(secId, blockId);
+  if (b?.items && b.items.length > 2) { b.items.splice(idx,1); renderBuilder(); triggerAutosave(); }
+}
+
+// Multiple Select
+function toggleMSOption(secId, blockId, idx) {
+  const b = getBlock(secId, blockId);
+  if (!b) return;
+  if (!b.correct_indices) b.correct_indices = [];
+  const pos = b.correct_indices.indexOf(idx);
+  if (pos === -1) b.correct_indices.push(idx);
+  else b.correct_indices.splice(pos,1);
+  renderBuilder(); triggerAutosave();
+}
+function updateMSOption(secId, blockId, idx, val) {
+  const b = getBlock(secId, blockId);
+  if (b?.options) { b.options[idx] = val; triggerAutosave(); }
+}
+function addMSOption(secId, blockId) {
+  const b = getBlock(secId, blockId);
+  if (b?.options && b.options.length < 6) { b.options.push(''); renderBuilder(); triggerAutosave(); }
+}
+function removeMSOption(secId, blockId, idx) {
+  const b = getBlock(secId, blockId);
+  if (b?.options && b.options.length > 2) {
+    b.options.splice(idx,1);
+    b.correct_indices = (b.correct_indices||[]).filter(i=>i!==idx).map(i=>i>idx?i-1:i);
+    renderBuilder(); triggerAutosave();
+  }
+}
+
+// Change question type
+function changeQuestionType(secId, blockId, newType) {
+  const b = getBlock(secId, blockId);
+  if (!b) return;
+  b.qtype = newType;
+  // Reset answer data
+  b.options = ['','','',''];
+  b.correct_index = null;
+  b.correct_answer = '';
+  b.correct_indices = [];
+  b.pairs = [['',''],['',''],['','']];
+  b.items = ['','',''];
+  renderBuilder(); triggerAutosave();
+}
+
+// ============================================================
+// MODAL HELPERS
+// ============================================================
+function openModal(id) {
+  const m = document.getElementById(id);
+  if (m) { m.style.display = 'flex'; setTimeout(() => m.classList.add('open'), 10); }
+}
+function closeModal(id) {
+  const m = document.getElementById(id);
+  if (m) { m.classList.remove('open'); m.style.display = 'none'; }
+}
+
+// ============================================================
+// BUILDER ACTIONS (Stubs for later steps)
+// ============================================================
+function builderPreview() {
+  showToast('Preview coming in Step 3 👁', 'info');
+}
+function builderExport() {
+  showToast('PDF Export coming in Step 4 📄', 'info');
+}
+
+// ============================================================
+// AUTO RESIZE TEXTAREA
+// ============================================================
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+// Auto-resize all textareas on render
+function autoResizeAll() {
+  document.querySelectorAll('textarea').forEach(autoResize);
+}
+
+// ============================================================
+// PATCH: showNewExamModal → open builder
+// ============================================================
+function showNewExamModal() {
+  openExamBuilder(null, { title: '', meta: {}, sections: [] });
+}
+
+async function openExam(id) {
+  if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+    showToast('Add Supabase credentials first', 'error');
+    return;
+  }
+  showToast('Loading…', 'info');
+  const exam = await sb.getExam(id);
+  if (!exam) {
+    showToast('Could not load exam', 'error');
+    return;
+  }
+  openExamBuilder(exam.id, {
+    title:    exam.title,
+    meta: {
+      subject: exam.subject    || '',
+      level:   exam.level      || '',
+      book:    exam.book_name  || '',
+      unit:    exam.unit_lesson|| '',
+      topic:   exam.topic      || ''
+    },
+    sections: exam.content?.sections || []
+  });
+}
+
+// ============================================================
+// INIT — check session on load
+// ============================================================
+(function init() {
+  if (sb.restoreSession()) {
+    enterDashboard();
+  }
+})();
+
+</script>
+</body>
+</html>
