@@ -3523,8 +3523,266 @@ body::after {
 }
 
 /* ============================================================
-   UPLOAD MODAL
+   READING TASK BLOCK
    ============================================================ */
+.block-reading {
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-left: 3px solid #5B9BD5;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.block-reading-header {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--black-border);
+  background: rgba(91,155,213,0.04);
+}
+.block-reading-label {
+  font-family: var(--font-mono); font-size: 9.5px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: #5B9BD5;
+}
+.block-reading-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+
+.reading-passage-title-input {
+  background: none; border: none; outline: none;
+  color: #5B9BD5; font-family: var(--font-display);
+  font-size: 17px; font-weight: 600; width: 100%;
+  letter-spacing: 0.01em;
+}
+.reading-passage-title-input::placeholder { color: rgba(91,155,213,0.3); }
+
+.reading-passage-textarea {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--black-border);
+  border-radius: 6px; outline: none;
+  color: var(--white); font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  line-height: var(--leading-loose);
+  width: 100%; resize: none; min-height: 100px;
+  padding: 10px 12px;
+}
+.reading-passage-textarea:focus { border-color: #5B9BD5; }
+.reading-passage-textarea::placeholder { color: rgba(155,150,144,0.35); }
+
+.reading-para-toggle {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; user-select: none;
+  font-size: var(--text-body-sm); color: var(--white-dim);
+}
+.reading-para-checkbox {
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--black-border);
+  border-radius: 3px; display: flex;
+  align-items: center; justify-content: center;
+  font-size: 10px; transition: all var(--transition);
+}
+.reading-para-checkbox.checked { background: #5B9BD5; border-color: #5B9BD5; color: white; }
+
+.reading-linked-questions {
+  border-top: 1px solid var(--black-border);
+  padding-top: 10px; margin-top: 2px;
+}
+.reading-linked-label {
+  font-family: var(--font-mono); font-size: 9.5px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: #5B9BD5; margin-bottom: 8px; display: block;
+}
+.reading-linked-list { display: flex; flex-direction: column; gap: 6px; }
+
+.reading-linked-q {
+  background: var(--black-soft);
+  border: 1px solid var(--black-border);
+  border-radius: 6px; padding: 8px 12px;
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.reading-linked-q-num {
+  font-family: var(--font-mono); font-size: 10px;
+  color: #5B9BD5; min-width: 20px; margin-top: 2px;
+}
+.reading-linked-q-input {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--white); font-family: var(--font-ui);
+  font-size: var(--text-body-sm); resize: none; min-height: 22px;
+  line-height: var(--leading-normal);
+}
+.reading-linked-q-input::placeholder { color: rgba(155,150,144,0.4); }
+.reading-linked-q-type {
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-radius: 4px; color: var(--white-dim);
+  font-family: var(--font-mono); font-size: 9px;
+  padding: 2px 6px; outline: none; cursor: pointer;
+  flex-shrink: 0;
+}
+.btn-add-linked-q {
+  background: none;
+  border: 1px dashed rgba(91,155,213,0.3);
+  border-radius: 6px; color: #5B9BD5;
+  font-family: var(--font-ui); font-size: 12px;
+  cursor: pointer; padding: 6px 12px;
+  transition: all var(--transition); width: 100%;
+  margin-top: 4px;
+}
+.btn-add-linked-q:hover { border-color: #5B9BD5; background: rgba(91,155,213,0.05); }
+
+/* ============================================================
+   SPEAKING TASK BLOCK
+   ============================================================ */
+.block-speaking {
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-left: 3px solid #B07FD4;
+  border-radius: var(--radius); overflow: hidden;
+}
+.block-speaking-header {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--black-border);
+  background: rgba(176,127,212,0.04);
+}
+.block-speaking-label {
+  font-family: var(--font-mono); font-size: 9.5px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: #B07FD4;
+}
+.speaking-part-select {
+  background: var(--black-soft);
+  border: 1px solid var(--black-border);
+  border-radius: 5px; color: var(--white-dim);
+  font-family: var(--font-mono); font-size: 10px;
+  padding: 4px 8px; outline: none; cursor: pointer;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.speaking-timer-row {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--white-dim);
+}
+.speaking-timer-input {
+  width: 52px; background: var(--black-soft);
+  border: 1px solid var(--black-border);
+  border-radius: 5px; color: var(--white);
+  font-family: var(--font-ui); font-size: 12px;
+  padding: 4px 8px; outline: none; text-align: center;
+}
+.speaking-timer-input:focus { border-color: #B07FD4; }
+
+.block-speaking-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+
+.speaking-prompt-textarea {
+  background: rgba(176,127,212,0.04);
+  border: 1px solid rgba(176,127,212,0.2);
+  border-radius: 6px; outline: none;
+  color: var(--white); font-family: var(--font-ui);
+  font-size: var(--text-body-lg); font-weight: var(--weight-medium);
+  line-height: var(--leading-relaxed);
+  width: 100%; resize: none; min-height: 60px;
+  padding: 10px 12px;
+}
+.speaking-prompt-textarea:focus { border-color: #B07FD4; }
+.speaking-prompt-textarea::placeholder { color: rgba(155,150,144,0.4); }
+
+.speaking-questions-section { display: flex; flex-direction: column; gap: 6px; }
+.speaking-questions-label {
+  font-family: var(--font-mono); font-size: 9.5px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: #B07FD4; display: block;
+}
+
+.speaking-q-row {
+  display: flex; align-items: flex-start; gap: 8px;
+  background: var(--black-soft);
+  border: 1px solid var(--black-border);
+  border-radius: 6px; padding: 8px 10px;
+}
+.speaking-q-num {
+  font-family: var(--font-mono); font-size: 10px;
+  color: #B07FD4; min-width: 18px; margin-top: 2px;
+}
+.speaking-q-input {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--white); font-family: var(--font-ui);
+  font-size: var(--text-body-sm); resize: none; min-height: 22px;
+  line-height: var(--leading-normal);
+}
+.speaking-q-input::placeholder { color: rgba(155,150,144,0.4); }
+.speaking-q-type {
+  font-family: var(--font-mono); font-size: 9px;
+  color: var(--white-muted); padding: 2px 6px;
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-radius: 4px; white-space: nowrap;
+}
+
+.btn-add-speaking-q {
+  background: none;
+  border: 1px dashed rgba(176,127,212,0.3);
+  border-radius: 6px; color: #B07FD4;
+  font-family: var(--font-ui); font-size: 12px;
+  cursor: pointer; padding: 6px 12px;
+  transition: all var(--transition);
+}
+.btn-add-speaking-q:hover { border-color: #B07FD4; background: rgba(176,127,212,0.05); }
+
+/* Speaking rubric */
+.speaking-rubric-toggle {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; user-select: none;
+  padding: 8px 0 4px;
+  border-top: 1px solid var(--black-border);
+}
+.speaking-rubric-btn {
+  width: 32px; height: 18px;
+  background: var(--black-border); border-radius: 10px;
+  position: relative; transition: background var(--transition); flex-shrink: 0;
+}
+.speaking-rubric-btn::after {
+  content: ''; position: absolute;
+  width: 12px; height: 12px; background: var(--white-dim);
+  border-radius: 50%; top: 3px; left: 3px;
+  transition: all var(--transition);
+}
+.speaking-rubric-btn.on { background: #B07FD4; }
+.speaking-rubric-btn.on::after { left: 17px; background: white; }
+
+.speaking-rubric {
+  background: rgba(176,127,212,0.04);
+  border: 1px solid rgba(176,127,212,0.2);
+  border-radius: var(--radius); padding: 12px 14px;
+  display: none; flex-direction: column; gap: 8px;
+}
+.speaking-rubric.visible { display: flex; }
+.speaking-rubric-header {
+  font-family: var(--font-mono); font-size: 9.5px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: #B07FD4; margin-bottom: 4px;
+}
+.speaking-rubric-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.speaking-rubric-name {
+  flex: 1; font-size: var(--text-body-sm);
+  color: var(--white); font-weight: var(--weight-medium);
+}
+.speaking-score-input {
+  width: 52px; background: var(--black-soft);
+  border: 1px solid var(--black-border);
+  border-radius: 5px; color: #B07FD4;
+  font-family: var(--font-mono); font-size: 12px;
+  text-align: center; padding: 4px 6px; outline: none;
+}
+.speaking-score-input:focus { border-color: #B07FD4; }
+.speaking-rubric-total {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid rgba(176,127,212,0.2);
+  font-size: var(--text-body-sm);
+}
+
 .upload-modal-overlay {
   position: fixed;
   inset: 0;
@@ -4775,6 +5033,20 @@ body::after {
     <div class="picker-item-info">
       <div class="picker-item-name">Writing Task</div>
       <div class="picker-item-desc">Prompt + rubric + word limit</div>
+    </div>
+  </div>
+  <div class="picker-item" onclick="pickerAddBlock('reading_task')">
+    <div class="picker-item-icon">📖</div>
+    <div class="picker-item-info">
+      <div class="picker-item-name">Reading Task</div>
+      <div class="picker-item-desc">Passage + linked questions</div>
+    </div>
+  </div>
+  <div class="picker-item" onclick="pickerAddBlock('speaking_task')">
+    <div class="picker-item-icon">🎤</div>
+    <div class="picker-item-info">
+      <div class="picker-item-name">Speaking Task</div>
+      <div class="picker-item-desc">Prompt card + questions + rubric</div>
     </div>
   </div>
   <div class="picker-item" onclick="pickerAddBlock('instruction')">
@@ -6044,6 +6316,12 @@ function buildBlockContent(block, secId, bi, qNum) {
     case 'writing_task':
       return buildWritingTaskContent(block, secId);
 
+    case 'reading_task':
+      return buildReadingTaskContent(block, secId);
+
+    case 'speaking_task':
+      return buildSpeakingTaskContent(block, secId);
+
     case 'question':
       return buildQuestionContent(block, secId, qNum);
 
@@ -6056,8 +6334,213 @@ function buildBlockContent(block, secId, bi, qNum) {
 // QUESTION BLOCK CONTENT
 // ============================================================
 // ============================================================
-// WRITING TASK BLOCK
+// READING TASK BLOCK
 // ============================================================
+function buildReadingTaskContent(block, secId) {
+  const paraOn = block.para_numbers || false;
+  const qs     = block.questions || [];
+
+  const qRows = qs.map((q, i) => `
+    <div class="reading-linked-q">
+      <span class="reading-linked-q-num">Q${i+1}</span>
+      <textarea class="reading-linked-q-input" rows="1"
+        placeholder="Question text…"
+        oninput="updateReadingQ('${secId}','${block.id}',${i},'text',this.value);autoResize(this)"
+      >${escHtml(q.text||'')}</textarea>
+      <select class="reading-linked-q-type"
+        onchange="updateReadingQ('${secId}','${block.id}',${i},'qtype',this.value)">
+        <option value="mcq"          ${q.qtype==='mcq'?'selected':''}>MCQ</option>
+        <option value="true_false"   ${q.qtype==='true_false'?'selected':''}>T/F</option>
+        <option value="short_answer" ${q.qtype==='short_answer'?'selected':''}>Short</option>
+        <option value="fill_blank"   ${q.qtype==='fill_blank'?'selected':''}>Fill</option>
+      </select>
+      ${qs.length>1?`<button class="btn-remove-option" onclick="removeReadingQ('${secId}','${block.id}',${i})">×</button>`:''}
+    </div>`).join('');
+
+  return `
+    <div class="block-reading">
+      <div class="block-reading-header">
+        <span class="block-reading-label">Reading Task</span>
+        <div class="reading-para-toggle"
+             onclick="toggleReadingPara('${secId}','${block.id}')">
+          <div class="reading-para-checkbox ${paraOn?'checked':''}">${paraOn?'✓':''}</div>
+          <span style="font-size:11px;">Paragraph numbers</span>
+        </div>
+      </div>
+      <div class="block-reading-body">
+        <input class="reading-passage-title-input"
+          placeholder="Passage Title (optional)"
+          value="${escHtml(block.title||'')}"
+          oninput="updateBlockField('${secId}','${block.id}','title',this.value)">
+        <textarea class="reading-passage-textarea" rows="6"
+          placeholder="Paste or type the reading passage here…"
+          oninput="updateBlockField('${secId}','${block.id}','passage',this.value);autoResize(this)"
+        >${escHtml(block.passage||'')}</textarea>
+        <div class="reading-linked-questions">
+          <span class="reading-linked-label">Linked Questions</span>
+          <div class="reading-linked-list">${qRows}</div>
+          <button class="btn-add-linked-q"
+            onclick="addReadingQ('${secId}','${block.id}')">+ Add Question</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function toggleReadingPara(secId, blockId) {
+  const b = getBlock(secId, blockId);
+  if (!b) return;
+  b.para_numbers = !b.para_numbers;
+  renderBuilder(); triggerAutosave();
+}
+
+function updateReadingQ(secId, blockId, idx, field, val) {
+  const b = getBlock(secId, blockId);
+  if (!b?.questions) return;
+  b.questions[idx][field] = val;
+  triggerAutosave();
+}
+
+function addReadingQ(secId, blockId) {
+  const b = getBlock(secId, blockId);
+  if (!b) return;
+  if (!b.questions) b.questions = [];
+  b.questions.push({ id:'rq_'+Date.now(), text:'', qtype:'mcq' });
+  renderBuilder(); triggerAutosave();
+}
+
+function removeReadingQ(secId, blockId, idx) {
+  const b = getBlock(secId, blockId);
+  if (!b?.questions || b.questions.length <= 1) return;
+  b.questions.splice(idx, 1);
+  renderBuilder(); triggerAutosave();
+}
+
+// ============================================================
+// SPEAKING TASK BLOCK
+// ============================================================
+function buildSpeakingTaskContent(block, secId) {
+  const rubricOn = block.rubric_on || false;
+  const rubric   = block.rubric || [];
+  const rubricTotal = rubric.reduce((s,r)=>s+(r.score||0),0);
+  const qs = block.questions || [];
+
+  const parts = [
+    {v:'part1',l:'Part 1'},{v:'part2',l:'Part 2'},
+    {v:'part3',l:'Part 3'},{v:'custom',l:'Custom'}
+  ];
+  const partOptions = parts.map(p=>
+    `<option value="${p.v}" ${block.part===p.v?'selected':''}>${p.l}</option>`
+  ).join('');
+
+  const qRows = qs.map((q,i)=>`
+    <div class="speaking-q-row">
+      <span class="speaking-q-num">${i+1}.</span>
+      <textarea class="speaking-q-input" rows="1"
+        placeholder="${q.type==='followup'?'Follow-up question…':'Question…'}"
+        oninput="updateSpeakingQ('${secId}','${block.id}',${i},'text',this.value);autoResize(this)"
+      >${escHtml(q.text||'')}</textarea>
+      <span class="speaking-q-type">${q.type==='followup'?'Follow-up':'Main'}</span>
+      ${qs.length>1?`<button class="btn-remove-option" onclick="removeSpeakingQ('${secId}','${block.id}',${i})">×</button>`:''}
+    </div>`).join('');
+
+  const rubricRows = rubric.map((r,i)=>`
+    <div class="speaking-rubric-row">
+      <span class="speaking-rubric-name">${escHtml(r.name)}</span>
+      <input class="speaking-score-input" type="number" min="0" max="9"
+        value="${r.score}"
+        oninput="updateSpeakingRubric('${secId}','${block.id}',${i},+this.value)">
+      <span style="font-size:11px;color:var(--white-muted);">pts</span>
+    </div>`).join('');
+
+  return `
+    <div class="block-speaking">
+      <div class="block-speaking-header">
+        <span class="block-speaking-label">Speaking Task</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <select class="speaking-part-select"
+            onchange="updateBlockField('${secId}','${block.id}','part',this.value)">
+            ${partOptions}
+          </select>
+          <div class="speaking-timer-row">
+            <input class="speaking-timer-input" type="number" min="0" max="120"
+              value="${block.timer||0}"
+              oninput="updateBlockField('${secId}','${block.id}','timer',+this.value)"
+              title="Preparation time (seconds)">
+            <span>sec</span>
+          </div>
+        </div>
+      </div>
+      <div class="block-speaking-body">
+        <textarea class="speaking-prompt-textarea" rows="3"
+          placeholder="Speaking prompt / task card…"
+          oninput="updateBlockField('${secId}','${block.id}','prompt',this.value);autoResize(this)"
+        >${escHtml(block.prompt||'')}</textarea>
+
+        <div class="speaking-questions-section">
+          <span class="speaking-questions-label">Questions</span>
+          ${qRows}
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button class="btn-add-speaking-q" style="flex:1;"
+              onclick="addSpeakingQ('${secId}','${block.id}','main')">+ Main Q</button>
+            <button class="btn-add-speaking-q" style="flex:1;"
+              onclick="addSpeakingQ('${secId}','${block.id}','followup')">+ Follow-up</button>
+          </div>
+        </div>
+
+        <div class="speaking-rubric-toggle"
+             onclick="toggleSpeakingRubric('${secId}','${block.id}')">
+          <div class="speaking-rubric-btn ${rubricOn?'on':''}"></div>
+          <span class="rubric-toggle-label">Scoring Rubric</span>
+          ${rubricOn?`<span style="font-family:var(--font-mono);font-size:10px;color:#B07FD4;margin-left:auto;">${rubricTotal}pts</span>`:''}
+        </div>
+
+        <div class="speaking-rubric ${rubricOn?'visible':''}">
+          <div class="speaking-rubric-header">IELTS Speaking Criteria</div>
+          ${rubricRows}
+          <div class="speaking-rubric-total">
+            <span style="font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--white-muted);">Total</span>
+            <span style="font-family:var(--font-mono);font-size:13px;color:#B07FD4;" id="speaking-rubric-total-${block.id}">${rubricTotal}pts</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function updateSpeakingQ(secId, blockId, idx, field, val) {
+  const b = getBlock(secId, blockId);
+  if (!b?.questions) return;
+  b.questions[idx][field] = val; triggerAutosave();
+}
+function addSpeakingQ(secId, blockId, type) {
+  const b = getBlock(secId, blockId);
+  if (!b) return;
+  if (!b.questions) b.questions = [];
+  b.questions.push({ id:'sq_'+Date.now(), text:'', type });
+  renderBuilder(); triggerAutosave();
+}
+function removeSpeakingQ(secId, blockId, idx) {
+  const b = getBlock(secId, blockId);
+  if (!b?.questions || b.questions.length<=1) return;
+  b.questions.splice(idx,1);
+  renderBuilder(); triggerAutosave();
+}
+function toggleSpeakingRubric(secId, blockId) {
+  const b = getBlock(secId, blockId);
+  if (!b) return;
+  b.rubric_on = !b.rubric_on;
+  renderBuilder(); triggerAutosave();
+}
+function updateSpeakingRubric(secId, blockId, idx, val) {
+  const b = getBlock(secId, blockId);
+  if (!b?.rubric) return;
+  b.rubric[idx].score = val;
+  const total = b.rubric.reduce((s,r)=>s+(r.score||0),0);
+  const el = document.getElementById(`speaking-rubric-total-${blockId}`);
+  if (el) el.textContent = total+'pts';
+  triggerAutosave();
+}
+
+
 function buildWritingTaskContent(block, secId) {
   const rubricOn = block.rubric_on || false;
   const rubric   = block.rubric || [
@@ -6466,6 +6949,32 @@ function addBlock(secId, type) {
     block.points        = 1;
     block.difficulty    = '';
   }
+  if (type === 'reading_task') {
+    block.title        = '';
+    block.passage      = '';
+    block.para_numbers = false;
+    block.questions    = [
+      { id: 'rq_'+Date.now(), text: '', qtype: 'mcq' }
+    ];
+  }
+
+  if (type === 'speaking_task') {
+    block.part         = 'part2';
+    block.prompt       = '';
+    block.timer        = 0;
+    block.questions    = [
+      { id: 'sq_'+Date.now(), text: '', type: 'main' },
+      { id: 'sq_'+(Date.now()+1), text: '', type: 'followup' }
+    ];
+    block.rubric_on    = false;
+    block.rubric       = [
+      { name: 'Fluency & Coherence',    score: 9 },
+      { name: 'Lexical Resource',       score: 9 },
+      { name: 'Grammatical Range',      score: 9 },
+      { name: 'Pronunciation',          score: 9 }
+    ];
+  }
+
   if (type === 'writing_task') {
     block.task_type   = 'task2';
     block.prompt      = '';
@@ -6798,12 +7307,80 @@ function buildPreviewBlock(block, isTeacher, letters, qNum) {
 
     case 'writing_task':
       return buildPreviewWritingTask(block, isTeacher);
+    case 'reading_task':
+      return buildPreviewReadingTask(block, isTeacher, letters, qNum);
+    case 'speaking_task':
+      return buildPreviewSpeakingTask(block, isTeacher);
     case 'question':
       return buildPreviewQuestion(block, isTeacher, letters, qNum);
 
     default: return '';
   }
 }
+
+function buildPreviewReadingTask(block, isTeacher, letters, startQNum) {
+  const qs = block.questions || [];
+  let qNum = startQNum - 1;
+
+  const qHtml = qs.map((q,i) => {
+    qNum++;
+    return `<div style="display:flex;gap:10px;margin-bottom:8px;font-size:13px;">
+      <span style="font-family:var(--font-mono);font-size:9px;color:#5B9BD5;min-width:22px;margin-top:2px;">Q${qNum}</span>
+      <span style="flex:1;color:#0D0D0D;font-weight:500;">${escHtml(q.text||'')}</span>
+      <span style="font-size:10px;color:#AAA;">${(q.qtype||'').replace('_',' ')}</span>
+    </div>
+    ${!isTeacher?`<div style="margin:4px 0 6px 32px;border-bottom:1px solid #DDD;height:14px;"></div>`:''}`;
+  }).join('');
+
+  let passageHtml = `<div style="font-size:13px;line-height:1.8;color:#333;white-space:pre-wrap;">${escHtml(block.passage||'')}</div>`;
+  if (block.para_numbers) {
+    const paras = (block.passage||'').split('\n').filter(p=>p.trim());
+    passageHtml = paras.map((p,i)=>`
+      <div style="display:flex;gap:10px;margin-bottom:6px;">
+        <span style="font-family:var(--font-mono);font-size:9px;color:#5B9BD5;min-width:16px;margin-top:3px;">${String.fromCharCode(65+i)}.</span>
+        <span style="font-size:13px;line-height:1.75;color:#333;">${escHtml(p)}</span>
+      </div>`).join('');
+  }
+
+  return `
+    <div class="preview-passage" style="border-left-color:#5B9BD5;">
+      ${block.title?`<div style="font-family:var(--font-display);font-size:16px;font-weight:600;color:#0D0D0D;margin-bottom:10px;">${escHtml(block.title)}</div>`:''}
+      ${passageHtml}
+      ${qs.length?`<div style="margin-top:14px;padding-top:12px;border-top:1px solid #E5E5E5;">
+        <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#5B9BD5;margin-bottom:8px;">Questions</div>
+        ${qHtml}
+      </div>`:''}
+    </div>`;
+}
+
+function buildPreviewSpeakingTask(block, isTeacher) {
+  const partLabel = {part1:'Part 1',part2:'Part 2',part3:'Part 3',custom:'Speaking Task'}[block.part||'part2']||'Speaking Task';
+  const qs        = block.questions || [];
+  const rubric    = block.rubric || [];
+  const rubricOn  = block.rubric_on && rubric.length>0 && isTeacher;
+  const total     = rubric.reduce((s,r)=>s+(r.score||0),0);
+
+  return `
+    <div class="preview-passage" style="border-left-color:#B07FD4;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#B07FD4;">${partLabel}</span>
+        ${block.timer?`<span style="font-size:11px;color:#AAA;">Prep: ${block.timer}s</span>`:''}
+      </div>
+      <div style="font-size:14px;font-weight:500;color:#0D0D0D;line-height:1.65;margin-bottom:${qs.length?'12px':'0'};">${escHtml(block.prompt||'[No prompt entered]')}</div>
+      ${qs.length?`<div style="border-top:1px solid #E5E5E5;padding-top:10px;">
+        ${qs.map((q,i)=>`<div style="display:flex;gap:10px;margin-bottom:7px;font-size:13px;">
+          <span style="font-family:var(--font-mono);font-size:9px;color:#B07FD4;min-width:18px;margin-top:2px;">${i+1}.</span>
+          <span style="flex:1;color:#1A1A1A;">${escHtml(q.text||'')}</span>
+          ${q.type==='followup'?`<span style="font-size:10px;color:#AAA;">follow-up</span>`:''}
+        </div>`).join('')}
+      </div>`:''}
+      ${rubricOn?`<div style="margin-top:12px;border:1px solid #E8D5FF;border-radius:6px;overflow:hidden;">
+        <div style="padding:6px 12px;background:#F9F0FF;font-size:10px;font-family:var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:#B07FD4;border-bottom:1px solid #E8D5FF;">Rubric — ${total}pts</div>
+        ${rubric.map(r=>`<div style="display:flex;padding:7px 12px;border-bottom:.5px solid #EEE;font-size:12px;"><span style="flex:1;color:#1A1A1A;">${escHtml(r.name)}</span><span style="color:#B07FD4;font-family:var(--font-mono);font-size:11px;">${r.score}pts</span></div>`).join('')}
+      </div>`:''}
+    </div>`;
+}
+
 
 function buildPreviewWritingTask(block, isTeacher) {
   const taskLabel = {task1:'Task 1',task2:'Task 2',essay:'Essay',letter:'Letter',report:'Report',custom:'Writing Task'}[block.task_type||'task2']||'Writing Task';
@@ -7430,11 +8007,84 @@ function buildPrintBlock(block, isTeacher, letters, getQNum) {
       return `<hr class="pdf-divider">`;
     case 'writing_task':
       return buildPrintWritingTask(block, isTeacher);
+    case 'reading_task':
+      return buildPrintReadingTask(block, isTeacher, letters, getQNum);
+    case 'speaking_task':
+      return buildPrintSpeakingTask(block, isTeacher);
     case 'question':
       return buildPrintQuestion(block, isTeacher, letters, getQNum());
     default: return '';
   }
 }
+
+function buildPrintReadingTask(block, isTeacher, letters, getQNum) {
+  const qs = block.questions || [];
+  const qHtml = qs.map((q,i) => {
+    const num = getQNum();
+    return `<div style="margin-bottom:8pt;page-break-inside:avoid;">
+      <div style="display:flex;gap:8pt;font-size:10.5pt;">
+        <span style="font-family:'DM Mono',monospace;font-size:8pt;color:#5B9BD5;min-width:20pt;">Q${num}</span>
+        <span style="flex:1;color:#1A1A1A;font-weight:500;">${escHtml(q.text||'')}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:7pt;color:#AAA;">${(q.qtype||'').replace('_',' ')}</span>
+      </div>
+      ${isTeacher?'':`<div style="margin:5pt 0 0 28pt;border-bottom:1pt solid #DDD;height:14pt;"></div>`}
+    </div>`;
+  }).join('');
+
+  // Add paragraph numbers if enabled
+  let passageHtml = escHtml(block.passage||'');
+  if (block.para_numbers) {
+    const paras = (block.passage||'').split('\n').filter(p=>p.trim());
+    passageHtml = paras.map((p,i)=>
+      `<div style="margin-bottom:6pt;display:flex;gap:8pt;">
+        <span style="font-family:'DM Mono',monospace;font-size:7.5pt;color:#5B9BD5;min-width:14pt;margin-top:2pt;">${String.fromCharCode(65+i)}.</span>
+        <span>${escHtml(p)}</span>
+      </div>`).join('');
+  }
+
+  return `
+    <div style="margin-bottom:16pt;page-break-inside:avoid;">
+      <div style="border:1pt solid #DDD;border-left:3pt solid #5B9BD5;border-radius:3pt;padding:12pt 14pt;margin-bottom:10pt;">
+        ${block.title?`<div style="font-family:'Cormorant Garamond',serif;font-size:14pt;font-weight:600;color:#1A1A1A;margin-bottom:8pt;">${escHtml(block.title)}</div>`:''}
+        <div style="font-size:10pt;line-height:1.75;color:#333;">${passageHtml}</div>
+      </div>
+      ${qs.length?`<div style="padding-left:4pt;"><div style="font-family:'DM Mono',monospace;font-size:8pt;letter-spacing:.1em;text-transform:uppercase;color:#5B9BD5;margin-bottom:8pt;">Questions</div>${qHtml}</div>`:''}
+    </div>`;
+}
+
+function buildPrintSpeakingTask(block, isTeacher) {
+  const partLabel = {part1:'Part 1',part2:'Part 2',part3:'Part 3',custom:'Speaking Task'}[block.part||'part2']||'Speaking Task';
+  const qs        = block.questions || [];
+  const rubric    = block.rubric || [];
+  const rubricOn  = block.rubric_on && rubric.length > 0 && isTeacher;
+  const total     = rubric.reduce((s,r)=>s+(r.score||0),0);
+
+  const qHtml = qs.map((q,i)=>`
+    <div style="display:flex;gap:8pt;margin-bottom:5pt;font-size:10pt;">
+      <span style="font-family:'DM Mono',monospace;font-size:8pt;color:#B07FD4;min-width:16pt;margin-top:2pt;">${i+1}.</span>
+      <span style="flex:1;color:#1A1A1A;">${escHtml(q.text||'')}</span>
+      ${q.type==='followup'?`<span style="font-family:'DM Mono',monospace;font-size:7pt;color:#AAA;white-space:nowrap;">follow-up</span>`:''}
+    </div>`).join('');
+
+  const rubricHtml = rubricOn ? `
+    <div style="margin-top:12pt;border:1pt solid #DDD;border-radius:4pt;overflow:hidden;">
+      <div style="padding:6pt 10pt;background:#F7F7F5;font-family:'DM Mono',monospace;font-size:8pt;letter-spacing:.1em;text-transform:uppercase;color:#666;border-bottom:1pt solid #DDD;">Scoring Rubric — ${total}pts</div>
+      ${rubric.map(r=>`<div style="display:flex;padding:6pt 10pt;border-bottom:.5pt solid #EEE;font-size:9.5pt;"><span style="flex:1;color:#1A1A1A;">${escHtml(r.name)}</span><span style="font-family:'DM Mono',monospace;font-size:9pt;color:#B07FD4;">${r.score}pts</span></div>`).join('')}
+      <div style="display:flex;justify-content:space-between;padding:6pt 10pt;background:#F7F7F5;font-family:'DM Mono',monospace;font-size:9pt;"><span style="color:#666;">Total</span><span style="color:#B07FD4;font-weight:500;">${total}pts</span></div>
+    </div>` : '';
+
+  return `
+    <div style="border:1pt solid #DDD;border-left:3pt solid #B07FD4;border-radius:3pt;padding:14pt 16pt;margin-bottom:16pt;page-break-inside:avoid;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10pt;">
+        <span style="font-family:'DM Mono',monospace;font-size:8.5pt;letter-spacing:.12em;text-transform:uppercase;color:#B07FD4;">${partLabel}</span>
+        ${block.timer?`<span style="font-family:'DM Mono',monospace;font-size:8pt;color:#AAA;">Prep: ${block.timer}s</span>`:''}
+      </div>
+      <div style="font-size:11pt;line-height:1.65;color:#0D0D0D;font-weight:500;margin-bottom:${qs.length?'12pt':'0'};">${escHtml(block.prompt||'')}</div>
+      ${qs.length?`<div style="border-top:1pt solid #EEE;padding-top:10pt;">${qHtml}</div>`:''}
+      ${rubricHtml}
+    </div>`;
+}
+
 
 function buildPrintWritingTask(block, isTeacher) {
   const taskLabel = {task1:'Task 1',task2:'Task 2',essay:'Essay',letter:'Letter',report:'Report',custom:'Writing Task'}[block.task_type||'task2']||'Writing Task';
