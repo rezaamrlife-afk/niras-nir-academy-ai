@@ -1954,12 +1954,15 @@ body::after {
   align-items: center;
   gap: 6px;
   padding: 10px 0 4px;
-  opacity: 0;
+  opacity: 0.5;
   transition: opacity var(--transition);
 }
 .add-block-bar:hover { opacity: 1; }
-.canvas-section:hover .add-block-bar { opacity: 0.6; }
+.canvas-section:hover .add-block-bar { opacity: 0.8; }
 .canvas-section:hover .add-block-bar:hover { opacity: 1; }
+
+/* Always visible when section has no blocks */
+.canvas-section.empty-section .add-block-bar { opacity: 1; }
 
 .add-block-bar-line {
   flex: 1;
@@ -3796,7 +3799,7 @@ function renderCanvas() {
 // ============================================================
 function buildSectionEl(sec, si) {
   const div = document.createElement('div');
-  div.className = 'canvas-section';
+  div.className = 'canvas-section' + (sec.blocks.length === 0 ? ' empty-section' : '');
   div.id = 'section-' + sec.id;
 
   // Section header
@@ -4423,7 +4426,7 @@ function closeModal(id) {
 // BUILDER ACTIONS (Stubs for later steps)
 // ============================================================
 function builderPreview() {
-  showToast('Preview coming in Step 3 👁', 'info');
+  showToast('Preview coming soon', 'info');
 }
 function builderExport() {
   if (!builder.sections.length) {
