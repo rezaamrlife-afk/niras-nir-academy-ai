@@ -2598,15 +2598,6 @@ function renderExams(exams) {
   `).join('');
 }
 
-function showNewExamModal() {
-  // Step 2 will open the full Exam Builder
-  showToast('Exam Builder coming in Step 2 🔨', 'info');
-}
-
-function openExam(id) {
-  showToast('Exam Editor coming in Step 2 🔨', 'info');
-}
-
 async function exportExam(id) {
   showToast('PDF Export coming in Step 4 📄', 'info');
 }
@@ -2795,21 +2786,20 @@ function renderCanvas() {
 
   if (!builder.sections.length) {
     empty.style.display = 'flex';
-    // Remove any section els
     inner.querySelectorAll('.canvas-section').forEach(e => e.remove());
+    setTimeout(autoResizeAll, 50);
     return;
   }
 
   empty.style.display = 'none';
-
-  // Remove old section els
   inner.querySelectorAll('.canvas-section').forEach(e => e.remove());
 
-  // Re-render all sections
   builder.sections.forEach((sec, si) => {
     const el = buildSectionEl(sec, si);
     inner.appendChild(el);
   });
+
+  setTimeout(autoResizeAll, 50);
 }
 
 // ============================================================
@@ -3463,13 +3453,6 @@ function autoResizeAll() {
   document.querySelectorAll('textarea').forEach(autoResize);
 }
 
-// Patch renderCanvas to call autoResizeAll after DOM update
-const _origRenderCanvas = renderCanvas;
-function renderCanvas() {
-  _origRenderCanvas();
-  setTimeout(autoResizeAll, 50);
-}
-
 // ============================================================
 // PATCH: showNewExamModal → open builder
 // ============================================================
@@ -3481,6 +3464,15 @@ function openExam(id) {
   // In Step 3 this will load from Supabase
   showToast('Loading from Supabase in Step 3 🔗', 'info');
 }
+
+// ============================================================
+// INIT — check session on load
+// ============================================================
+(function init() {
+  if (sb.restoreSession()) {
+    enterDashboard();
+  }
+})();
 
 </script>
 </body>
