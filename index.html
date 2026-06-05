@@ -5,32 +5,221 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NIRAS AI — Nir Academy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
 
 <style>
 /* ============================================================
    DESIGN TOKENS
    ============================================================ */
 :root {
-  --black:       #0A0A0A;
-  --black-soft:  #111111;
-  --black-card:  #161616;
-  --black-border:#222222;
-  --gold:        #C9A84C;
-  --gold-light:  #E2C47A;
-  --gold-dim:    #8A6E30;
-  --white:       #F5F0E8;
-  --white-dim:   #9E9A94;
-  --blush:       #E8A0A0;
-  --red-err:     #E07070;
+  /* Colors */
+  --black:        #0A0A0A;
+  --black-soft:   #111111;
+  --black-card:   #161616;
+  --black-border: #222222;
+  --gold:         #C9A84C;
+  --gold-light:   #E2C47A;
+  --gold-dim:     #8A6E30;
+  --white:        #F0EDE8;   /* warm off-white — easier on eyes in dark mode */
+  --white-dim:    #9B9690;
+  --white-muted:  #6B6762;
+  --blush:        #E8A0A0;
+  --red-err:      #E07070;
+  --green:        #6DBF7E;
 
-  --font-display: 'Cormorant Garamond', serif;
-  --font-ui:      'Outfit', sans-serif;
-  --font-mono:    'DM Mono', monospace;
+  /* Typography — Font Families */
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-ui:      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:    'DM Mono', 'Fira Code', 'Cascadia Code', monospace;
 
-  --radius:  8px;
+  /* Typography — Scale */
+  --text-display: 3.5rem;    /* 56px — hero, major headings */
+  --text-h1:      2.25rem;   /* 36px — page titles */
+  --text-h2:      1.625rem;  /* 26px — section titles */
+  --text-h3:      1.25rem;   /* 20px — subsection titles */
+  --text-h4:      1.0625rem; /* 17px — component titles */
+  --text-body-lg: 1rem;      /* 16px — body large */
+  --text-body:    0.9375rem; /* 15px — body default */
+  --text-body-sm: 0.875rem;  /* 14px — body small */
+  --text-caption: 0.8125rem; /* 13px — captions */
+  --text-label:   0.75rem;   /* 12px — labels, badges */
+  --text-micro:   0.6875rem; /* 11px — mono labels */
+
+  /* Typography — Weights */
+  --weight-light:    300;
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  /* Typography — Line Heights */
+  --leading-tight:   1.2;   /* display, large headings */
+  --leading-snug:    1.4;   /* h2, h3 */
+  --leading-normal:  1.6;   /* ui elements, labels */
+  --leading-relaxed: 1.7;   /* body text */
+  --leading-loose:   1.85;  /* long-form reading, passages */
+
+  /* Typography — Letter Spacing */
+  --tracking-tight:  -0.025em;  /* display headings */
+  --tracking-snug:   -0.015em;  /* h1 */
+  --tracking-normal:  0em;      /* body */
+  --tracking-wide:    0.03em;   /* buttons */
+  --tracking-wider:   0.06em;   /* labels */
+  --tracking-widest:  0.12em;   /* mono badges */
+
+  /* Spacing */
+  --radius:    8px;
   --radius-lg: 14px;
+
+  /* Animation */
   --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================
+   TYPOGRAPHY SYSTEM — Global Rules
+   ============================================================ */
+
+/* Base body typography */
+body {
+  font-family: var(--font-ui);
+  font-size: var(--text-body);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-relaxed);
+  color: var(--white);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+  text-rendering: optimizeLegibility;
+}
+
+/* Display — hero sections */
+.t-display {
+  font-family: var(--font-display);
+  font-size: var(--text-display);
+  font-weight: var(--weight-light);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--white);
+}
+
+/* H1 — page titles */
+.t-h1 {
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-snug);
+  color: var(--white);
+}
+
+/* H2 — section titles */
+.t-h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-snug);
+  color: var(--white);
+}
+
+/* H3 — subsection titles */
+.t-h3 {
+  font-family: var(--font-ui);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-normal);
+  color: var(--white);
+}
+
+/* H4 — component titles */
+.t-h4 {
+  font-family: var(--font-ui);
+  font-size: var(--text-h4);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-normal);
+  color: var(--white);
+}
+
+/* Body Large */
+.t-body-lg {
+  font-size: var(--text-body-lg);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-relaxed);
+  color: var(--white-dim);
+}
+
+/* Body */
+.t-body {
+  font-size: var(--text-body);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-relaxed);
+  color: var(--white);
+}
+
+/* Body Small */
+.t-body-sm {
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-relaxed);
+  color: var(--white-dim);
+}
+
+/* Caption */
+.t-caption {
+  font-size: var(--text-caption);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-normal);
+  color: var(--white-muted);
+}
+
+/* Label */
+.t-label {
+  font-size: var(--text-label);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--white-dim);
+}
+
+/* Mono label */
+.t-mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+}
+
+/* Button text */
+.t-btn {
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+}
+
+/* Long-form reading — passages, exam content */
+.t-reading {
+  font-family: var(--font-ui);
+  font-size: var(--text-body-lg);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-loose);
+  letter-spacing: var(--tracking-normal);
+  color: var(--white);
+  word-spacing: 0.02em;
+}
+
+/* Editor prose — question stems, instructions */
+.t-prose {
+  font-family: var(--font-ui);
+  font-size: var(--text-body);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-relaxed);
+  color: var(--white);
 }
 
 /* ============================================================
@@ -42,12 +231,9 @@ html { scroll-behavior: smooth; }
 
 body {
   background: var(--black);
-  color: var(--white);
-  font-family: var(--font-ui);
-  font-size: 15px;
-  line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
+  /* font props come from typography system above */
 }
 
 /* ============================================================
@@ -143,10 +329,10 @@ body::after {
 
 .nav-logo-text {
   font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 600;
+  font-size: var(--text-h4);
+  font-weight: var(--weight-semibold);
   color: var(--white);
-  letter-spacing: 0.02em;
+  letter-spacing: var(--tracking-snug);
 }
 
 .nav-logo-text span {
@@ -177,12 +363,13 @@ body::after {
   border: none;
   color: var(--white-dim);
   font-family: var(--font-ui);
-  font-size: 14px;
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
   cursor: pointer;
   padding: 8px 16px;
   border-radius: var(--radius);
   transition: color var(--transition);
-  letter-spacing: 0.02em;
+  letter-spacing: var(--tracking-normal);
 }
 .btn-ghost:hover { color: var(--white); }
 
@@ -191,13 +378,13 @@ body::after {
   border: none;
   color: var(--black);
   font-family: var(--font-ui);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
   padding: 9px 22px;
   border-radius: var(--radius);
   transition: background var(--transition), transform var(--transition);
-  letter-spacing: 0.03em;
+  letter-spacing: var(--tracking-wide);
 }
 .btn-gold:hover {
   background: var(--gold-light);
@@ -248,10 +435,10 @@ body::after {
 
 .hero-title {
   font-family: var(--font-display);
-  font-size: clamp(52px, 7vw, 96px);
-  font-weight: 300;
-  line-height: 1.05;
-  letter-spacing: -0.01em;
+  font-size: clamp(48px, 6.5vw, 88px);
+  font-weight: var(--weight-light);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
   color: var(--white);
   max-width: 900px;
 }
@@ -262,11 +449,11 @@ body::after {
 }
 
 .hero-sub {
-  font-size: 16px;
+  font-size: var(--text-body-lg);
+  font-weight: var(--weight-regular);
   color: var(--white-dim);
   max-width: 520px;
-  line-height: 1.7;
-  font-weight: 300;
+  line-height: var(--leading-relaxed);
 }
 
 .hero-cta {
@@ -347,17 +534,17 @@ body::after {
 
 .feature-title {
   font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 600;
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
   color: var(--white);
-  letter-spacing: 0.01em;
+  letter-spacing: var(--tracking-normal);
 }
 
 .feature-desc {
-  font-size: 13.5px;
+  font-size: var(--text-body-sm);
   color: var(--white-dim);
-  line-height: 1.65;
-  font-weight: 300;
+  line-height: var(--leading-relaxed);
+  font-weight: var(--weight-regular);
 }
 
 /* ============================================================
@@ -417,10 +604,10 @@ body::after {
 
 .auth-logo-name {
   font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 600;
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
   color: var(--white);
-  letter-spacing: 0.02em;
+  letter-spacing: var(--tracking-snug);
 }
 
 /* Tab switcher */
@@ -459,10 +646,10 @@ body::after {
 .form-group { display: flex; flex-direction: column; gap: 7px; }
 
 .form-label {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: var(--text-label);
+  font-weight: var(--weight-medium);
   color: var(--white-dim);
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-wider);
   text-transform: uppercase;
 }
 
@@ -472,13 +659,15 @@ body::after {
   border-radius: var(--radius);
   color: var(--white);
   font-family: var(--font-ui);
-  font-size: 14.5px;
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-regular);
   padding: 11px 14px;
   outline: none;
   transition: border-color var(--transition), box-shadow var(--transition);
   width: 100%;
+  line-height: var(--leading-normal);
 }
-.form-input::placeholder { color: rgba(158,154,148,0.5); }
+.form-input::placeholder { color: rgba(155,150,144,0.45); }
 .form-input:focus {
   border-color: var(--gold-dim);
   box-shadow: 0 0 0 3px rgba(201,168,76,0.1);
@@ -699,18 +888,19 @@ body::after {
 
 .dash-greeting-eyebrow {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--gold);
-  letter-spacing: 0.12em;
+  letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
 }
 
 .dash-greeting-title {
   font-family: var(--font-display);
-  font-size: 38px;
-  font-weight: 400;
+  font-size: var(--text-h1);
+  font-weight: var(--weight-regular);
   color: var(--white);
-  line-height: 1.1;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-snug);
 }
 
 /* Stats row */
@@ -733,23 +923,25 @@ body::after {
 
 .stat-label {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: var(--text-micro);
   color: var(--white-dim);
-  letter-spacing: 0.1em;
+  letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
 }
 
 .stat-value {
   font-family: var(--font-display);
-  font-size: 42px;
-  font-weight: 300;
+  font-size: 40px;
+  font-weight: var(--weight-light);
   color: var(--gold);
   line-height: 1;
+  letter-spacing: var(--tracking-tight);
 }
 
 .stat-sub {
-  font-size: 12px;
-  color: var(--white-dim);
+  font-size: var(--text-label);
+  font-weight: var(--weight-regular);
+  color: var(--white-muted);
 }
 
 /* Section header */
@@ -828,10 +1020,10 @@ body::after {
 
 .exam-card-title {
   font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 600;
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
   color: var(--white);
-  letter-spacing: 0.01em;
+  letter-spacing: var(--tracking-normal);
 }
 
 .exam-card-meta {
@@ -1096,10 +1288,10 @@ body::after {
 .sidebar-field:last-child { margin-bottom: 0; }
 
 .sidebar-label {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: var(--text-label);
+  font-weight: var(--weight-medium);
   color: var(--white-dim);
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-wider);
   text-transform: uppercase;
 }
 
@@ -1109,13 +1301,15 @@ body::after {
   border-radius: 6px;
   color: var(--white);
   font-family: var(--font-ui);
-  font-size: 13px;
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-regular);
   padding: 8px 10px;
   outline: none;
   width: 100%;
   transition: border-color var(--transition);
+  line-height: var(--leading-normal);
 }
-.sidebar-input::placeholder { color: rgba(158,154,148,0.4); }
+.sidebar-input::placeholder { color: rgba(155,150,144,0.4); }
 .sidebar-input:focus { border-color: var(--gold-dim); }
 
 .sidebar-select {
@@ -1345,14 +1539,14 @@ body::after {
   outline: none;
   color: var(--white);
   font-family: var(--font-ui);
-  font-size: 14px;
-  line-height: 1.65;
+  font-size: var(--text-body);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-relaxed);
   width: 100%;
   resize: none;
   min-height: 36px;
-  font-weight: 300;
 }
-.block-instruction-text::placeholder { color: rgba(158,154,148,0.4); }
+.block-instruction-text::placeholder { color: rgba(155,150,144,0.4); }
 
 /* ——— BLOCK: PASSAGE ——— */
 .block-passage {
@@ -1383,14 +1577,16 @@ body::after {
   outline: none;
   color: var(--white);
   font-family: var(--font-ui);
-  font-size: 13.5px;
-  line-height: 1.8;
+  font-size: var(--text-body-lg);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-loose);
+  letter-spacing: var(--tracking-normal);
+  word-spacing: 0.02em;
   width: 100%;
   resize: none;
   min-height: 80px;
-  font-weight: 300;
 }
-.block-passage-text::placeholder { color: rgba(158,154,148,0.35); }
+.block-passage-text::placeholder { color: rgba(155,150,144,0.35); }
 
 /* ——— BLOCK: DIVIDER ——— */
 .block-divider {
@@ -1501,14 +1697,15 @@ body::after {
   outline: none;
   color: var(--white);
   font-family: var(--font-ui);
-  font-size: 14.5px;
-  line-height: 1.6;
+  font-size: var(--text-body-lg);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-relaxed);
+  letter-spacing: var(--tracking-normal);
   width: 100%;
   resize: none;
   min-height: 38px;
-  font-weight: 400;
 }
-.question-stem::placeholder { color: rgba(158,154,148,0.4); }
+.question-stem::placeholder { color: rgba(155,150,144,0.4); }
 
 /* MCQ Options */
 .mcq-options { display: flex; flex-direction: column; gap: 6px; }
