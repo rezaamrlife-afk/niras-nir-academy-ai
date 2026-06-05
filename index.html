@@ -1683,7 +1683,34 @@ body::after {
   color: var(--gold);
 }
 
-/* ——— EDITOR CANVAS ——— */
+/* Score / Time row */
+.sidebar-score-row,
+.sidebar-time-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-score-unit {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--white-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sidebar-score-live {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--gold-dim);
+  margin-top: 4px;
+  letter-spacing: 0.04em;
+  min-height: 16px;
+}
+
+
 .builder-canvas {
   flex: 1;
   overflow-y: auto;
@@ -4292,6 +4319,28 @@ body::after {
         </div>
       </div>
 
+      <!-- Settings -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Settings</div>
+        <div class="sidebar-field">
+          <label class="sidebar-label">Total Score</label>
+          <div class="sidebar-score-row">
+            <input class="sidebar-input" id="meta-total-score" type="number" min="0" max="999"
+              placeholder="e.g. 100" oninput="onMetaChange()" style="flex:1;">
+            <span class="sidebar-score-unit">pts</span>
+          </div>
+          <div class="sidebar-score-live" id="sidebar-score-live"></div>
+        </div>
+        <div class="sidebar-field">
+          <label class="sidebar-label">Time Limit</label>
+          <div class="sidebar-time-row">
+            <input class="sidebar-input" id="meta-time-limit" type="number" min="0" max="480"
+              placeholder="e.g. 60" oninput="onMetaChange()" style="flex:1;">
+            <span class="sidebar-score-unit">min</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Sections list -->
       <div class="sidebar-section" style="flex:1;">
         <div class="sidebar-section-title">Sections</div>
@@ -5244,11 +5293,13 @@ function openExamBuilder(examId, examData) {
 
   // Populate UI
   document.getElementById('builder-title-input').value = builder.title;
-  document.getElementById('meta-subject').value = builder.meta.subject || '';
-  document.getElementById('meta-level').value   = builder.meta.level   || '';
-  document.getElementById('meta-book').value    = builder.meta.book    || '';
-  document.getElementById('meta-unit').value    = builder.meta.unit    || '';
-  document.getElementById('meta-topic').value   = builder.meta.topic   || '';
+  document.getElementById('meta-subject').value     = builder.meta.subject || '';
+  document.getElementById('meta-level').value       = builder.meta.level   || '';
+  document.getElementById('meta-book').value        = builder.meta.book    || '';
+  document.getElementById('meta-unit').value        = builder.meta.unit    || '';
+  document.getElementById('meta-topic').value       = builder.meta.topic   || '';
+  document.getElementById('meta-total-score').value = builder.meta.total_score || '';
+  document.getElementById('meta-time-limit').value  = builder.meta.time_limit  || '';
 
   renderBuilder();
   showPage('builder');
@@ -5269,12 +5320,48 @@ function onExamTitleChange(val) {
 }
 
 function onMetaChange() {
-  builder.meta.subject = document.getElementById('meta-subject').value;
-  builder.meta.level   = document.getElementById('meta-level').value;
-  builder.meta.book    = document.getElementById('meta-book').value;
-  builder.meta.unit    = document.getElementById('meta-unit').value;
-  builder.meta.topic   = document.getElementById('meta-topic').value;
+  builder.meta.subject     = document.getElementById('meta-subject').value;
+  builder.meta.level       = document.getElementById('meta-level').value;
+  builder.meta.book        = document.getElementById('meta-book').value;
+  builder.meta.unit        = document.getElementById('meta-unit').value;
+  builder.meta.topic       = document.getElementById('meta-topic').value;
+  builder.meta.total_score = parseInt(document.getElementById('meta-total-score').value) || 0;
+  builder.meta.time_limit  = parseInt(document.getElementById('meta-time-limit').value)  || 0;
+
+  // Live score feedback
+  const autoScore = calcAutoScore();
+  const setScore  = builder.meta.total_score;
+  const liveEl    = document.getElementById('sidebar-score-live');
+  if (liveEl) {
+    if (setScore > 0 && autoScore > 0) {
+      const diff = setScore - autoScore;
+      if (diff === 0) {
+        liveEl.textContent = `✓ Matches question points (${autoScore}pts)`;
+        liveEl.style.color = 'var(--green)';
+      } else if (diff > 0) {
+        liveEl.textContent = `${diff}pts unassigned (questions: ${autoScore}pts)`;
+        liveEl.style.color = 'var(--gold-dim)';
+      } else {
+        liveEl.textContent = `Exceeds question points by ${Math.abs(diff)}pts`;
+        liveEl.style.color = 'var(--red-err)';
+      }
+    } else if (autoScore > 0 && setScore === 0) {
+      liveEl.textContent = `Auto: ${autoScore}pts from questions`;
+      liveEl.style.color = 'var(--white-muted)';
+    } else {
+      liveEl.textContent = '';
+    }
+  }
+
   triggerAutosave();
+}
+
+function calcAutoScore() {
+  let total = 0;
+  builder.sections.forEach(sec =>
+    sec.blocks.forEach(b => { if (b.type === 'question') total += (b.points || 1); })
+  );
+  return total;
 }
 
 function triggerAutosave() {
@@ -6120,9 +6207,14 @@ function renderPreview() {
         </div>
         <div class="preview-info-field">
           <span class="preview-info-label">Score</span>
-          <div class="preview-info-line"></div>
+          <div class="preview-info-line" style="font-size:12px;color:#AAA;padding-top:4px;">/ ${meta.total_score || calcTotalPoints(builder.sections)}</div>
         </div>
-      </div>` : ''}
+        ${meta.time_limit ? `<div class="preview-info-field"><span class="preview-info-label">Time</span><div style="font-size:13px;font-weight:500;color:#333;">${meta.time_limit} min</div></div>` : ''}
+      </div>` : `
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid #E5E5E5;font-size:11px;color:#AAA;display:flex;gap:20px;">
+        <span>Total: ${meta.total_score || calcTotalPoints(builder.sections)}pts</span>
+        ${meta.time_limit ? `<span>Time: ${meta.time_limit} min</span>` : ''}
+      </div>`}
     </div>
     <div class="preview-sections">${sectionsHtml}</div>`;
 }
@@ -6724,8 +6816,13 @@ body{font-family:'Inter',sans-serif;font-size:10.5pt;line-height:1.65;color:var(
   <div class="pdf-info-row">
     <div class="pdf-info-field"><span class="pdf-info-label">Name</span><div class="pdf-info-value"></div></div>
     <div class="pdf-info-field"><span class="pdf-info-label">Date</span><div class="pdf-info-value"></div></div>
-    <div class="pdf-info-field"><span class="pdf-info-label">Score</span><div class="pdf-info-value"></div></div>
-  </div>` : ''}
+    <div class="pdf-info-field"><span class="pdf-info-label">Score</span><div class="pdf-info-value">/ ${exam.meta?.total_score || calcTotalPoints(exam.sections)}</div></div>
+    ${exam.meta?.time_limit ? `<div class="pdf-info-field"><span class="pdf-info-label">Time</span><div class="pdf-info-value" style="border:none;font-weight:500;">${exam.meta.time_limit} min</div></div>` : ''}
+  </div>` : `
+  <div style="margin-top:14px;padding-top:12px;border-top:1pt solid #DDD;font-family:'DM Mono',monospace;font-size:8pt;color:#888;display:flex;gap:20pt;">
+    ${exam.meta?.total_score ? `<span>Total: ${exam.meta.total_score}pts</span>` : `<span>Total: ${calcTotalPoints(exam.sections)}pts</span>`}
+    ${exam.meta?.time_limit ? `<span>Time: ${exam.meta.time_limit} min</span>` : ''}
+  </div>`}
 </div>
 ${sectionsHtml}
 <div class="pdf-footer">
@@ -6792,6 +6889,14 @@ function buildPrintQuestion(block, isTeacher, letters, qNum) {
     ? `<div class="pdf-explanation"><span class="pdf-explanation-label">Explanation</span>${escHtml(block.explanation)}</div>` : '';
 
   return `<div class="pdf-question"><div class="pdf-q-header"><span class="pdf-q-num">Q${qNum}</span><span class="pdf-q-stem">${escHtml(block.stem||'')}</span><div class="pdf-q-meta">${block.difficulty?`<span class="pdf-q-badge">${escHtml(block.difficulty)}</span>`:''}<span class="pdf-q-points">${block.points||1}pt</span></div></div>${answerHtml}${expHtml}</div>`;
+}
+
+function calcTotalPoints(sections) {
+  let total = 0;
+  (sections || []).forEach(sec =>
+    (sec.blocks || []).forEach(b => { if (b.type === 'question') total += (b.points || 1); })
+  );
+  return total;
 }
 
 function getSectionIcon(type) {
