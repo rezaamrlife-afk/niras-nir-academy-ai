@@ -1344,6 +1344,7 @@ body::after {
   /* Export modal */
   .export-modal { max-width: 100%; border-radius: 12px 12px 0 0; }
   .export-modal-overlay { align-items: flex-end; padding: 0; }
+  .export-modal-footer { padding: 14px 20px 28px; }
 }
 
 /* ============================================================
@@ -4475,7 +4476,7 @@ body::after {
 </div>
 
 <!-- Upload Modal -->
-<div class="upload-modal-overlay" id="upload-modal">
+<div class="upload-modal-overlay" id="upload-modal" onclick="if(event.target===this)closeUploadModal()">
   <div class="upload-modal">
 
     <!-- Header -->
@@ -4664,7 +4665,7 @@ body::after {
 </div>
 
 <!-- PDF Export Modal -->
-<div class="export-modal-overlay" id="export-modal">
+<div class="export-modal-overlay" id="export-modal" onclick="if(event.target===this)closeExportModal()">
   <div class="export-modal">
     <div class="export-modal-header">
       <div class="export-modal-title">Export PDF</div>
