@@ -1304,107 +1304,9 @@ body::after {
 /* ============================================================
    RESPONSIVE
    ============================================================ */
-@media (max-width: 900px) {
-  /* Landing */
-  .landing-nav { padding: 16px 24px; }
-  .landing-features { grid-template-columns: 1fr; }
-  .hero-logo-img { width: 80px; height: 80px; }
-  .hero-title { font-size: clamp(36px, 8vw, 60px); }
-  .hero-tagline-strip { gap: 20px; padding: 14px 24px; }
-  /* Dashboard */
-  .dash-body { padding: 28px 20px; }
-  .dash-stats { grid-template-columns: 1fr 1fr; }
-  /* Auth */
-  .auth-card { padding: 32px 24px; }
-  /* Preview */
-  .preview-topbar { padding: 12px 16px; flex-wrap: wrap; gap: 10px; }
-  .preview-body { padding: 20px 16px 60px; }
-  /* Builder */
-  .builder-exam-title-input { font-size: 15px; }
-}
 
-@media (max-width: 600px) {
-  /* Landing */
-  .landing-nav { padding: 14px 16px; }
-  .landing-footer { padding: 12px 16px; flex-direction: column; gap: 6px; text-align: center; }
-  .hero-logo-img { width: 72px; height: 72px; }
-  .hero-title { font-size: clamp(32px, 9vw, 48px); }
-  .hero-sub { font-size: var(--text-body); }
-  .hero-founder { flex-direction: column; gap: 4px; text-align: center; }
-  .hero-cta { flex-direction: column; width: 100%; }
-  .hero-cta .btn-primary,
-  .hero-cta .btn-outline { width: 100%; justify-content: center; }
-  .hero-tagline-strip { gap: 12px; }
-  .tagline-item { font-size: 9px; }
 
-  /* Dashboard */
-  .dash-topbar { padding: 12px 16px; }
-  .dash-stats { grid-template-columns: 1fr; }
-  .dash-body { padding: 20px 16px; }
-  .dash-user-pill span { display: none; }
-  .section-title { font-size: var(--text-h3); }
 
-  /* Auth */
-  .auth-card { padding: 28px 20px; margin: 16px; max-width: 100%; }
-  .auth-back { top: 16px; left: 16px; }
-
-  /* Builder */
-  .builder-topbar { padding: 0 12px; height: 52px; gap: 8px; }
-  .builder-back { font-size: 12px; padding: 5px 8px; }
-  .builder-back span { display: none; }
-  .builder-nav-logo { width: 28px; height: 28px; }
-  .builder-exam-title-input { font-size: 14px; }
-  .builder-autosave { display: none; }
-  .builder-topbar-right { gap: 6px; }
-  .btn-builder-action { font-size: 12px; padding: 6px 10px; }
-  .btn-builder-action.upload-btn { padding: 6px 12px; }
-  .builder-sidebar { display: none; }
-  .builder-canvas { padding: 20px 14px 60px; }
-
-  /* Preview */
-  .preview-topbar { padding: 10px 14px; }
-  .preview-mode-tabs { display: none; }
-  .preview-paper { border-radius: 8px; }
-
-  /* Upload modal */
-  .upload-modal { max-width: 100%; max-height: 95vh; border-radius: 12px 12px 0 0; }
-  .upload-modal-overlay { align-items: flex-end; padding: 0; }
-  .upload-dropzone { padding: 32px 20px; }
-  .ai-options-row { grid-template-columns: 1fr 1fr; }
-
-  /* Export modal */
-  .export-modal { max-width: 100%; border-radius: 12px 12px 0 0; }
-  .export-modal-overlay { align-items: flex-end; padding: 0; }
-  .export-modal-footer { padding: 14px 20px 28px; }
-
-  /* Profile modal */
-  .profile-modal { max-width: 100%; border-radius: 16px 16px 0 0; max-height: 92vh; }
-  .profile-modal-overlay { align-items: flex-end; padding: 0; }
-  .profile-modal-footer { padding: 14px 20px 32px; }
-
-  /* AI Generate modal */
-  .ai-modal { max-width: 100%; max-height: 95vh; border-radius: 16px 16px 0 0; }
-  .ai-modal-overlay { align-items: flex-end; padding: 0; }
-  .ai-options-row { grid-template-columns: 1fr 1fr; }
-
-  /* Skill Generator modal */
-  .sg-modal { max-width: 100%; border-radius: 16px 16px 0 0; max-height: 94vh; }
-  .sg-overlay { align-items: flex-end; padding: 0; }
-  .sg-footer { padding: 12px 16px 32px; }
-  .sg-body { padding: 16px; gap: 14px; }
-  .sg-header { padding: 14px 16px 12px; }
-  .sg-row { grid-template-columns: 1fr; gap: 10px; }
-  .sg-row-3 { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .sg-tabs { gap: 3px; }
-  .sg-tab { font-size: 12px; padding: 7px 8px; }
-  .sg-chips { gap: 6px; }
-  .sg-chip { font-size: 12px; padding: 5px 11px; }
-
-  /* Upload modal */
-  .upload-modal { max-width: 100%; max-height: 95vh; border-radius: 16px 16px 0 0; }
-  .upload-modal-overlay { align-items: flex-end; padding: 0; }
-  .upload-modal-footer { padding: 12px 16px 32px; }
-}
 
 /* ============================================================
    ——————————————  EXAM BUILDER PAGE  ——————————————
@@ -5000,11 +4902,136 @@ body::after {
 .sg-generated { animation: sg-fade-in .4s ease both; }
 
 /* Mobile */
+
+/* ============================================================
+   RESPONSIVE — 900px
+   ============================================================ */
+@media (max-width: 900px) {
+
+  /* Landing */
+  .landing-nav { padding: 16px 24px; }
+  .landing-features { grid-template-columns: 1fr; }
+  .hero-logo-img { width: 80px; height: 80px; }
+  .hero-title { font-size: clamp(36px, 8vw, 60px); }
+  .hero-tagline-strip { gap: 20px; padding: 14px 24px; }
+  /* Dashboard */
+  .dash-body { padding: 28px 20px; }
+  .dash-stats { grid-template-columns: 1fr 1fr; }
+  /* Auth */
+  .auth-card { padding: 32px 24px; }
+  /* Preview */
+  .preview-topbar { padding: 12px 16px; flex-wrap: wrap; gap: 10px; }
+  .preview-body { padding: 20px 16px 60px; }
+  /* Builder */
+  .builder-exam-title-input { font-size: 15px; }
+}
+
+/* ============================================================
+   RESPONSIVE — 600px (Mobile)
+   ============================================================ */
 @media (max-width: 600px) {
+
+  /* Landing */
+  .landing-nav { padding: 14px 16px; }
+  .landing-footer { padding: 12px 16px; flex-direction: column; gap: 6px; text-align: center; }
+  .hero-logo-img { width: 72px; height: 72px; }
+  .hero-title { font-size: clamp(32px, 9vw, 48px); }
+  .hero-sub { font-size: var(--text-body); }
+  .hero-founder { flex-direction: column; gap: 4px; text-align: center; }
+  .hero-cta { flex-direction: column; width: 100%; }
+  .hero-cta .btn-primary,
+  .hero-cta .btn-outline { width: 100%; justify-content: center; }
+  .hero-tagline-strip { gap: 12px; }
+  .tagline-item { font-size: 9px; }
+
+  /* Dashboard */
+  .dash-topbar { padding: 12px 16px; }
+  .dash-stats { grid-template-columns: 1fr; }
+  .dash-body { padding: 20px 16px; }
+  .dash-user-pill span { display: none; }
+  .section-title { font-size: var(--text-h3); }
+
+  /* Auth */
+  .auth-card { padding: 28px 20px; margin: 16px; max-width: 100%; }
+  .auth-back { top: 16px; left: 16px; }
+
+  /* Builder */
+  .builder-topbar { padding: 0 12px; height: 52px; gap: 8px; }
+  .builder-back { font-size: 12px; padding: 5px 8px; }
+  .builder-back span { display: none; }
+  .builder-nav-logo { width: 28px; height: 28px; }
+  .builder-exam-title-input { font-size: 14px; }
+  .builder-autosave { display: none; }
+  .builder-topbar-right { gap: 6px; }
+  .btn-builder-action { font-size: 12px; padding: 6px 10px; }
+  .btn-builder-action.upload-btn { padding: 6px 12px; }
+  .builder-sidebar { display: none; }
+  .builder-canvas { padding: 20px 14px 60px; }
+
+  /* Preview */
+  .preview-topbar { padding: 10px 14px; }
+  .preview-mode-tabs { display: none; }
+  .preview-paper { border-radius: 8px; }
+
+  /* Upload modal */
+  .upload-modal { max-width: 100%; max-height: 95vh; border-radius: 12px 12px 0 0; }
+  .upload-modal-overlay { align-items: flex-end; padding: 0; }
+  .upload-dropzone { padding: 32px 20px; }
+  .ai-options-row { grid-template-columns: 1fr 1fr; }
+
+  /* Export modal */
+  .export-modal { max-width: 100%; border-radius: 12px 12px 0 0; }
+  .export-modal-overlay { align-items: flex-end; padding: 0; }
+  .export-modal-footer { padding: 14px 20px 28px; }
+
+  /* Profile modal */
+  .profile-modal { max-width: 100%; border-radius: 16px 16px 0 0; max-height: 92vh; }
+  .profile-modal-overlay { align-items: flex-end; padding: 0; }
+  .profile-modal-footer { padding: 14px 20px 32px; }
+
+  /* AI Generate modal */
+  .ai-modal { max-width: 100%; max-height: 95vh; border-radius: 16px 16px 0 0; }
+  .ai-modal-overlay { align-items: flex-end; padding: 0; }
+  .ai-options-row { grid-template-columns: 1fr 1fr; }
+
+  /* Skill Generator modal */
+  .sg-modal { max-width: 100%; border-radius: 16px 16px 0 0; max-height: 94vh; }
+  .sg-overlay { align-items: flex-end; padding: 0; }
+  .sg-footer { padding: 12px 16px 32px; }
+  .sg-body { padding: 16px; gap: 14px; }
+  .sg-header { padding: 14px 16px 12px; }
+  .sg-row { grid-template-columns: 1fr; gap: 10px; }
+  .sg-row-3 { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .sg-tabs { gap: 3px; }
+  .sg-tab { font-size: 12px; padding: 7px 8px; }
+  .sg-chips { gap: 6px; }
+  .sg-chip { font-size: 12px; padding: 5px 11px; }
+
+  /* Upload modal */
+  .upload-modal { max-width: 100%; max-height: 95vh; border-radius: 16px 16px 0 0; }
+  .upload-modal-overlay { align-items: flex-end; padding: 0; }
+  .upload-modal-footer { padding: 12px 16px 32px; }
+
   .sg-modal { max-width: 100%; border-radius: 16px 16px 0 0; max-height: 94vh; }
   .sg-overlay { align-items: flex-end; padding: 0; }
   .sg-row, .sg-row-3 { grid-template-columns: 1fr 1fr; }
   .sg-footer { padding: 12px 16px 28px; }
+
+  /* Builder - MUST come after base CSS */
+  .builder-sidebar { display: none !important; }
+  .builder-layout { display: block; }
+  .builder-canvas { width: 100%; padding: 20px 14px 80px; }
+  .builder-topbar { padding: 0 12px; height: 52px; gap: 6px; overflow: hidden; }
+  .builder-topbar-left { min-width: 0; flex: 1; gap: 6px; overflow: hidden; }
+  .builder-topbar-right { flex-shrink: 0; gap: 4px; }
+  .builder-back { font-size: 11px; padding: 5px 6px; white-space: nowrap; }
+  .builder-divider { display: none; }
+  .builder-nav-logo { width: 26px; height: 26px; flex-shrink: 0; }
+  .builder-exam-title-input { font-size: 13px; min-width: 0; }
+  .builder-autosave { display: none; }
+  .btn-builder-action { font-size: 11px; padding: 5px 8px; gap: 3px; }
+  .btn-builder-action.upload-btn { padding: 5px 10px; }
+  .btn-builder-action.primary { padding: 5px 10px; }
 }
 </style>
 </head>
