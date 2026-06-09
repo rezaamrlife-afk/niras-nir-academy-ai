@@ -6116,10 +6116,9 @@ const SUPABASE_URL = 'https://bvwudwvikijmzbutpdtw.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2d3Vkd3Zpa2lqbXpidXRwZHR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NDQ5MDgsImV4cCI6MjA5NjIyMDkwOH0.fv_hLbC10KB635C0mZi_lmjwniOtALAwgeK-nwaDtF0';
 
 // ============================================================
-// CONFIG — Groq AI
+// CONFIG — Groq AI (proxied via Vercel serverless)
 // ============================================================
-const GROQ_API_KEY = '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';
-const GROQ_MODEL   = 'llama-3.1-8b-instant';
+const GROQ_MODEL = 'llama-3.1-8b-instant';
 
 // ============================================================
 // SUPABASE REST CLIENT (no CDN dependency)
@@ -8171,12 +8170,9 @@ async function openExam(id) {
 
 // ——— Core Groq call ———
 async function groqChat(systemPrompt, userPrompt) {
-  const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  const r = await fetch('/api/groq', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${GROQ_API_KEY}`
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: GROQ_MODEL,
       temperature: 0.7,
