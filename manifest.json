@@ -1,6 +1,6 @@
 {
-  "name": "NIRAS AI — Professional Exam Builder",
-  "short_name": "NIRAS AI",
+  "name": "NIRAS AI",
+  "short_name": "NIRAS",
   "description": "Professional AI-powered exam authoring system for ELT teachers. Build world-class exams in minutes.",
   "start_url": "/",
   "scope": "/",
@@ -9,7 +9,10 @@
   "background_color": "#1A1816",
   "theme_color": "#1A1816",
   "lang": "en",
-  "categories": ["education", "productivity"],
+  "categories": [
+    "education",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
@@ -72,7 +75,12 @@
       "short_name": "New Exam",
       "description": "Create a new exam",
       "url": "/?action=new",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ],
   "screenshots": [
@@ -82,5 +90,6 @@
       "type": "image/png",
       "form_factor": "narrow"
     }
-  ]
+  ],
+  "id": "com.niracademy.niras"
 }
