@@ -5353,7 +5353,7 @@ body::after {
     <div class="hero-cta">
       <button class="btn-primary" onclick="showPage('auth','signup')">
         Start Building
-        <span>\u2192</span>
+        <span>→</span>
       </button>
       <button class="btn-outline" onclick="showPage('auth','login')">
         Sign In
@@ -5364,17 +5364,17 @@ body::after {
   <!-- Feature strip -->
   <div class="landing-features">
     <div class="feature-card">
-      <div class="feature-icon">\u2b1b</div>
+      <div class="feature-icon">⬛</div>
       <div class="feature-title">Block-Based Editor</div>
-      <p class="feature-desc">Everything is a block. Questions, passages, instructions \u2014 arrange freely with drag & drop in a Notion-style interface.</p>
+      <p class="feature-desc">Everything is a block. Questions, passages, instructions — arrange freely with drag & drop in a Notion-style interface.</p>
     </div>
     <div class="feature-card">
-      <div class="feature-icon">\ud83d\udcc4</div>
+      <div class="feature-icon">📄</div>
       <div class="feature-title">Professional PDF Export</div>
       <p class="feature-desc">Export student and teacher versions with clean typography, page breaks, and full layout control.</p>
     </div>
     <div class="feature-card">
-      <div class="feature-icon">\ud83c\udfaf</div>
+      <div class="feature-icon">🎯</div>
       <div class="feature-title">IELTS-Level Sections</div>
       <p class="feature-desc">Reading, Writing, Speaking, and custom sections built to international exam standards.</p>
     </div>
@@ -5388,7 +5388,7 @@ body::after {
   <div class="auth-bg"></div>
 
   <button class="auth-back" onclick="showPage('landing')">
-    \u2190 Back
+    ← Back
   </button>
 
   <div class="auth-card">
@@ -5411,7 +5411,7 @@ body::after {
       </div>
       <div class="form-group">
         <label class="form-label">Password</label>
-        <input type="password" class="form-input" id="login-password" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" autocomplete="current-password">
+        <input type="password" class="form-input" id="login-password" placeholder="••••••••" autocomplete="current-password">
         <span class="form-error" id="login-error">Invalid email or password.</span>
       </div>
       <button class="btn-auth" id="btn-login" onclick="handleLogin()">
@@ -5423,7 +5423,7 @@ body::after {
     <!-- Signup Form -->
     <div id="auth-signup" class="auth-form hidden">
       <div id="signup-success" class="auth-success">
-        <div class="auth-success-icon">\u2709\ufe0f</div>
+        <div class="auth-success-icon">✉️</div>
         <div class="auth-success-text">
           Check your email!<br>
           <strong>Confirm your account</strong> to get started.
@@ -5478,7 +5478,7 @@ body::after {
     <!-- Header -->
     <div class="dash-header">
       <div class="dash-greeting">
-        <span class="dash-greeting-eyebrow">Nir Academy \u2014 Exam Builder</span>
+        <span class="dash-greeting-eyebrow">Nir Academy — Exam Builder</span>
         <h1 class="dash-greeting-title">Your Exams</h1>
       </div>
       <button class="btn-primary" onclick="showNewExamModal()">
@@ -5500,7 +5500,7 @@ body::after {
       </div>
       <div class="stat-card">
         <span class="stat-label">Last Active</span>
-        <span class="stat-value" style="font-size:22px;padding-top:8px;" id="stat-last">\u2014</span>
+        <span class="stat-value" style="font-size:22px;padding-top:8px;" id="stat-last">—</span>
         <span class="stat-sub">most recent edit</span>
       </div>
     </div>
@@ -5525,15 +5525,15 @@ body::after {
   <!-- Top bar -->
   <header class="builder-topbar">
     <div class="builder-topbar-left">
-      <button class="builder-back" onclick="exitBuilder()">\u2190 Dashboard</button>
+      <button class="builder-back" onclick="exitBuilder()">← Dashboard</button>
       <div class="builder-divider"></div>
       <input class="builder-exam-title-input" id="builder-title-input"
              placeholder="Untitled Exam" oninput="onExamTitleChange(this.value)">
       <span class="builder-autosave" id="builder-autosave">Saved</span>
     </div>
     <div class="builder-topbar-right">
-      <button class="btn-builder-action" onclick="builderPreview()">\ud83d\udc41 Preview</button>
-      <button class="btn-builder-action primary" onclick="builderExport()">\ud83d\udcc4 Export PDF</button>
+      <button class="btn-builder-action" onclick="builderPreview()">👁 Preview</button>
+      <button class="btn-builder-action primary" onclick="builderExport()">📄 Export PDF</button>
     </div>
   </header>
 
@@ -5553,7 +5553,7 @@ body::after {
         <div class="sidebar-field">
           <label class="sidebar-label">Level</label>
           <select class="sidebar-select" id="meta-level" onchange="onMetaChange()">
-            <option value="">\u2014 Select \u2014</option>
+            <option value="">— Select —</option>
             <option value="Beginner">Beginner</option>
             <option value="Intermediate">Intermediate</option>
             <option value="Advanced">Advanced</option>
@@ -5594,7 +5594,7 @@ body::after {
     <div class="builder-canvas" id="builder-canvas">
       <div class="canvas-inner" id="canvas-inner">
         <div class="canvas-empty" id="canvas-empty">
-          <div class="canvas-empty-icon">\ud83d\udccb</div>
+          <div class="canvas-empty-icon">📋</div>
           <div class="canvas-empty-title">Start building your exam</div>
           <p class="canvas-empty-sub">Add a section from the sidebar, or click below</p>
           <button class="btn-primary" style="margin-top:8px;" onclick="openAddSectionModal()">+ Add First Section</button>
@@ -5609,28 +5609,28 @@ body::after {
 <div class="block-type-picker" id="block-type-picker">
   <div class="picker-label">Add Block</div>
   <div class="picker-item" onclick="pickerAddBlock('question')">
-    <div class="picker-item-icon">\u2753</div>
+    <div class="picker-item-icon">❓</div>
     <div class="picker-item-info">
       <div class="picker-item-name">Question</div>
-      <div class="picker-item-desc">MCQ, T/F, Short Answer\u2026</div>
+      <div class="picker-item-desc">MCQ, T/F, Short Answer…</div>
     </div>
   </div>
   <div class="picker-item" onclick="pickerAddBlock('instruction')">
-    <div class="picker-item-icon">\ud83d\udccc</div>
+    <div class="picker-item-icon">📌</div>
     <div class="picker-item-info">
       <div class="picker-item-name">Instruction</div>
       <div class="picker-item-desc">Directions for students</div>
     </div>
   </div>
   <div class="picker-item" onclick="pickerAddBlock('passage')">
-    <div class="picker-item-icon">\ud83d\udcd6</div>
+    <div class="picker-item-icon">📖</div>
     <div class="picker-item-info">
       <div class="picker-item-name">Passage</div>
       <div class="picker-item-desc">Reading text with title</div>
     </div>
   </div>
   <div class="picker-item" onclick="pickerAddBlock('divider')">
-    <div class="picker-item-icon">\u2014</div>
+    <div class="picker-item-icon">—</div>
     <div class="picker-item-info">
       <div class="picker-item-name">Divider</div>
       <div class="picker-item-desc">Visual separator</div>
@@ -5645,27 +5645,27 @@ body::after {
     <p class="modal-sub">Choose the type of section to add to your exam.</p>
     <div class="modal-section-types">
       <div class="modal-section-type selected" data-type="questions" onclick="selectSectionType(this)">
-        <div class="modal-type-icon">\u2753</div>
+        <div class="modal-type-icon">❓</div>
         <div class="modal-type-name">Questions</div>
         <div class="modal-type-desc">General question section</div>
       </div>
       <div class="modal-section-type" data-type="reading" onclick="selectSectionType(this)">
-        <div class="modal-type-icon">\ud83d\udcd6</div>
+        <div class="modal-type-icon">📖</div>
         <div class="modal-type-name">Reading</div>
         <div class="modal-type-desc">Passage + linked questions</div>
       </div>
       <div class="modal-section-type" data-type="writing" onclick="selectSectionType(this)">
-        <div class="modal-type-icon">\u270d\ufe0f</div>
+        <div class="modal-type-icon">✍️</div>
         <div class="modal-type-name">Writing</div>
         <div class="modal-type-desc">Prompt, task, word limit</div>
       </div>
       <div class="modal-section-type" data-type="speaking" onclick="selectSectionType(this)">
-        <div class="modal-type-icon">\ud83c\udfa4</div>
+        <div class="modal-type-icon">🎤</div>
         <div class="modal-type-name">Speaking</div>
         <div class="modal-type-desc">Prompt card + questions</div>
       </div>
       <div class="modal-section-type" data-type="custom" onclick="selectSectionType(this)">
-        <div class="modal-type-icon">\u2699\ufe0f</div>
+        <div class="modal-type-icon">⚙️</div>
         <div class="modal-type-name">Custom</div>
         <div class="modal-type-desc">Flexible free section</div>
       </div>
@@ -5687,7 +5687,7 @@ body::after {
 <div id="page-preview" class="page">
   <header class="preview-topbar">
     <div class="preview-topbar-left">
-      <button class="btn-preview-back" onclick="closePreview()">\u2190 Back to Editor</button>
+      <button class="btn-preview-back" onclick="closePreview()">← Back to Editor</button>
       <div style="width:1px;height:20px;background:var(--black-border);"></div>
       <span class="preview-title" id="preview-topbar-title">Preview</span>
     </div>
@@ -5697,7 +5697,7 @@ body::after {
       <button class="preview-mode-tab" id="preview-tab-teacher"
               onclick="switchPreviewMode('teacher')">Teacher Key</button>
     </div>
-    <button class="btn-builder-action primary" onclick="closePreview();builderExport()">\ud83d\udcc4 Export PDF</button>
+    <button class="btn-builder-action primary" onclick="closePreview();builderExport()">📄 Export PDF</button>
   </header>
   <div class="preview-body">
     <div class="preview-paper" id="preview-paper">
