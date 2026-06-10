@@ -20,7 +20,9 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230A0A0A'/><text x='16' y='22' text-anchor='middle' font-family='Georgia,serif' font-size='18' font-weight='600' fill='%23C9A84C'>N</text></svg>">
 
 <!-- PWA -->
-<meta name="theme-color" content="#0A0A0A">
+<meta name="theme-color" content="#1A1816">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/icon-192x192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="NIRAS AI">
@@ -9714,6 +9716,17 @@ function insertSGContent() {
     const el = document.getElementById('block-'+sg.blockId);
     if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
   }, 150);
+}
+
+// ============================================================
+// SERVICE WORKER REGISTRATION
+// ============================================================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.log('SW failed:', err));
+  });
 }
 
 // ============================================================
