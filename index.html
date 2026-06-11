@@ -672,6 +672,7 @@ body::after {
   padding: 13px 30px;
   border-radius: var(--radius);
   transition: all var(--transition);
+  font-weight: var(--weight-medium);
 }
 .btn-outline:hover { border-color: var(--gold-dim); color: var(--white); }
 
@@ -692,7 +693,7 @@ body::after {
 }
 .tagline-item {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--gold-dim);
@@ -756,6 +757,7 @@ body::after {
   font-size: var(--text-body-sm);
   color: var(--white-dim);
   line-height: var(--leading-relaxed);
+  max-width: 320px;
 }
 
 /* ——— FOOTER STRIP ——— */
@@ -876,6 +878,7 @@ body::after {
   color: var(--gold);
   box-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
+.auth-tab:hover:not(.active) { color: var(--white); }
 
 /* Form */
 .auth-form { display: flex; flex-direction: column; gap: 18px; }
@@ -1965,6 +1968,7 @@ body::after {
   background: var(--black-card);
   border: 1px solid var(--black-border);
   border-radius: var(--radius);
+  border-left: 2px solid rgba(201,168,76,0.35);
   overflow: hidden;
   transition: border-color var(--transition);
 }
@@ -2304,6 +2308,7 @@ body::after {
   border: 1px solid var(--black-border);
   border-left: 3px solid #6DBF7E;
   border-radius: var(--radius);
+  border-left: 2px solid rgba(109,191,126,0.45);
   overflow: hidden;
 }
 
@@ -3581,6 +3586,7 @@ body::after {
   border: 1px solid var(--black-border);
   border-left: 3px solid #5B9BD5;
   border-radius: var(--radius);
+  border-left: 2px solid rgba(91,155,213,0.45);
   overflow: hidden;
 }
 .block-reading-header {
@@ -3686,7 +3692,8 @@ body::after {
   background: var(--black-card);
   border: 1px solid var(--black-border);
   border-left: 3px solid #B07FD4;
-  border-radius: var(--radius); overflow: hidden;
+  border-radius: var(--radius);
+  border-left: 2px solid rgba(176,127,212,0.45); overflow: hidden;
 }
 .block-speaking-header {
   display: flex; align-items: center;
@@ -5069,7 +5076,7 @@ body::after {
   .btn-nav-cta { font-size: 12px; padding: 7px 14px; white-space: nowrap; }
   .landing-footer { padding: 12px 16px; flex-direction: column; gap: 6px; text-align: center; }
   .hero-logo-img { width: 72px; height: 72px; }
-  .hero-title { font-size: clamp(32px, 9vw, 48px); }
+  .hero-title { font-size: clamp(32px, 9vw, 48px); font-weight: var(--weight-regular); }
   .hero-sub { font-size: var(--text-body); }
   .hero-founder { flex-direction: column; gap: 4px; text-align: center; }
   .hero-cta { flex-direction: column; width: 100%; }
