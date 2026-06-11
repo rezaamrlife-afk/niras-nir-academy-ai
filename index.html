@@ -720,6 +720,7 @@ body::after {
 .feature-card {
   background: var(--black-soft);
   border: 1px solid var(--black-border);
+  border-top: 2px solid rgba(201,168,76,0.35);
   padding: 36px 32px;
   display: flex;
   flex-direction: column;
@@ -730,7 +731,8 @@ body::after {
 .feature-card:hover {
   background: var(--black-card);
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  border-top-color: var(--gold-dim);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35), 0 0 0 1px rgba(201,168,76,0.15);
 }
 
 .feature-icon {
@@ -1152,6 +1154,7 @@ body::after {
 .stat-card {
   background: var(--black-card);
   border: 1px solid var(--black-border);
+  border-top: 2px solid rgba(201,168,76,0.35);
   border-radius: var(--radius-lg);
   padding: 24px 28px;
   display: flex;
@@ -1162,6 +1165,7 @@ body::after {
 .stat-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  border-top-color: var(--gold-dim);
 }
 
 .stat-label {
