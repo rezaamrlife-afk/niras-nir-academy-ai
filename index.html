@@ -7363,7 +7363,7 @@ function buildSectionEl(sec, qOffset) {
 
   const icon = document.createElement('span');
   icon.style.fontSize = '14px';
-  icon.textContent = SECTION_ICONS[sec.type] || '\u{1F4C4}';
+  icon.innerHTML = SECTION_ICONS[sec.type] || '📄';
 
   const titleInput = document.createElement('input');
   titleInput.className = 'canvas-section-title-input';
