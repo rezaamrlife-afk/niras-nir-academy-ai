@@ -686,15 +686,18 @@ body::after {
 
 .feature-card {
   background: var(--black-soft);
+  border: 1px solid var(--black-border);
   padding: 36px 32px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  transition: background var(--transition), transform var(--transition);
+  transition: background var(--transition), transform var(--transition), box-shadow var(--transition), border-color var(--transition);
   cursor: default;
 }
 .feature-card:hover {
   background: var(--black-card);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
 }
 
 .feature-icon {
