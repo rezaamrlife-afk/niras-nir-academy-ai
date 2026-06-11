@@ -7277,28 +7277,48 @@ function renderCanvas() {
 // ============================================================
 // BUILD SECTION ELEMENT
 // ============================================================
-function buildSectionEl(sec, si, qOffset = 0) {
+function buildSectionEl(sec, qOffset) {
+
   const div = document.createElement('div');
   div.className = 'canvas-section' + (sec.blocks.length === 0 ? ' empty-section' : '');
   div.id = 'section-' + sec.id;
 
-  // Section header
-  div.innerHTML = `
-    <div class="canvas-section-header">
-      <span style="font-size:14px;">${SECTION_ICONS[sec.type] || '📄'}</span>
-      <input class="canvas-section-title-input" value="${escHtml(sec.title)}"
-             placeholder="Section title"
-             onchange="updateSectionTitle('${sec.id}', this.value)"
-             onclick="event.stopPropagation()">
-      <div class="canvas-section-actions">
-        <button class="btn-section-action" title="Move up" onclick="moveSectionUp('${sec.id}')">↑</button>
-        <button class="btn-section-action" title="Move down" onclick="moveSectionDown('${sec.id}')">↓</button>
-        <button class="btn-section-action danger" title="Delete section" onclick="deleteSection('${sec.id}')">✕</button>
-      </div>
-    </div>
-  `;
+  // Header — pure DOM API
+  const header = document.createElement('div');
+  header.className = 'canvas-section-header';
 
-  // Render blocks
+  const icon = document.createElement('span');
+  icon.style.fontSize = '14px';
+  icon.textContent = SECTION_ICONS[sec.type] || '\u{1F4C4}';
+
+  const titleInput = document.createElement('input');
+  titleInput.className = 'canvas-section-title-input';
+  titleInput.value = escHtml(sec.title);
+  titleInput.placeholder = 'Section title';
+  titleInput.setAttribute('onchange', `updateSectionTitle('${sec.id}', this.value)`);
+  titleInput.setAttribute('onclick', 'event.stopPropagation()');
+
+  const actions = document.createElement('div');
+  actions.className = 'canvas-section-actions';
+
+  [['\u2191', 'Move up', `moveSectionUp('${sec.id}')`],
+   ['\u2193', 'Move down', `moveSectionDown('${sec.id}')`],
+   ['\u2715', 'Delete section', `deleteSection('${sec.id}')`, 'danger']
+  ].forEach(([text, title, onclick, extra]) => {
+    const b = document.createElement('button');
+    b.className = 'btn-section-action' + (extra ? ' ' + extra : '');
+    b.title = title;
+    b.textContent = text;
+    b.setAttribute('onclick', onclick);
+    actions.appendChild(b);
+  });
+
+  header.appendChild(icon);
+  header.appendChild(titleInput);
+  header.appendChild(actions);
+  div.appendChild(header);
+
+  // Blocks container — appended before add-bar
   const blocksContainer = document.createElement('div');
   blocksContainer.id = 'blocks-' + sec.id;
   blocksContainer.style.cssText = 'display:flex;flex-direction:column;gap:6px;padding:4px 0 8px;';
@@ -7312,20 +7332,28 @@ function buildSectionEl(sec, si, qOffset = 0) {
 
   div.appendChild(blocksContainer);
 
-  // Add block bar
-  div.innerHTML += `
-    <div class="add-block-bar">
-      <div class="add-block-bar-line"></div>
-      <button class="btn-add-block" onclick="openBlockPicker(event, '${sec.id}')">+ Add Block</button>
-      <div class="add-block-bar-line"></div>
-    </div>
-  `;
+  // Add-block bar — pure DOM, never resets parent innerHTML
+  const addBar = document.createElement('div');
+  addBar.className = 'add-block-bar';
 
-  // Re-append blocks container (innerHTML reset above)
-  const placeholder = div.querySelector('.add-block-bar');
-  div.insertBefore(blocksContainer, placeholder);
+  const l1 = document.createElement('div');
+  l1.className = 'add-block-bar-line';
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'btn-add-block';
+  addBtn.textContent = '+ Add Block';
+  addBtn.setAttribute('onclick', `openBlockPicker(event, '${sec.id}')`);
+
+  const l2 = document.createElement('div');
+  l2.className = 'add-block-bar-line';
+
+  addBar.appendChild(l1);
+  addBar.appendChild(addBtn);
+  addBar.appendChild(l2);
+  div.appendChild(addBar);
 
   return div;
+
 }
 
 // ============================================================
