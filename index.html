@@ -6015,6 +6015,9 @@ body::after {
             <option value="true_false">True / False</option>
             <option value="short_answer">Short Answer</option>
             <option value="fill_blank">Fill in the Blank</option>
+            <option value="matching">Matching</option>
+            <option value="ordering">Ordering</option>
+            <option value="multiple_select">Multiple Select</option>
           </select>
         </div>
         <div class="ai-field">
@@ -8532,6 +8535,30 @@ Return JSON with this exact structure:
       document.getElementById('meta-topic').value = meta.topic;
       builder.meta.topic = meta.topic;
     }
+    if (meta.book_hint) {
+      document.getElementById('meta-book').value = meta.book_hint;
+      builder.meta.book = meta.book_hint;
+    }
+
+    // Normalise level to select options
+    const levelNorm = {
+      'a1':'Beginner','a2':'Beginner',
+      'b1':'Intermediate','b2':'Intermediate',
+      'c1':'Advanced','c2':'Advanced',
+      'beginner':'Beginner','elementary':'Beginner',
+      'pre-intermediate':'Intermediate','intermediate':'Intermediate',
+      'upper intermediate':'Intermediate','upper-intermediate':'Intermediate',
+      'advanced':'Advanced','proficient':'Advanced','c2 proficient':'Advanced',
+    };
+    if (meta.level) {
+      const norm = levelNorm[(meta.level||'').toLowerCase().trim()] || meta.level;
+      const validLevels = ['Beginner','Intermediate','Advanced','Mixed'];
+      const finalLevel = validLevels.includes(norm) ? norm : null;
+      if (finalLevel) {
+        document.getElementById('meta-level').value = finalLevel;
+        builder.meta.level = finalLevel;
+      }
+    }
 
     triggerAutosave();
     showToast('✦ Smart Fill complete', 'success');
@@ -8597,11 +8624,14 @@ async function generateQuestions() {
     const system = `You are an expert ELT exam writer. Generate exam questions in valid JSON only. No explanation, no markdown, no extra text.`;
 
     const typeInstructions = {
-      mcq: `MCQ with 4 options (A-D). Mark correct_index (0-3).`,
-      true_false: `True/False. correct_answer must be "true" or "false".`,
-      short_answer: `Short answer. Provide a model correct_answer.`,
-      fill_blank: `Fill in the blank. Use ___ in the stem. Provide correct_answer.`,
-      matching: `Matching. Provide pairs array of [item, match] arrays.`
+      mcq:            `MCQ with 4 options (A-D). Mark correct_index (0-3).`,
+      true_false:     `True/False. correct_answer must be "true" or "false".`,
+      short_answer:   `Short answer. Provide a model correct_answer.`,
+      fill_blank:     `Fill in the blank. Use ___ in the stem. Provide correct_answer.`,
+      matching:       `Matching. Provide pairs array of [item, match] arrays.`,
+      ordering:       `Ordering. Provide items array of strings to be put in correct order. Do NOT include correct_answer.`,
+      multiple_select:`Multiple Select. Provide options array of 4 strings. correct_indices is array of correct option indexes (e.g. [0,2]).`,
+      mixed:          `Mix of question types. For each question choose qtype from: mcq, true_false, short_answer, fill_blank. Each question must have its own valid qtype field — never use "mixed" as qtype.`
     };
 
     const user = `Topic/Passage: "${topic}"
@@ -8618,8 +8648,11 @@ ${qtype === 'mcq' ? '- options: array of 4 strings\n- correct_index: number 0-3'
 ${qtype === 'true_false' ? '- correct_answer: "true" or "false"' : ''}
 ${qtype === 'short_answer' ? '- correct_answer: string' : ''}
 ${qtype === 'fill_blank' ? '- correct_answer: string' : ''}
-${qtype === 'matching' ? '- pairs: array of [string, string] pairs (min 3)' : ''}
-- explanation: brief explanation of the answer`;
+${qtype === 'matching'         ? '- pairs: array of [string, string] pairs (min 3)' : ''}
+${qtype === 'ordering'         ? '- items: array of strings in correct order (3-6 items)' : ''}
+${qtype === 'multiple_select'  ? '- options: array of 4 strings\n- correct_indices: array of correct indexes (e.g. [0,2])' : ''}
+- explanation: brief explanation of the answer
+IMPORTANT: For mixed type, each question must have a concrete qtype (mcq/true_false/short_answer/fill_blank) — never use "mixed" as qtype value.`;
 
     const raw = await groqChat(system, user);
     const questions = parseAIJson(raw);
@@ -8904,7 +8937,8 @@ body{font-family:'Inter',sans-serif;font-size:10.5pt;line-height:1.65;color:var(
   <div style="margin-top:14px;padding-top:12px;border-top:1pt solid #DDD;font-family:'DM Mono',monospace;font-size:8pt;color:#888;display:flex;gap:20pt;">
     ${exam.meta?.total_score ? `<span>Total: ${exam.meta.total_score}pts</span>` : `<span>Total: ${calcTotalPoints(exam.sections)}pts</span>`}
     ${exam.meta?.time_limit ? `<span>Time: ${exam.meta.time_limit} min</span>` : ''}
-  </div>`}
+  </div>
+  ${exam.meta?.level ? `<div style="margin-top:10pt;padding:7pt 12pt;background:#F7F7F5;border-radius:3pt;font-family:'DM Mono',monospace;font-size:8pt;color:#555;display:flex;gap:10pt;flex-wrap:wrap;"><span style="color:#7A6020;letter-spacing:.1em;text-transform:uppercase;">CEFR</span><span>${escHtml(exam.meta.level)}</span>${exam.meta.subject?`<span>·</span><span>${escHtml(exam.meta.subject)}</span>`:''}</div>` : ''}`}
 </div>
 ${sectionsHtml}
 <div class="pdf-footer">
@@ -8939,13 +8973,23 @@ function buildPrintReadingTask(block, isTeacher, letters, getQNum) {
   const qs = block.questions || [];
   const qHtml = qs.map((q,i) => {
     const num = getQNum();
+    // Build answer key for teacher
+    let rqAnswerKey = '';
+    if (isTeacher) {
+      if (q.qtype === 'mcq' && q.options && q.options.length && q.correct_index != null) {
+        const letters = ['A','B','C','D','E','F'];
+        rqAnswerKey = `<div style="font-size:8.5pt;color:#2E7D47;font-style:italic;margin:3pt 0 0 28pt;">▸ ${letters[q.correct_index] || q.correct_index}. ${escHtml(q.options[q.correct_index]||'')}</div>`;
+      } else if (q.correct_answer) {
+        rqAnswerKey = `<div style="font-size:8.5pt;color:#2E7D47;font-style:italic;margin:3pt 0 0 28pt;">▸ ${escHtml(q.correct_answer)}</div>`;
+      }
+    }
     return `<div style="margin-bottom:8pt;page-break-inside:avoid;">
       <div style="display:flex;gap:8pt;font-size:10.5pt;">
         <span style="font-family:'DM Mono',monospace;font-size:8pt;color:#5B9BD5;min-width:20pt;">Q${num}</span>
         <span style="flex:1;color:#1A1A1A;font-weight:500;">${escHtml(q.text||'')}</span>
         <span style="font-family:'DM Mono',monospace;font-size:7pt;color:#AAA;">${(q.qtype||'').replace('_',' ')}</span>
       </div>
-      ${isTeacher?'':`<div style="margin:5pt 0 0 28pt;border-bottom:1pt solid #DDD;height:14pt;"></div>`}
+      ${isTeacher ? rqAnswerKey : `<div style="margin:5pt 0 0 28pt;border-bottom:1pt solid #DDD;height:14pt;"></div>`}
     </div>`;
   }).join('');
 
@@ -8991,6 +9035,10 @@ function buildPrintSpeakingTask(block, isTeacher) {
       <div style="display:flex;justify-content:space-between;padding:6pt 10pt;background:#F7F7F5;font-family:'DM Mono',monospace;font-size:9pt;"><span style="color:#666;">Total</span><span style="color:#B07FD4;font-weight:500;">${total}pts</span></div>
     </div>` : '';
 
+  const examinerHtml = isTeacher && block.examiner_notes
+    ? `<div style="margin-top:10pt;padding:8pt 12pt;background:#FFF8F0;border-left:2pt solid #B07FD4;border-radius:0 3pt 3pt 0;font-size:9pt;color:#7A5A9A;"><span style="font-family:'DM Mono',monospace;font-size:7pt;letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:3pt;color:#B07FD4;">Examiner Notes</span>${escHtml(block.examiner_notes)}</div>`
+    : '';
+
   return `
     <div style="border:1pt solid #DDD;border-left:3pt solid #B07FD4;border-radius:3pt;padding:14pt 16pt;margin-bottom:16pt;page-break-inside:avoid;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10pt;">
@@ -9000,6 +9048,7 @@ function buildPrintSpeakingTask(block, isTeacher) {
       <div style="font-size:11pt;line-height:1.65;color:#0D0D0D;font-weight:500;margin-bottom:${qs.length?'12pt':'0'};">${escHtml(block.prompt||'')}</div>
       ${qs.length?`<div style="border-top:1pt solid #EEE;padding-top:10pt;">${qHtml}</div>`:''}
       ${rubricHtml}
+      ${examinerHtml}
     </div>`;
 }
 
@@ -9926,7 +9975,8 @@ Return JSON:
   "questions": [
     { "text": "Question text", "type": "main|followup" }
   ],
-  "timer": 60
+  "timer": 60,
+  "examiner_notes": "Brief guidance for the examiner — what to listen for, common errors, expected response length"
 }`;
   }
 
@@ -9970,9 +10020,12 @@ function insertSGContent() {
     b.title    = sg.result.title   || '';
     b.passage  = sg.result.passage || '';
     b.questions = (sg.result.questions||[]).map((q,i) => ({
-      id:    'rq_'+Date.now()+'_'+i,
-      text:  q.text  || '',
-      qtype: q.qtype || 'mcq'
+      id:            'rq_'+Date.now()+'_'+i,
+      text:          q.text          || '',
+      qtype:         q.qtype         || 'mcq',
+      options:       q.options       || [],
+      correct_index: q.correct_index ?? null,
+      correct_answer:q.correct_answer|| ''
     }));
 
   } else if (sg.skill === 'writing') {
@@ -9991,6 +10044,7 @@ function insertSGContent() {
       text: q.text || '',
       type: q.type || 'main'
     }));
+    if (sg.result.examiner_notes) b.examiner_notes = sg.result.examiner_notes;
     if (sg.spRubricYes) b.rubric_on = true;
   }
 
