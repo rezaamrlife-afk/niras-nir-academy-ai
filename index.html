@@ -1569,7 +1569,7 @@ body::after {
 
 .sidebar-section {
   padding: 20px 18px 16px;
-  border-bottom: 1px solid var(--black-border);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
 .sidebar-section-title {
@@ -1627,7 +1627,9 @@ body::after {
   line-height: var(--leading-normal);
 }
 .sidebar-input::placeholder { color: rgba(155,150,144,0.4); }
+.sidebar-input:hover { border-color: rgba(201,168,76,0.3); }
 .sidebar-input:focus { border-color: var(--gold-dim); }
+.sidebar-input:hover { border-color: rgba(201,168,76,0.3); }
 
 .sidebar-select {
   background: var(--black-card);
