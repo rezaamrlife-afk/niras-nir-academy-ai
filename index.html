@@ -8988,13 +8988,25 @@ function insertSelectedQuestions() {
     inserted++;
   });
 
+  // Capture last inserted block id before modal/render
+  const _lastInsertedBlockId = sec.blocks.length > 0
+    ? sec.blocks[sec.blocks.length - 1].id
+    : null;
+
   closeAIModal();
   renderBuilder();
   triggerAutosave();
   showToast(`✦ ${inserted} question${inserted>1?'s':''} inserted`, 'success');
 
-  // Scroll to section
-  setTimeout(() => scrollToSection(_aiTargetSection), 100);
+  // Scroll to last inserted block — block-level, not section-level
+  setTimeout(() => {
+    if (_lastInsertedBlockId) {
+      const el = document.getElementById('block-' + _lastInsertedBlockId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, 150);
 }
 
 // ============================================================
