@@ -1532,11 +1532,26 @@ body::after {
 
 .sidebar-section-title {
   font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.14em;
+  font-size: 9px;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--gold-dim);
+  color: var(--white-muted);
   margin-bottom: 14px;
+  padding-bottom: 6px;
+}
+
+.ai-badge-mini {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: var(--gold-dim);
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: 6px;
+  vertical-align: middle;
+  opacity: 0.8;
 }
 
 .sidebar-field {
@@ -2986,6 +3001,11 @@ body::after {
   border-top: 1px solid var(--black-border);
   flex-shrink: 0;
   gap: 10px;
+}
+.ai-footer-info {
+  font-size: 11px;
+  color: var(--white-muted);
+  white-space: nowrap;
 }
 
 .ai-footer-left {
@@ -5663,7 +5683,7 @@ body::after {
         </div>
         <button class="btn-smart-fill" id="btn-smart-fill" onclick="runSmartFill()">
           <div class="ai-spinner"></div>
-          <span class="ai-btn-text">✦ Smart Fill</span>
+          <span class="ai-btn-text">✦ Smart Fill</span><span class="ai-badge-mini">AI</span>
         </button>
       </div>
 
