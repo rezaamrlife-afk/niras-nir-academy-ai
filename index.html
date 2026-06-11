@@ -1119,6 +1119,11 @@ body::after {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
 }
 
 .stat-label {
@@ -1208,12 +1213,14 @@ body::after {
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  transition: border-color var(--transition), background var(--transition);
+  transition: border-color var(--transition), background var(--transition), transform var(--transition), box-shadow var(--transition);
   cursor: pointer;
 }
 .exam-card:hover {
   border-color: var(--gold-dim);
   background: #1a1a1a;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
 }
 
 .exam-card-info { display: flex; flex-direction: column; gap: 5px; flex: 1; }
