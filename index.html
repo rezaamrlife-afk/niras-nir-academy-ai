@@ -5409,6 +5409,22 @@ body::after {
   background-clip: text;
   animation: niras-shimmer 6s linear infinite;
 }
+
+/* Sidebar scrollbar */
+.builder-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.builder-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.builder-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(201,168,76,0.25);
+  border-radius: 2px;
+}
+.builder-sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(201,168,76,0.45);
+}
+
 </style>
 </head>
 <body>
