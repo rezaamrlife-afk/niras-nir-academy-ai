@@ -2610,6 +2610,11 @@ body::after {
   border-radius: 6px;
   font-size: 14px;
 }
+.picker-item-icon svg, .canvas-section-header svg { 
+  display: inline-block; 
+  vertical-align: middle;
+  flex-shrink: 0;
+}
 
 .picker-item-info { display: flex; flex-direction: column; gap: 1px; }
 .picker-item-name { font-size: 13px; color: var(--white); font-weight: 500; }
@@ -5434,6 +5439,60 @@ body::after {
   background: rgba(201,168,76,0.45);
 }
 
+
+/* ——— AI Modal Custom Dropdowns ——— */
+.ai-custom-select {
+  position: relative;
+  background: var(--black-soft);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius);
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  transition: border-color var(--transition);
+  user-select: none;
+}
+.ai-custom-select:hover { border-color: rgba(201,168,76,0.4); }
+.ai-custom-select.open { border-color: var(--gold-dim); }
+.ai-select-arrow {
+  width: 14px; height: 14px;
+  color: var(--white-dim);
+  flex-shrink: 0;
+  transition: transform var(--transition);
+}
+.ai-custom-select.open .ai-select-arrow { transform: rotate(180deg); }
+.ai-dropdown-list {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--black-card);
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: var(--radius);
+  z-index: 100;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+.ai-dropdown-list.open { display: block; }
+.ai-dropdown-item {
+  padding: 10px 14px;
+  font-size: var(--text-body-sm);
+  color: var(--white-dim);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+  font-family: var(--font-ui);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.ai-dropdown-item:last-child { border-bottom: none; }
+.ai-dropdown-item:hover { background: rgba(201,168,76,0.08); color: var(--white); }
+.ai-dropdown-item.ai-dropdown-selected { color: var(--gold-dim); }
+/* wrapper for positioning */
+.ai-field { position: relative; }
 </style>
 </head>
 <body>
@@ -5860,28 +5919,28 @@ body::after {
     </div>
   </div>
   <div class="picker-item" onclick="pickerAddBlock('passage')">
-    <div class="picker-item-icon">📖</div>
+    <div class="picker-item-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
     <div class="picker-item-info">
       <div class="picker-item-name">Passage</div>
       <div class="picker-item-desc">Reading text with title</div>
     </div>
   </div>
   <div class="picker-item" onclick="pickerAddBlock('reading_task')">
-    <div class="picker-item-icon">📖</div>
+    <div class="picker-item-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
     <div class="picker-item-info">
       <div class="picker-item-name">Reading Task</div>
       <div class="picker-item-desc">Passage + linked questions</div>
     </div>
   </div>
   <div class="picker-item" onclick="pickerAddBlock('writing_task')">
-    <div class="picker-item-icon">✍️</div>
+    <div class="picker-item-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/><path d="m15 5 3 3"/></svg></div>
     <div class="picker-item-info">
       <div class="picker-item-name">Writing Task</div>
       <div class="picker-item-desc">Prompt, task, word limit</div>
     </div>
   </div>
   <div class="picker-item" onclick="pickerAddBlock('speaking_task')">
-    <div class="picker-item-icon">🎤</div>
+    <div class="picker-item-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></div>
     <div class="picker-item-info">
       <div class="picker-item-name">Speaking Task</div>
       <div class="picker-item-desc">Prompt card + questions</div>
@@ -6190,33 +6249,48 @@ body::after {
       <div class="ai-options-row">
         <div class="ai-field">
           <label class="ai-label">Question Type</label>
-          <select class="ai-select" id="ai-qtype">
-            <option value="mixed">Mixed Types</option>
-            <option value="mcq">MCQ Only</option>
-            <option value="true_false">True / False</option>
-            <option value="short_answer">Short Answer</option>
-            <option value="fill_blank">Fill in the Blank</option>
-            <option value="matching">Matching</option>
-            <option value="ordering">Ordering</option>
-            <option value="multiple_select">Multiple Select</option>
-          </select>
+          <input type="hidden" id="ai-qtype" value="mixed">
+          <div class="ai-custom-select" id="ai-qtype-wrap" onclick="toggleAiDropdown('ai-qtype-wrap')">
+            <div class="ai-custom-select-val" id="ai-qtype-val">Mixed Types</div>
+            <svg class="ai-select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="ai-dropdown-list" id="ai-qtype-list">
+            <div class="ai-dropdown-item" onclick="setAiDropdown('ai-qtype','mixed','Mixed Types','ai-qtype-wrap')">Mixed Types</div>
+            <div class="ai-dropdown-item" onclick="setAiDropdown('ai-qtype','mcq','MCQ Only','ai-qtype-wrap')">MCQ Only</div>
+            <div class="ai-dropdown-item" onclick="setAiDropdown('ai-qtype','true_false','True / False','ai-qtype-wrap')">True / False</div>
+            <div class="ai-dropdown-item" onclick="setAiDropdown('ai-qtype','short_answer','Short Answer','ai-qtype-wrap')">Short Answer</div>
+            <div class="ai-dropdown-item" onclick="setAiDropdown('ai-qtype','fill_blank','Fill in the Blank','ai-qtype-wrap')">Fill in the Blank</div>
+            <div class="ai-dropdown-item" onclick="setAiDropdown('ai-qtype','matching','Matching','ai-qtype-wrap')">Matching</div>
+            <div class="ai-dropdown-item" onclick="setAiDropdown('ai-qtype','ordering','Ordering','ai-qtype-wrap')">Ordering</div>
+            <div class="ai-dropdown-item" onclick="setAiDropdown('ai-qtype','multiple_select','Multiple Select','ai-qtype-wrap')">Multiple Select</div>
+          </div>
         </div>
         <div class="ai-field">
           <label class="ai-label">Difficulty</label>
-          <select class="ai-select" id="ai-difficulty">
-            <option value="easy">Easy</option>
-            <option value="medium" selected>Medium</option>
-            <option value="hard">Hard</option>
-          </select>
+          <input type="hidden" id="ai-difficulty" value="medium">
+          <div class="ai-custom-select" id="ai-difficulty-wrap" onclick="toggleAiDropdown('ai-difficulty-wrap')">
+            <div class="ai-custom-select-val" id="ai-difficulty-val">Medium</div>
+            <svg class="ai-select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="ai-dropdown-list" id="ai-difficulty-list">
+            <div class="ai-dropdown-item" onclick="setAiDropdown('ai-difficulty','easy','Easy','ai-difficulty-wrap')">Easy</div>
+            <div class="ai-dropdown-item ai-dropdown-selected" onclick="setAiDropdown('ai-difficulty','medium','Medium','ai-difficulty-wrap')">Medium</div>
+            <div class="ai-dropdown-item" onclick="setAiDropdown('ai-difficulty','hard','Hard','ai-difficulty-wrap')">Hard</div>
+          </div>
         </div>
         <div class="ai-field">
           <label class="ai-label">Count</label>
-          <select class="ai-select" id="ai-count">
-            <option value="3">3</option>
-            <option value="5" selected>5</option>
-            <option value="8">8</option>
-            <option value="10">10</option>
-          </select>
+          <input type="hidden" id="ai-count" value="5">
+          <div class="ai-custom-select" id="ai-count-wrap" onclick="toggleAiDropdown('ai-count-wrap')">
+            <div class="ai-custom-select-val" id="ai-count-val">5</div>
+            <svg class="ai-select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="ai-dropdown-list" id="ai-count-list">
+            <div class="ai-dropdown-item" onclick="setAiDropdown('ai-count','3','3','ai-count-wrap')">3</div>
+            <div class="ai-dropdown-item ai-dropdown-selected" onclick="setAiDropdown('ai-count','5','5','ai-count-wrap')">5</div>
+            <div class="ai-dropdown-item" onclick="setAiDropdown('ai-count','8','8','ai-count-wrap')">8</div>
+            <div class="ai-dropdown-item" onclick="setAiDropdown('ai-count','10','10','ai-count-wrap')">10</div>
+          </div>
         </div>
       </div>
 
@@ -7064,11 +7138,11 @@ const builder = {
 };
 
 const SECTION_ICONS = {
-  questions: '❓',
-  reading:   '📖',
-  writing:   '✍️',
-  speaking:  '🎤',
-  custom:    '⚙️'
+  questions: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  reading:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+  writing:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/><path d="m15 5 3 3"/></svg>',
+  speaking:  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>',
+  custom:    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="1" x2="7" y1="14" y2="14"/><line x1="9" x2="15" y1="8" y2="8"/><line x1="17" x2="23" y1="16" y2="16"/></svg>'
 };
 
 const SECTION_DEFAULTS = {
@@ -10385,6 +10459,50 @@ function closeSidebar() {
 
 window.addEventListener('resize', function() {
   if (window.innerWidth > 600) closeSidebar();
+});
+
+
+// ============================================================
+// AI MODAL CUSTOM DROPDOWNS
+// ============================================================
+function toggleAiDropdown(wrapId) {
+  const wrap = document.getElementById(wrapId);
+  const listId = wrapId.replace('-wrap', '-list');
+  const list   = document.getElementById(listId);
+  if (!wrap || !list) return;
+  const isOpen = list.classList.contains('open');
+  // Close all open dropdowns first
+  document.querySelectorAll('.ai-dropdown-list.open').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.ai-custom-select.open').forEach(el => el.classList.remove('open'));
+  if (!isOpen) {
+    list.classList.add('open');
+    wrap.classList.add('open');
+  }
+}
+
+function setAiDropdown(inputId, value, label, wrapId) {
+  const input = document.getElementById(inputId);
+  const val   = document.getElementById(inputId + '-val');
+  const wrap  = document.getElementById(wrapId);
+  const list  = document.getElementById(wrapId.replace('-wrap', '-list'));
+  if (input) input.value = value;
+  if (val)   val.textContent = label;
+  // Update selected state
+  if (list) {
+    list.querySelectorAll('.ai-dropdown-item').forEach(el => {
+      el.classList.toggle('ai-dropdown-selected', el.textContent.trim() === label);
+    });
+    list.classList.remove('open');
+  }
+  if (wrap) wrap.classList.remove('open');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.ai-field')) {
+    document.querySelectorAll('.ai-dropdown-list.open').forEach(el => el.classList.remove('open'));
+    document.querySelectorAll('.ai-custom-select.open').forEach(el => el.classList.remove('open'));
+  }
 });
 
 // ============================================================
