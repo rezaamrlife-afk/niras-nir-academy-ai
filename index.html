@@ -1629,6 +1629,14 @@ body::after {
   transition: border-color var(--transition);
   line-height: var(--leading-normal);
 }
+
+/* Hide native number spinners — all inputs */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] { -moz-appearance: textfield; }
 .sidebar-input::placeholder { color: rgba(155,150,144,0.4); }
 .sidebar-input:hover { border-color: rgba(201,168,76,0.3); }
 .sidebar-input:focus { border-color: var(--gold-dim); }
@@ -5087,6 +5095,8 @@ body::after {
 
   /* Dashboard */
   .dash-topbar { padding: 12px 16px; }
+  #dash-user-email { display: none; }
+  .btn-signout { padding: 6px 10px; font-size: 11px; }
   .dash-stats { grid-template-columns: 1fr; }
   .dash-body { padding: 20px 16px; }
   .dash-user-pill span { display: none; }
