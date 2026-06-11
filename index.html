@@ -2959,9 +2959,6 @@ body::after {
   flex-direction: column;
   gap: 8px;
   padding-top: 4px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
 }
 .ai-results-list {
   display: flex;
@@ -6235,7 +6232,7 @@ body::after {
           <span class="ai-results-title">Generated Questions</span>
           <label class="ai-select-all-label">
             <input type="checkbox" id="ai-select-all"
-              onchange="document.querySelectorAll('.ai-q-check').forEach(c=>{c.checked=this.checked; const i=+c.dataset.idx; if(this.checked)_aiSelectedIndices.add(i); else _aiSelectedIndices.delete(i); updateInsertBtn();})">
+              onchange="_aiGeneratedQuestions.forEach((_,i)=>{if(this.checked){_aiSelectedIndices.add(i);document.getElementById('ai-q-'+i)?.classList.add('selected');}else{_aiSelectedIndices.delete(i);document.getElementById('ai-q-'+i)?.classList.remove('selected');}});updateInsertBtn();">
             Select All
           </label>
         </div>
