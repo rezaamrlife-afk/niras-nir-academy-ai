@@ -5682,6 +5682,25 @@ input[type=number] { -moz-appearance: textfield; }
   transition: background var(--transition);
 }
 .btn-forgot-send:hover { background: var(--gold-light); }
+
+/* ——— UI Foundation Layer (Phase 1) ——— */
+
+/* Step 2: Global active state — tactile feedback on all buttons */
+button:active {
+  transform: scale(0.98);
+}
+
+/* Step 3: Base button transition class (not applied yet) */
+.btn-base {
+  transition: all 0.2s ease;
+}
+
+/* Step 4: Focus accessibility — keyboard/screen reader visible focus */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
 </style>
 </head>
 <body>
