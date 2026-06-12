@@ -5108,6 +5108,7 @@ input[type=number] { -moz-appearance: textfield; }
   .dash-topbar { padding: 12px 16px; }
   #dash-user-email { display: none; }
   .btn-signout { padding: 6px 10px; font-size: 11px; }
+  .profile-input { padding: 13px 14px; }
   .dash-stats { grid-template-columns: 1fr; }
   .dash-body { padding: 20px 16px; }
   .dash-user-pill span { display: none; }
@@ -10072,7 +10073,9 @@ function openProfileModal() {
   // Load profile from Supabase
   sb.getProfile().then(profile => {
     const name = profile?.full_name || user?.user_metadata?.full_name || '';
-    document.getElementById('profile-full-name').value  = name;
+    document.getElementById('profile-full-name').disabled     = false;
+    document.getElementById('profile-full-name').placeholder  = 'Dr. Niki Majidi';
+    document.getElementById('profile-full-name').value        = name;
     document.getElementById('profile-display-name').textContent = name || email;
     document.getElementById('profile-display-email').textContent = email;
 
@@ -10091,6 +10094,9 @@ function openProfileModal() {
     }
   });
 
+  // Show loading placeholder until Supabase fetch completes
+  document.getElementById('profile-full-name').placeholder = 'Loading…';
+  document.getElementById('profile-full-name').disabled = true;
   document.getElementById('profile-modal').classList.add('open');
 }
 
@@ -10146,7 +10152,8 @@ async function saveProfile() {
   statusEl.textContent = '';
 
   try {
-    let ok = true;
+    let nameOk = true;
+    let pwdOk  = true;
 
     // 1. Update full_name in profiles table
     if (fullName) {
@@ -10158,11 +10165,11 @@ async function saveProfile() {
           body: JSON.stringify({ full_name: fullName })
         }
       );
-      if (!r?.ok) ok = false;
+      if (!r?.ok) nameOk = false;
     }
 
-    // 2. Update password if provided
-    if (newPassword && ok) {
+    // 2. Update password if provided (independent of name)
+    if (newPassword) {
       const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
         method: 'PUT',
         headers: {
@@ -10172,7 +10179,7 @@ async function saveProfile() {
         },
         body: JSON.stringify({ password: newPassword })
       });
-      if (!r.ok) ok = false;
+      if (!r.ok) pwdOk = false;
     }
 
     // 3. Save avatar to localStorage (no storage bucket needed)
@@ -10187,8 +10194,9 @@ async function saveProfile() {
       }
     }
 
-    if (ok) {
-      // Update UI
+    // Granular feedback — user knows exactly what succeeded
+    if (nameOk && pwdOk) {
+      // Full success
       if (fullName) {
         document.getElementById('dash-user-email').textContent = fullName;
         document.getElementById('profile-display-name').textContent = fullName;
@@ -10196,17 +10204,29 @@ async function saveProfile() {
         document.getElementById('dash-avatar-letter').textContent = letter;
         document.getElementById('profile-avatar-letter').textContent = letter;
       }
-
-      // Clear password fields
       document.getElementById('profile-new-password').value     = '';
       document.getElementById('profile-confirm-password').value = '';
-
       statusEl.textContent = '✓ Saved';
       statusEl.className   = 'profile-save-status success';
       showToast('Profile updated', 'success');
       setTimeout(() => closeProfileModal(), 1200);
+    } else if (nameOk && !pwdOk) {
+      // Name saved, password failed
+      if (fullName) {
+        document.getElementById('profile-display-name').textContent = fullName;
+      }
+      statusEl.textContent = 'Name saved — password update failed';
+      statusEl.className   = 'profile-save-status error';
+      showToast('Name saved, but password update failed', 'error');
+    } else if (!nameOk && pwdOk) {
+      // Password saved, name failed
+      document.getElementById('profile-new-password').value     = '';
+      document.getElementById('profile-confirm-password').value = '';
+      statusEl.textContent = 'Password saved — name update failed';
+      statusEl.className   = 'profile-save-status error';
+      showToast('Password saved, but name update failed', 'error');
     } else {
-      statusEl.textContent = 'Save failed';
+      statusEl.textContent = 'Save failed — please try again';
       statusEl.className   = 'profile-save-status error';
     }
 
