@@ -5571,12 +5571,134 @@ input[type=number] { -moz-appearance: textfield; }
   border-radius: 10px;
   padding: 2px 8px;
 }
+
+/* ——— Password Toggle ——— */
+.pwd-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.pwd-wrapper .form-input {
+  padding-right: 42px;
+}
+.btn-pwd-toggle {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--white-muted);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  transition: color var(--transition);
+}
+.btn-pwd-toggle:hover { color: var(--white); }
+.eye-icon { width: 16px; height: 16px; }
+
+/* ——— Forgot Password ——— */
+.forgot-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+.btn-forgot {
+  background: none;
+  border: none;
+  color: var(--gold-dim);
+  font-family: var(--font-ui);
+  font-size: var(--text-caption);
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--transition);
+}
+.btn-forgot:hover { color: var(--gold); }
+
+/* ——— Forgot Password Modal ——— */
+.forgot-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 6000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.forgot-modal-overlay.open { display: flex; }
+.forgot-modal {
+  background: var(--black-card);
+  border: 1px solid var(--black-border);
+  border-radius: var(--radius-lg);
+  padding: 32px 28px;
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.forgot-title {
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  color: var(--white);
+  font-weight: var(--weight-medium);
+}
+.forgot-sub {
+  font-size: var(--text-body-sm);
+  color: var(--white-muted);
+  line-height: var(--leading-relaxed);
+}
+.forgot-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+.btn-forgot-cancel {
+  background: none;
+  border: 1px solid var(--black-border);
+  color: var(--white-dim);
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  cursor: pointer;
+  padding: 9px 18px;
+  border-radius: var(--radius);
+  transition: all var(--transition);
+}
+.btn-forgot-cancel:hover { border-color: var(--white-dim); color: var(--white); }
+.btn-forgot-send {
+  background: var(--gold);
+  border: none;
+  color: var(--black);
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  padding: 9px 20px;
+  border-radius: var(--radius);
+  transition: background var(--transition);
+}
+.btn-forgot-send:hover { background: var(--gold-light); }
 </style>
 </head>
 <body>
 
 <!-- Sidebar Overlay -->
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+<!-- Forgot Password Modal -->
+<div class="forgot-modal-overlay" id="forgot-modal" onclick="if(event.target===this)closeForgotModal()">
+  <div class="forgot-modal">
+    <div class="forgot-title">Reset Password</div>
+    <div class="forgot-sub">Enter your email address and we'll send you a link to reset your password.</div>
+    <input type="email" class="form-input" id="forgot-email" placeholder="you@example.com" autocomplete="email">
+    <span class="form-error" id="forgot-error"></span>
+    <div class="forgot-actions">
+      <button class="btn-forgot-cancel" onclick="closeForgotModal()">Cancel</button>
+      <button class="btn-forgot-send" id="btn-forgot-send" onclick="sendResetEmail()">Send Reset Link</button>
+    </div>
+  </div>
+</div>
+
 <!-- NIRAS INTRO MODAL -->
 <div class="intro-overlay hidden" id="intro-overlay">
   <div class="intro-modal">
@@ -5756,7 +5878,15 @@ input[type=number] { -moz-appearance: textfield; }
       </div>
       <div class="form-group">
         <label class="form-label">Password</label>
-        <input type="password" class="form-input" id="login-password" placeholder="••••••••" autocomplete="current-password">
+        <div class="pwd-wrapper">
+          <input type="password" class="form-input" id="login-password" placeholder="••••••••" autocomplete="current-password">
+          <button type="button" class="btn-pwd-toggle" onclick="togglePwd('login-password',this)" aria-label="Show password">
+            <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div class="forgot-row">
+          <button type="button" class="btn-forgot" onclick="handleForgotPassword()">Forgot password?</button>
+        </div>
         <span class="form-error" id="login-error">Invalid email or password.</span>
       </div>
       <button class="btn-auth" id="btn-login" onclick="handleLogin()">
@@ -5786,7 +5916,12 @@ input[type=number] { -moz-appearance: textfield; }
           </div>
           <div class="form-group">
             <label class="form-label">Password</label>
-            <input type="password" class="form-input" id="signup-password" placeholder="Min. 8 characters" autocomplete="new-password">
+            <div class="pwd-wrapper">
+          <input type="password" class="form-input" id="signup-password" placeholder="Min. 8 characters" autocomplete="new-password">
+          <button type="button" class="btn-pwd-toggle" onclick="togglePwd('signup-password',this)" aria-label="Show password">
+            <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
             <span class="form-error" id="signup-error">Please check your details.</span>
           </div>
           <button class="btn-auth" id="btn-signup" onclick="handleSignup()">
@@ -10588,6 +10723,77 @@ document.addEventListener('click', function(e) {
     document.querySelectorAll('.ai-custom-select.open').forEach(el => el.classList.remove('open'));
   }
 });
+
+
+// ============================================================
+// AUTH — PASSWORD TOGGLE & FORGOT PASSWORD
+// ============================================================
+function togglePwd(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  // Swap eye icon
+  btn.innerHTML = isHidden
+    ? '<svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+    : '<svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+}
+
+function handleForgotPassword() {
+  const emailInput = document.getElementById('login-email');
+  const forgotEmailInput = document.getElementById('forgot-email');
+  if (emailInput && forgotEmailInput) {
+    forgotEmailInput.value = emailInput.value || '';
+  }
+  document.getElementById('forgot-modal').classList.add('open');
+  document.getElementById('forgot-error').textContent = '';
+}
+
+function closeForgotModal() {
+  document.getElementById('forgot-modal').classList.remove('open');
+}
+
+async function sendResetEmail() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const errEl = document.getElementById('forgot-error');
+  const btn   = document.getElementById('btn-forgot-send');
+
+  if (!email) {
+    errEl.textContent = 'Please enter your email address.';
+    errEl.classList.add('visible');
+    return;
+  }
+
+  btn.textContent = 'Sending…';
+  btn.disabled = true;
+  errEl.classList.remove('visible');
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({ email })
+    });
+
+    if (res.ok) {
+      closeForgotModal();
+      showToast('Password reset email sent — check your inbox', 'success');
+    } else {
+      const data = await res.json();
+      errEl.textContent = data.msg || 'Could not send reset email.';
+      errEl.classList.add('visible');
+    }
+  } catch (e) {
+    errEl.textContent = 'Network error. Please try again.';
+    errEl.classList.add('visible');
+  } finally {
+    btn.textContent = 'Send Reset Link';
+    btn.disabled = false;
+  }
+}
 
 // ============================================================
 // SERVICE WORKER REGISTRATION
