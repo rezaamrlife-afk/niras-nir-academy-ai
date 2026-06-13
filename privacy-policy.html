@@ -6,265 +6,282 @@
   <title>Privacy Policy — NIRAS AI</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 16px;
-      line-height: 1.7;
-      color: #1a1a1a;
-      background: #ffffff;
-      padding: 0 16px;
-    }
-
-    .container {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 48px 0 80px;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 40px;
-    }
-
-    .brand-name {
-      font-size: 20px;
-      font-weight: 700;
-      color: #1a1a1a;
-      letter-spacing: -0.02em;
-    }
-
-    .brand-sub {
-      font-size: 13px;
-      color: #666;
-    }
-
-    h1 {
-      font-size: 28px;
-      font-weight: 700;
-      color: #1a1a1a;
-      letter-spacing: -0.02em;
-      margin-bottom: 6px;
-    }
-
-    .updated {
-      font-size: 13px;
-      color: #888;
-      margin-bottom: 36px;
-    }
-
-    h2 {
-      font-size: 17px;
-      font-weight: 600;
-      color: #1a1a1a;
-      margin-top: 36px;
-      margin-bottom: 10px;
-    }
-
-    h3 {
-      font-size: 15px;
-      font-weight: 600;
-      color: #333;
-      margin-top: 20px;
-      margin-bottom: 8px;
-    }
-
-    p {
-      font-size: 15px;
-      color: #333;
-      margin-bottom: 12px;
-    }
-
-    ul {
-      padding-left: 20px;
-      margin-bottom: 12px;
-    }
-
-    li {
-      font-size: 15px;
-      color: #333;
-      margin-bottom: 5px;
-    }
-
-    .divider {
-      border: none;
-      border-top: 1px solid #e8e8e8;
-      margin: 32px 0;
-    }
-
-    .contact-box {
-      background: #f7f7f5;
-      border: 1px solid #e0e0e0;
-      border-radius: 10px;
-      padding: 20px 24px;
-      margin-top: 12px;
-    }
-
-    .contact-box p {
-      margin: 0;
-      font-size: 15px;
-      color: #333;
-    }
-
-    .contact-box a {
-      color: #b8902a;
-      text-decoration: none;
-      font-weight: 500;
-    }
-
-    .contact-box a:hover {
-      text-decoration: underline;
-    }
-
-    .footer {
-      margin-top: 56px;
-      padding-top: 20px;
-      border-top: 1px solid #e8e8e8;
-      font-size: 13px;
-      color: #999;
-      text-align: center;
-    }
-
-    @media (max-width: 480px) {
-      h1 { font-size: 22px; }
-      h2 { font-size: 16px; }
-      .container { padding: 32px 0 60px; }
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; line-height: 1.7; color: #1a1a1a; background: #fff; padding: 0 16px; }
+    .container { max-width: 720px; margin: 0 auto; padding: 48px 0 80px; }
+    .brand { margin-bottom: 40px; }
+    .brand-name { font-size: 20px; font-weight: 700; color: #1a1a1a; letter-spacing: -0.02em; }
+    .brand-sub { font-size: 13px; color: #666; margin-top: 3px; }
+    h1 { font-size: 28px; font-weight: 700; color: #1a1a1a; letter-spacing: -0.02em; margin-bottom: 6px; }
+    .updated { font-size: 13px; color: #888; margin-bottom: 36px; }
+    h2 { font-size: 17px; font-weight: 600; color: #1a1a1a; margin-top: 40px; margin-bottom: 10px; }
+    h3 { font-size: 15px; font-weight: 600; color: #333; margin-top: 20px; margin-bottom: 8px; }
+    p { font-size: 15px; color: #333; margin-bottom: 12px; }
+    ul { padding-left: 20px; margin-bottom: 12px; }
+    li { font-size: 15px; color: #333; margin-bottom: 6px; }
+    strong { color: #1a1a1a; }
+    a { color: #b8902a; }
+    .divider { border: none; border-top: 1px solid #e8e8e8; margin: 32px 0; }
+    .toc { background: #f7f7f5; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px 24px; margin: 24px 0; }
+    .toc-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 12px; }
+    .toc ol { padding-left: 18px; margin: 0; }
+    .toc li { font-size: 14px; margin-bottom: 4px; }
+    .toc a { color: #b8902a; text-decoration: none; }
+    .highlight-box { background: #f7f7f5; border: 1px solid #e0e0e0; border-left: 3px solid #b8902a; border-radius: 8px; padding: 16px 20px; margin: 16px 0; }
+    .highlight-box p { margin: 0; font-size: 14px; color: #444; }
+    .deletion-box { background: #fff8f0; border: 1px solid #f0d9a8; border-left: 3px solid #b8902a; border-radius: 8px; padding: 20px 24px; margin: 16px 0; }
+    .deletion-box p { margin-bottom: 8px; font-size: 15px; }
+    .deletion-box p:last-child { margin-bottom: 0; }
+    .contact-box { background: #f7f7f5; border: 1px solid #e0e0e0; border-radius: 10px; padding: 20px 24px; margin-top: 12px; }
+    .contact-box p { margin-bottom: 6px; font-size: 15px; }
+    .contact-box p:last-child { margin-bottom: 0; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+    th { background: #f7f7f5; border: 1px solid #e0e0e0; padding: 10px 14px; text-align: left; font-weight: 600; color: #1a1a1a; }
+    td { border: 1px solid #e0e0e0; padding: 10px 14px; color: #333; vertical-align: top; }
+    tr:nth-child(even) td { background: #fafafa; }
+    .footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid #e8e8e8; font-size: 13px; color: #999; text-align: center; }
+    @media (max-width: 480px) { h1 { font-size: 22px; } h2 { font-size: 16px; } .container { padding: 32px 0 60px; } table { font-size: 13px; } th, td { padding: 8px 10px; } }
   </style>
 </head>
 <body>
-  <div class="container">
+<div class="container">
 
-    <div class="brand">
-      <div>
-        <div class="brand-name">NIRAS AI</div>
-        <div class="brand-sub">NIR Academy — Professional Exam Authoring</div>
-      </div>
-    </div>
-
-    <h1>Privacy Policy</h1>
-    <p class="updated">Last updated: June 2026</p>
-
-    <hr class="divider">
-
-    <h2>1. Overview</h2>
-    <p>
-      NIRAS AI is an educational exam authoring platform that allows users to create, manage,
-      and export educational content such as exams, questions, and learning materials.
-      This Privacy Policy explains how we collect, use, and protect user data.
-    </p>
-
-    <h2>2. Information We Collect</h2>
-
-    <h3>2.1 Account Information</h3>
-    <ul>
-      <li>Email address</li>
-      <li>Login authentication data (via Supabase secure authentication)</li>
-    </ul>
-
-    <h3>2.2 User Content</h3>
-    <ul>
-      <li>Exams created by users</li>
-      <li>Questions, answers, and uploaded educational files</li>
-      <li>Generated AI content based on user input</li>
-    </ul>
-
-    <h3>2.3 Technical Data</h3>
-    <ul>
-      <li>Device type and operating system</li>
-      <li>Browser type and version</li>
-      <li>Usage logs for performance and error monitoring</li>
-    </ul>
-
-    <h2>3. How We Use Information</h2>
-    <p>We use collected data to:</p>
-    <ul>
-      <li>Provide core app functionality (exam creation and AI generation)</li>
-      <li>Store and manage user-generated content</li>
-      <li>Improve app performance and stability</li>
-      <li>Provide authentication and secure access</li>
-    </ul>
-    <p>
-      AI question generation is powered by <strong>Groq (api.groq.com)</strong> — for AI question generation.
-      User input sent to Groq is used solely to produce requested educational output.
-    </p>
-
-    <h2>4. Data Storage</h2>
-    <ul>
-      <li>User content is stored securely using Supabase cloud database</li>
-      <li>Servers are located in the United States</li>
-      <li>We do not store sensitive personal financial data</li>
-      <li>Data is retained until the user deletes it or requests removal</li>
-    </ul>
-
-    <h2>5. AI Processing</h2>
-    <ul>
-      <li>User inputs may be processed by Groq (api.groq.com) for question generation</li>
-      <li>Data sent to AI services is used only to generate requested educational output</li>
-      <li>We do not use AI input data for advertising or profiling</li>
-    </ul>
-
-    <h2>6. Data Sharing</h2>
-    <p>We do <strong>not</strong> sell user data.</p>
-    <p>We may share limited data only with:</p>
-    <ul>
-      <li><strong>Supabase</strong> — cloud database and authentication</li>
-      <li><strong>Groq (api.groq.com)</strong> — AI question generation</li>
-      <li><strong>Vercel</strong> — app hosting and delivery</li>
-      <li>Legal authorities, if required by applicable law</li>
-    </ul>
-
-    <h2>7. User Control</h2>
-    <p>Users can:</p>
-    <ul>
-      <li>Edit or delete their content at any time</li>
-      <li>Request account deletion by contacting us</li>
-      <li>Clear local browser storage (for PWA cached data)</li>
-    </ul>
-
-    <h2>8. Security</h2>
-    <p>We implement:</p>
-    <ul>
-      <li>Secure authentication via Supabase Auth</li>
-      <li>HTTPS encryption for all data in transit</li>
-      <li>Access controls to protect user data</li>
-    </ul>
-    <p>No system is 100% secure. We encourage users to use strong passwords.</p>
-
-    <h2>9. Children's Privacy</h2>
-    <p>
-      NIRAS AI is intended for educational professionals and is not directed at children
-      under the age of 13 without parental supervision. We do not knowingly collect
-      personal data from children under 13.
-    </p>
-
-    <h2>10. Third-Party Services</h2>
-    <p>We use the following third-party services, each with their own privacy policies:</p>
-    <ul>
-      <li><strong>Supabase</strong> — supabase.com/privacy</li>
-      <li><strong>Groq</strong> — groq.com/privacy</li>
-      <li><strong>Vercel</strong> — vercel.com/legal/privacy-policy</li>
-    </ul>
-
-    <h2>11. Changes to This Policy</h2>
-    <p>
-      We may update this policy occasionally. Updates will be posted within the app
-      or on this page with a revised date.
-    </p>
-
-    <h2>12. Contact</h2>
-    <p>For privacy-related questions, please contact:</p>
-    <div class="contact-box">
-      <p>📧 <a href="mailto:info@niracademy.com">info@niracademy.com</a></p>
-      <p style="margin-top:6px;">Dr. Niki Majidi — NIR Academy</p>
-    </div>
-
-    <div class="footer">
-      &copy; 2026 NIR Academy. All rights reserved.
-    </div>
-
+  <div class="brand">
+    <div class="brand-name">NIRAS AI</div>
+    <div class="brand-sub">NIR Academy &mdash; Professional Exam Authoring System</div>
   </div>
+
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: June 2026 &nbsp;&bull;&nbsp; Effective: June 2026</p>
+  <hr class="divider">
+
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#information-we-collect">Information We Collect</a></li>
+      <li><a href="#how-we-use">How We Use Information</a></li>
+      <li><a href="#ai-processing">AI Processing and Third-Party AI Services</a></li>
+      <li><a href="#data-storage">Data Storage and Retention</a></li>
+      <li><a href="#data-sharing">Data Sharing and Disclosure</a></li>
+      <li><a href="#user-rights">User Rights</a></li>
+      <li><a href="#data-deletion">Account Deletion and Data Deletion</a></li>
+      <li><a href="#security">Security Measures</a></li>
+      <li><a href="#childrens-privacy">Children's Privacy</a></li>
+      <li><a href="#international-transfers">International Data Transfers</a></li>
+      <li><a href="#third-party-services">Third-Party Services</a></li>
+      <li><a href="#policy-changes">Changes to This Privacy Policy</a></li>
+      <li><a href="#contact">Contact Information</a></li>
+    </ol>
+  </div>
+
+  <h2 id="overview">1. Overview</h2>
+  <p>NIRAS AI (&ldquo;the Application,&rdquo; &ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;) is an AI-powered exam authoring and educational content creation platform developed by <strong>NIR Academy</strong>, operated by Dr. Niki Majidi. NIRAS AI enables educators and teachers to create, manage, and export professional exams, questions, worksheets, and educational materials.</p>
+  <p>This Privacy Policy describes how we collect, use, disclose, and safeguard information when you use our web and Android application. By using NIRAS AI, you agree to the practices described in this policy.</p>
+  <div class="highlight-box"><p><strong>Key commitments:</strong> We do not sell your personal data. We do not use your content for advertising. We do not share your data with third parties except as described in this policy.</p></div>
+  <hr class="divider">
+
+  <h2 id="information-we-collect">2. Information We Collect</h2>
+  <h3>2.1 Account Information</h3>
+  <ul>
+    <li><strong>Email address</strong> &mdash; used for authentication and account identification</li>
+    <li><strong>Password</strong> &mdash; stored in encrypted form via Supabase Auth; never stored in plaintext</li>
+    <li><strong>Display name</strong> &mdash; optional, provided by the user in profile settings</li>
+  </ul>
+  <h3>2.2 User-Generated Educational Content</h3>
+  <ul>
+    <li>Exams, sections, and metadata (title, subject, CEFR level, time limit, scoring)</li>
+    <li>Questions, answer choices, correct answers, and explanations</li>
+    <li>Reading passages, writing prompts, and speaking tasks</li>
+    <li>Text content submitted for AI-assisted question generation</li>
+    <li>Uploaded documents or files used as source material for AI generation</li>
+  </ul>
+  <h3>2.3 Profile and Preference Data</h3>
+  <ul>
+    <li>Profile name and optional avatar image (stored locally on device only, not uploaded to our servers)</li>
+    <li>Application preferences and settings</li>
+  </ul>
+  <h3>2.4 Technical and Usage Data</h3>
+  <ul>
+    <li>Device type, operating system, and browser version</li>
+    <li>Internet Protocol (IP) address</li>
+    <li>Pages accessed and features used within the Application</li>
+    <li>Error logs and performance diagnostics</li>
+    <li>Session duration and access timestamps</li>
+  </ul>
+  <p>Technical data is collected by our infrastructure providers (Vercel, Supabase) as part of standard operations.</p>
+  <hr class="divider">
+
+  <h2 id="how-we-use">3. How We Use Information</h2>
+  <ul>
+    <li><strong>Authentication and account management</strong> &mdash; to verify identity and provide secure access</li>
+    <li><strong>Core functionality</strong> &mdash; to enable exam creation, editing, saving, and PDF export</li>
+    <li><strong>AI content generation</strong> &mdash; to process your input and generate educational content via Groq API</li>
+    <li><strong>Service improvement</strong> &mdash; to monitor performance, identify errors, and improve stability</li>
+    <li><strong>User support</strong> &mdash; to respond to inquiries and resolve issues</li>
+    <li><strong>Legal compliance</strong> &mdash; to comply with applicable laws and regulations</li>
+  </ul>
+  <p>We do <strong>not</strong> use your personal data or educational content for advertising, profiling, behavioral tracking, or any purpose beyond providing the core service described above.</p>
+  <hr class="divider">
+
+  <h2 id="ai-processing">4. AI Processing and Third-Party AI Services</h2>
+  <p>NIRAS AI uses the <strong>Groq API</strong> (api.groq.com) to power AI-assisted question generation features.</p>
+  <ul>
+    <li>Text content you submit is transmitted to Groq servers for processing</li>
+    <li>Groq processes this content solely to generate the requested educational output</li>
+    <li>AI requests are routed through our secure server-side proxy &mdash; API credentials are never exposed client-side</li>
+    <li>We do not use AI input or output for model training, advertising, or profiling</li>
+    <li>All AI API requests are transmitted over encrypted HTTPS/TLS connections</li>
+  </ul>
+  <p>Groq's privacy practices are governed by the <a href="https://groq.com/privacy-policy/" target="_blank" rel="noopener">Groq Privacy Policy</a>.</p>
+  <hr class="divider">
+
+  <h2 id="data-storage">5. Data Storage and Retention</h2>
+  <h3>5.1 Where Data is Stored</h3>
+  <ul>
+    <li>User accounts and exam content are stored in <strong>Supabase</strong> cloud database infrastructure, located in the United States</li>
+    <li>The Application is hosted on <strong>Vercel</strong> infrastructure, distributed globally via CDN</li>
+    <li>Profile avatar images are stored locally on your device and are not uploaded to our servers</li>
+  </ul>
+  <h3>5.2 Retention Period</h3>
+  <ul>
+    <li>Account data and content are retained for as long as your account remains active</li>
+    <li>Upon account deletion, personal data is permanently deleted within <strong>30 days</strong></li>
+    <li>Anonymized or aggregated technical logs may be retained longer for security and infrastructure purposes</li>
+    <li>Data required for legal or compliance obligations will be retained only for the period required by law</li>
+  </ul>
+  <hr class="divider">
+
+  <h2 id="data-sharing">6. Data Sharing and Disclosure</h2>
+  <p>We do <strong>not</strong> sell, rent, or trade your personal data to any third party.</p>
+  <h3>6.1 Service Providers</h3>
+  <ul>
+    <li><strong>Supabase</strong> &mdash; receives account credentials, authentication tokens, and exam content for database storage and authentication</li>
+    <li><strong>Groq</strong> &mdash; receives text content submitted for AI generation, used only to produce the requested output</li>
+    <li><strong>Vercel</strong> &mdash; receives standard web request data (IP address, browser headers) as part of hosting</li>
+  </ul>
+  <h3>6.2 Legal Requirements</h3>
+  <p>We may disclose your data if required by applicable law, regulation, legal process, or governmental authority, or to protect the rights, property, or safety of NIR Academy, our users, or the public.</p>
+  <h3>6.3 Business Transfers</h3>
+  <p>In the event of a merger, acquisition, or asset sale, user data may be transferred. Users will be notified of any such change via an updated policy or direct communication.</p>
+  <hr class="divider">
+
+  <h2 id="user-rights">7. User Rights</h2>
+  <p>Depending on your jurisdiction, you may have the following rights:</p>
+  <ul>
+    <li><strong>Right of Access</strong> &mdash; Request a copy of the personal data we hold about you</li>
+    <li><strong>Right of Rectification</strong> &mdash; Update or correct inaccurate data via account settings or by contacting us</li>
+    <li><strong>Right of Erasure</strong> &mdash; Request permanent deletion of your account and personal data (see Section 8)</li>
+    <li><strong>Right to Restrict Processing</strong> &mdash; Request that we limit how we use your data</li>
+    <li><strong>Right to Data Portability</strong> &mdash; Request an export of your data in a structured, machine-readable format</li>
+    <li><strong>Right to Object</strong> &mdash; Object to certain processing of your personal data</li>
+  </ul>
+  <p>To exercise any of these rights, please contact us at <a href="mailto:info@niracademy.com">info@niracademy.com</a>. We will respond to all legitimate requests within 30 days.</p>
+  <hr class="divider">
+
+  <h2 id="data-deletion">8. Account Deletion and Data Deletion</h2>
+  <div class="deletion-box">
+    <p><strong>You have the right to delete your account and all associated personal data at any time.</strong></p>
+    <p>All deletion requests are processed within <strong>30 days</strong> of submission.</p>
+  </div>
+  <h3>8.1 How to Request Account Deletion</h3>
+  <ul>
+    <li><strong>Email request:</strong> Send an email to <a href="mailto:info@niracademy.com">info@niracademy.com</a> with subject &ldquo;Account Deletion Request&rdquo; and the email address associated with your account</li>
+    <li><strong>In-app request:</strong> Contact us via the in-app support option if available</li>
+  </ul>
+  <h3>8.2 What Data Is Deleted</h3>
+  <p>Upon a verified deletion request, the following data will be permanently deleted within 30 days:</p>
+  <ul>
+    <li>Your account credentials (email address and authentication data)</li>
+    <li>All exams, questions, and educational content you have created</li>
+    <li>Your profile information and display name</li>
+    <li>All records associating your identity with your content</li>
+  </ul>
+  <h3>8.3 Data That May Be Retained</h3>
+  <ul>
+    <li>Anonymized or aggregated usage statistics that cannot be linked to your identity</li>
+    <li>Technical logs retained by infrastructure providers for security and compliance, subject to their own policies</li>
+    <li>Records required for compliance with applicable legal, tax, or financial regulations</li>
+  </ul>
+  <h3>8.4 Confirmation of Deletion</h3>
+  <p>You will receive email confirmation once your account and data have been deleted. If you do not receive confirmation within 30 days, please contact <a href="mailto:info@niracademy.com">info@niracademy.com</a>.</p>
+  <hr class="divider">
+
+  <h2 id="security">9. Security Measures</h2>
+  <ul>
+    <li><strong>Encryption in transit:</strong> All data is transmitted using HTTPS/TLS encryption</li>
+    <li><strong>Encryption at rest:</strong> User data stored in Supabase is protected using industry-standard encryption</li>
+    <li><strong>Secure authentication:</strong> Authentication is managed by Supabase Auth with secure token-based access controls</li>
+    <li><strong>Server-side API security:</strong> AI API keys are stored as server-side environment variables and never exposed client-side</li>
+    <li><strong>Access controls:</strong> Row-level security in Supabase ensures users can only access their own data</li>
+    <li><strong>Password protection:</strong> Passwords are hashed and salted; we never store plaintext passwords</li>
+  </ul>
+  <p>While we implement reasonable security measures, no system is completely secure. We encourage users to use strong, unique passwords and to notify us immediately if they suspect unauthorized access.</p>
+  <hr class="divider">
+
+  <h2 id="childrens-privacy">10. Children&rsquo;s Privacy</h2>
+  <p>NIRAS AI is designed for educational professionals and is not directed at children under the age of 13 (or the applicable age of digital consent in your jurisdiction). We do not knowingly collect personal data from children under 13.</p>
+  <p>If you are a parent or guardian and believe your child has provided personal data to us without your consent, please contact us at <a href="mailto:info@niracademy.com">info@niracademy.com</a> and we will promptly delete such information.</p>
+  <hr class="divider">
+
+  <h2 id="international-transfers">11. International Data Transfers</h2>
+  <p>Our infrastructure providers &mdash; Supabase and Vercel &mdash; store and process data primarily in the United States. If you access the Application from outside the United States, including from the European Economic Area (EEA), United Kingdom, or Turkey, your personal data may be transferred to and processed in a country with different data protection standards.</p>
+  <p>We take appropriate measures to ensure international data transfers comply with applicable laws, including through reliance on our service providers&rsquo; compliance frameworks and standard contractual clauses where applicable.</p>
+  <hr class="divider">
+
+  <h2 id="third-party-services">12. Third-Party Services</h2>
+  <p>NIRAS AI relies on the following third-party providers, each governed by their own privacy policy:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Provider</th>
+        <th>Purpose</th>
+        <th>Data Shared</th>
+        <th>Privacy Policy</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Supabase</strong></td>
+        <td>Database and authentication</td>
+        <td>Email, password hash, exam content</td>
+        <td><a href="https://supabase.com/privacy" target="_blank" rel="noopener">supabase.com/privacy</a></td>
+      </tr>
+      <tr>
+        <td><strong>Groq</strong></td>
+        <td>AI question generation</td>
+        <td>Text content for AI processing</td>
+        <td><a href="https://groq.com/privacy-policy/" target="_blank" rel="noopener">groq.com/privacy-policy</a></td>
+      </tr>
+      <tr>
+        <td><strong>Vercel</strong></td>
+        <td>Application hosting</td>
+        <td>IP address, browser headers, request logs</td>
+        <td><a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener">vercel.com/legal/privacy-policy</a></td>
+      </tr>
+    </tbody>
+  </table>
+  <hr class="divider">
+
+  <h2 id="policy-changes">13. Changes to This Privacy Policy</h2>
+  <p>We may update this Privacy Policy at any time. When we make material changes, we will update the &ldquo;Last updated&rdquo; date and notify registered users by email or via a notice within the Application. Continued use of NIRAS AI after any changes constitutes acceptance of the updated policy.</p>
+  <hr class="divider">
+
+  <h2 id="contact">14. Contact Information</h2>
+  <p>For questions, concerns, or requests regarding this Privacy Policy or your personal data, please contact:</p>
+  <div class="contact-box">
+    <p><strong>NIR Academy &mdash; NIRAS AI</strong></p>
+    <p>Data Controller: Dr. Niki Majidi</p>
+    <p>Email: <a href="mailto:info@niracademy.com">info@niracademy.com</a></p>
+    <p>Website: <a href="https://niracademy.com" target="_blank" rel="noopener">niracademy.com</a></p>
+  </div>
+  <p style="margin-top:14px;font-size:14px;color:#666;">We will acknowledge your request within 5 business days and respond fully within 30 days.</p>
+
+  <div class="footer">
+    &copy; 2026 NIR Academy. All rights reserved. &nbsp;&bull;&nbsp;
+    NIRAS AI &nbsp;&bull;&nbsp;
+    <a href="mailto:info@niracademy.com">info@niracademy.com</a>
+  </div>
+
+</div>
 </body>
 </html>
