@@ -9281,7 +9281,7 @@ ${qtype === 'multiple_select'  ? '- options: array of 4 strings\n- correct_indic
 - explanation: brief explanation of the answer
 IMPORTANT: For mixed type, each question must have a concrete qtype (mcq/true_false/short_answer/fill_blank) — never use "mixed" as qtype value.`;
 
-    const raw = await groqChat(system, user);
+    const raw = await groqWithRetry(system, user, 2000);
     const questions = parseAIJson(raw);
 
     if (!Array.isArray(questions) || questions.length === 0) throw new Error('No questions returned');
@@ -10420,7 +10420,7 @@ async function generateFromContent(content, qtype, difficulty, count) {
   const system = `You are an expert ELT exam writer. Generate questions ONLY from provided content. Return ONLY a valid JSON array, no markdown, no extra text.`;
   const user = `CONTENT:\n"${content}"\n\nGenerate ${count} questions.\nType: ${typeMap[qtype]}\nDifficulty: ${diffMap[difficulty]}\n\nEach question must have:\n- stem, qtype, difficulty, points:1\n- options (array of 4, for MCQ), correct_index (for MCQ)\n- correct_answer (for tf/short/fill)\n- pairs (array of [str,str] for matching)\n- explanation\n- ai_verified: true`;
 
-  const raw = await groqChat(system, user);
+  const raw = await groqWithRetry(system, user, 2000);
   const qs  = parseAIJson(raw);
   if (!Array.isArray(qs) || qs.length === 0) throw new Error('AI returned no questions');
   return qs;
@@ -11064,7 +11064,7 @@ Return JSON:
 }`;
   }
 
-  const raw = await groqChat(sys, prompt);
+  const raw = await groqWithRetry(sys, prompt, 2000);
   return parseAIJson(raw);
 }
 
