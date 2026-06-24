@@ -10015,6 +10015,59 @@ async function generateFromContentWithTokens(content, qtype, difficulty, count, 
   return qs;
 }
 
+// ── Quality Validation Layer (Standard + Deep only) ──────────
+async function validateQuestions(questions, onProgress) {
+  if (!questions || questions.length === 0) return questions;
+
+  // Split into batches of max 20 to avoid token spike
+  const BATCH_SIZE = 20;
+  const batches = [];
+  for (let i = 0; i < questions.length; i += BATCH_SIZE) {
+    batches.push(questions.slice(i, i + BATCH_SIZE));
+  }
+
+  const validatedAll = [];
+
+  for (let b = 0; b < batches.length; b++) {
+    const batch = batches[b];
+    if (onProgress && batches.length > 1) {
+      onProgress('Reviewing question quality — batch ' + (b+1) + ' of ' + batches.length + '…');
+    } else if (onProgress) {
+      onProgress('AI quality check — reviewing ' + batch.length + ' questions…');
+    }
+
+    // Build compact review payload (stem + qtype only — minimize tokens)
+    const payload = batch.map((q, i) => (i+1) + '. [' + q.qtype + '] ' + q.stem).join('\n');
+
+    const system = 'You are a strict ELT exam quality reviewer. Return ONLY a JSON array of question numbers to KEEP. Remove questions that are: ambiguous, grammatically unclear, unanswerable without context, or near-duplicate. Be strict but fair.';
+    const user   = 'Review these exam questions and return a JSON array of numbers to KEEP (e.g. [1,2,4,5]):\n\n' + payload;
+
+    try {
+      const raw  = await groqChatWithTokens(system, user, 300);
+      const clean = raw.replace(/```json|```/g, '').trim();
+      const keep  = JSON.parse(clean);
+      if (Array.isArray(keep)) {
+        keep.forEach(n => {
+          const q = batch[n - 1];
+          if (q) validatedAll.push(q);
+        });
+      } else {
+        // If parse fails, keep all from this batch
+        validatedAll.push(...batch);
+      }
+    } catch (e) {
+      console.warn('[NIRAS] Validation batch ' + (b+1) + ' failed, keeping all:', e.message);
+      validatedAll.push(...batch);
+    }
+
+    if (b < batches.length - 1) await delay(800);
+  }
+
+  console.log('[NIRAS] Validation: ' + questions.length + ' → ' + validatedAll.length + ' questions kept');
+  return validatedAll;
+}
+
+
 async function runModePipeline(content, options) {
   const { qtype, difficulty, count, pageCount, onProgress } = options;
   const mode = detectUploadMode(content.length, pageCount || 1);
@@ -10056,7 +10109,9 @@ async function runModePipeline(content, options) {
       allQ.push(...q);
       if (i < chunks.length - 1) await delay(1000);
     }
-    return deduplicateQuestions(allQ, 0.70).slice(0, count);
+    const deduped = deduplicateQuestions(allQ, 0.70).slice(0, count);
+    if (onProgress) onProgress('AI quality check — reviewing questions…');
+    return await validateQuestions(deduped, onProgress);
   }
 
   // Deep mode — concurrency 3
@@ -10075,7 +10130,9 @@ async function runModePipeline(content, options) {
     })
   ));
   const allQ = results.flat().filter(Boolean);
-  return rankByDiversity(deduplicateQuestions(allQ, 0.60), count);
+  const ranked = rankByDiversity(deduplicateQuestions(allQ, 0.60), count);
+  if (onProgress) onProgress('AI quality check — reviewing questions…');
+  return await validateQuestions(ranked, onProgress);
 }
 
 
