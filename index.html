@@ -5173,7 +5173,7 @@ input[type=number] { -moz-appearance: textfield; }
   /* Upload modal */
   .upload-modal { max-width: 100%; max-height: 95vh; border-radius: 16px 16px 0 0; }
   .upload-modal-overlay { align-items: flex-end; padding: 0; }
-  .upload-modal-footer { padding: 12px 16px 32px; }
+  .upload-modal-footer { padding: 12px 16px 48px; }
 
   .sg-modal { max-width: 100%; border-radius: 16px 16px 0 0; max-height: 94vh; }
   .sg-overlay { align-items: flex-end; padding: 0; }
@@ -9021,6 +9021,29 @@ async function groqChat(systemPrompt, userPrompt) {
   return data.choices[0].message.content;
 }
 
+// ─── Retry wrapper for Groq API ──────────────────────────────
+async function groqWithRetry(systemPrompt, userPrompt) {
+  const delays  = [3000, 6000, 12000, 24000];
+  const retryOn = [429, 503];
+  let lastErr;
+
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    try {
+      return await groqChat(systemPrompt, userPrompt);
+    } catch (err) {
+      lastErr = err;
+      const status  = err?.status || err?.response?.status;
+      const isRetry = retryOn.includes(status) || err?.name === 'TimeoutError' || String(err).includes('timeout');
+      if (!isRetry || attempt === delays.length) break;
+      const wait = delays[attempt];
+      showToast(`AI service busy — retrying in ${wait/1000}s…`, 'info');
+      await new Promise(r => setTimeout(r, wait));
+    }
+  }
+  throw lastErr;
+}
+
+
 // ——— Safe JSON parse from AI response ———
 function parseAIJson(text) {
   const clean = text.replace(/```json|```/g, '').trim();
@@ -9058,7 +9081,7 @@ Return JSON with this exact structure:
   "book_hint": "likely textbook series if inferable, else empty string"
 }`;
 
-    const raw = await groqChat(system, user);
+    const raw = await groqWithRetry(system, user);
     const meta = parseAIJson(raw);
 
     // Apply to sidebar
@@ -9820,7 +9843,7 @@ async function extractPDFText(file) {
     }
     const pdf = await window.pdfjsLib.getDocument({data: new Uint8Array(arrayBuffer)}).promise;
     const pages = [];
-    for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
+    for (let i = 1; i <= Math.min(pdf.numPages, 30); i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       pages.push(content.items.map(item => item.str).join(' '));
@@ -9865,7 +9888,15 @@ async function startUploadProcessing() {
     if (upload.file)  content = await extractTextFromFile(upload.file);
     if (pastedText)   content = pastedText + (content ? '\n\n'+content : '');
     if (!content.trim()) throw new Error('No content found in file. Try pasting text instead.');
-    upload.extractedText = content.slice(0, 6000);
+    // Scanned PDF detection
+    if (content.length < 500 && upload.file?.type === 'application/pdf') {
+      showToast('This PDF may be image-based. Text extraction may be limited — try pasting text instead.', 'error');
+    }
+    // Truncation warning
+    if (content.length > 12000) {
+      showToast('Large document detected — analysing first portion only.', 'info');
+    }
+    upload.extractedText = content.slice(0, 12000);
     setProcStep(1,'done');
 
     setProcStep(2,'active'); await delay(350); setProcStep(2,'done');
@@ -10044,7 +10075,7 @@ function deleteUploadQ(idx) {
 function insertUploadedQuestions() {
   const secId = upload.targetSection || builder.sections[0]?.id;
   const sec   = builder.sections.find(s => s.id === secId);
-  if (!sec) { showToast('Select a section first', 'error'); return; }
+  if (!sec) { showToast(builder.sections.length === 0 ? 'Add a section to your exam first' : 'No target section found', 'error'); return; }
 
   let inserted = 0;
   [...upload.selectedIdx].forEach(idx => {
