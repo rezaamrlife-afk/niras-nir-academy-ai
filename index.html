@@ -6395,6 +6395,7 @@ button:active {
           <div class="upload-processing-spinner"></div>
           <div class="upload-processing-title" id="upload-proc-title">Extracting Content</div>
           <div class="upload-processing-sub" id="upload-proc-sub">Reading your file and preparing for AI analysis…</div>
+          <div id="upload-mode-badge" style="display:none;margin-top:8px;font-family:var(--font-mono);font-size:10px;letter-spacing:0.12em;color:var(--gold-dim);background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:20px;padding:3px 12px;"></div>
           <div class="upload-progress-bar"><div class="upload-progress-fill"></div></div>
           <div class="upload-processing-steps">
             <div class="upload-proc-step" id="proc-step-1">
@@ -9843,6 +9844,7 @@ async function extractPDFText(file) {
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
     const pdf = await window.pdfjsLib.getDocument({data: new Uint8Array(arrayBuffer)}).promise;
+    upload.pageCount = pdf.numPages;
     const pages = [];
     for (let i = 1; i <= Math.min(pdf.numPages, 30); i++) {
       const page = await pdf.getPage(i);
@@ -9873,6 +9875,224 @@ function loadScript(src) {
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+// ============================================================
+// MODE ENGINE — NIRAS Upload Pipeline
+// ============================================================
+
+function detectUploadMode(contentLength, pageCount) {
+  if (pageCount <= 8  || contentLength <= 8000)  return 'quick';
+  if (pageCount <= 40 || contentLength <= 35000) return 'standard';
+  return 'deep';
+}
+
+function smartSample(text, maxChars) {
+  if (text.length <= maxChars) return text;
+  const zone = Math.floor(maxChars / 3);
+  const start = text.slice(0, zone);
+  const mid   = text.slice(Math.floor(text.length/2) - Math.floor(zone/2),
+                            Math.floor(text.length/2) + Math.floor(zone/2));
+  const end   = text.slice(-zone);
+  return start + '\n\n[...]\n\n' + mid + '\n\n[...]\n\n' + end;
+}
+
+function chunkText(text, chunkSize, overlap) {
+  const chunks = [];
+  let i = 0;
+  while (i < text.length) {
+    chunks.push(text.slice(i, Math.min(i + chunkSize, text.length)));
+    if (i + chunkSize >= text.length) break;
+    i += chunkSize - overlap;
+  }
+  return chunks;
+}
+
+function jaccardSimilarity(a, b) {
+  const setA = new Set(a.split(' ').filter(w => w.length > 3));
+  const setB = new Set(b.split(' ').filter(w => w.length > 3));
+  if (!setA.size || !setB.size) return 0;
+  const inter = [...setA].filter(w => setB.has(w)).length;
+  return inter / (setA.size + setB.size - inter);
+}
+
+function deduplicateQuestions(questions, threshold) {
+  const stems = [];
+  return questions.filter(q => {
+    const s = (q.stem || '').toLowerCase().replace(/[^a-z0-9 ]/g, '');
+    const isDup = stems.some(seen => jaccardSimilarity(seen, s) > threshold);
+    if (!isDup) stems.push(s);
+    return !isDup;
+  });
+}
+
+function rankByDiversity(questions, targetCount) {
+  const types = ['mcq','true_false','short_answer','fill_blank','matching','ordering'];
+  const buckets = {};
+  types.forEach(t => { buckets[t] = []; });
+  questions.forEach(q => { (buckets[q.qtype] || buckets.mcq).push(q); });
+  const result = [];
+  let safety = 0;
+  while (result.length < targetCount && safety++ < 500) {
+    let added = false;
+    for (const t of types) {
+      if (buckets[t].length && result.length < targetCount) {
+        result.push(buckets[t].shift());
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+  return result;
+}
+
+function createSemaphore(limit) {
+  let active = 0;
+  const queue = [];
+  return function acquire(fn) {
+    return new Promise((resolve, reject) => {
+      const run = async () => {
+        active++;
+        try { resolve(await fn()); }
+        catch (e) { reject(e); }
+        finally {
+          active--;
+          if (queue.length) queue.shift()();
+        }
+      };
+      if (active < limit) run();
+      else queue.push(run);
+    });
+  };
+}
+
+async function groqChatWithTokens(systemPrompt, userPrompt, maxTokens) {
+  const r = await fetch('/api/groq', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      temperature: 0.7,
+      max_tokens: maxTokens,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userPrompt   }
+      ]
+    })
+  });
+  if (!r.ok) { const err = new Error('Groq error ' + r.status); err.status = r.status; throw err; }
+  const data = await r.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+async function analyzeDocumentIntelligence(text) {
+  const sample = text.slice(0, 2000);
+  const system = 'You are an educational content analyzer. Return ONLY valid JSON, no markdown.';
+  const user   = 'Analyze this educational document and return JSON: {"content_type":"textbook|lecture_notes|ielts|exam_paper|article|other","subject_area":"brief subject","difficulty":"beginner|intermediate|advanced","exam_style":"academic|language|general"}. Document: "' + sample + '"';
+  try {
+    const raw = await groqChatWithTokens(system, user, 300);
+    return JSON.parse(raw.replace(/```json|```/g, '').trim());
+  } catch (e) {
+    console.warn('[NIRAS] Document intelligence failed:', e.message);
+    return { content_type: 'other', difficulty: 'intermediate', exam_style: 'general' };
+  }
+}
+
+async function generateFromContentWithTokens(content, qtype, difficulty, count, maxTokens) {
+  const typeMap = {
+    mixed:        'Mix of MCQ (50%), True/False (25%), Short Answer (25%).',
+    mcq:          'All MCQ, 4 options each, mark correct_index (0-3).',
+    true_false:   'All True/False. correct_answer must be "true" or "false".',
+    short_answer: 'All Short Answer. Provide correct_answer.',
+    fill_blank:   'All Fill in Blank. Use ___ in stem. Provide correct_answer.',
+    matching:     'All Matching. pairs: [[item,match],...] min 3.',
+    ordering:     'All Ordering. items: [step1, step2,...] in correct order.'
+  };
+  const diffMap = { mixed:'Mix easy(40%) medium(40%) hard(20%).', easy:'All easy.', medium:'All medium.', hard:'All hard.' };
+  const system = 'You are an expert ELT exam writer. Generate questions ONLY from provided content. Return ONLY a valid JSON array, no markdown.';
+  const user   = `CONTENT: "${content}"\n\nGenerate ${count} questions.\nType: ${typeMap[qtype]||typeMap.mixed}\nDifficulty: ${diffMap[difficulty]||diffMap.medium}\n\nEach question: stem, qtype, difficulty, points:1, options(MCQ), correct_index(MCQ), correct_answer(tf/short/fill), pairs(matching), explanation, ai_verified:true`;
+  const raw = await groqWithRetry(system, user, maxTokens);
+  const qs  = parseAIJson(raw);
+  if (!Array.isArray(qs) || qs.length === 0) throw new Error('AI returned no questions');
+  return qs;
+}
+
+async function runModePipeline(content, options) {
+  const { qtype, difficulty, count, pageCount, onProgress } = options;
+  const mode = detectUploadMode(content.length, pageCount || 1);
+  console.log('[NIRAS] Mode:', mode, '| chars:', content.length, '| pages:', pageCount);
+
+  if (onProgress) onProgress('Analysing document structure…');
+  const intel = await analyzeDocumentIntelligence(content);
+  console.log('[NIRAS] Document intelligence:', intel);
+
+  // Show real AI insight to user
+  const modeLabel = mode === 'quick' ? '⚡ Quick Mode' : mode === 'standard' ? '◆ Standard Mode' : '◈ Deep Mode';
+  const modeReason = mode === 'quick'
+    ? ('Small document — ' + (pageCount||'?') + ' pages')
+    : mode === 'standard'
+    ? ('Medium document — ' + (pageCount||'?') + ' pages detected')
+    : ('Large document — ' + (pageCount||'?') + ' pages, chunked analysis');
+  updateProcUI(
+    intel.subject_area ? 'Detected: ' + intel.subject_area : 'Content structure analysed',
+    modeReason,
+    modeLabel
+  );
+  await delay(800);
+
+  if (mode === 'quick') {
+    if (onProgress) onProgress('Generating questions…');
+    return await generateFromContentWithTokens(smartSample(content, 12000), qtype, difficulty, count, 2000);
+  }
+
+  if (mode === 'standard') {
+    const chunks = chunkText(content, 10000, 500).slice(0, 5);
+    const qPerChunk = Math.max(2, Math.ceil(count / chunks.length));
+    const allQ = [];
+    for (let i = 0; i < chunks.length; i++) {
+      if (onProgress) {
+        const pct = Math.round(((i+1)/chunks.length)*100);
+        onProgress('Section ' + (i+1) + ' of ' + chunks.length + '  ·  ' + pct + '% complete');
+      }
+      const q = await generateFromContentWithTokens(chunks[i], qtype, difficulty, qPerChunk, 1500);
+      allQ.push(...q);
+      if (i < chunks.length - 1) await delay(1000);
+    }
+    return deduplicateQuestions(allQ, 0.70).slice(0, count);
+  }
+
+  // Deep mode — concurrency 3
+  const chunks = chunkText(content, 8000, 800);
+  const sem = createSemaphore(3);
+  const results = new Array(chunks.length).fill(null);
+  let completed = 0;
+  await Promise.all(chunks.map((chunk, i) =>
+    sem(async () => {
+      results[i] = await generateFromContentWithTokens(chunk, qtype, difficulty, 2, 1200);
+      completed++;
+      if (onProgress) {
+        const pct = Math.round((completed/chunks.length)*100);
+        onProgress('Deep analysis: section ' + completed + ' of ' + chunks.length + '  ·  ' + pct + '% complete');
+      }
+    })
+  ));
+  const allQ = results.flat().filter(Boolean);
+  return rankByDiversity(deduplicateQuestions(allQ, 0.60), count);
+}
+
+
+// ── UX Alignment: Live AI state renderer ─────────────────────
+function updateProcUI(title, sub, showMode) {
+  const titleEl = document.getElementById('upload-proc-title');
+  const subEl   = document.getElementById('upload-proc-sub');
+  const modeEl  = document.getElementById('upload-mode-badge');
+  if (titleEl) titleEl.textContent = title;
+  if (subEl && sub)  subEl.textContent = sub;
+  if (modeEl && showMode) {
+    modeEl.textContent = showMode;
+    modeEl.style.display = 'inline-flex';
+  }
+}
+
+
 async function startUploadProcessing() {
   const pastedText = document.getElementById('upload-paste-text').value.trim();
   const qtype      = document.getElementById('upload-qtype').value;
@@ -9901,18 +10121,28 @@ async function startUploadProcessing() {
     upload.extractedText = content.slice(0, 12000);
     setProcStep(1,'done');
 
-    setProcStep(2,'active'); await delay(350); setProcStep(2,'done');
-    setProcStep(3,'active'); await delay(300); setProcStep(3,'done');
+    setProcStep(2,'active');
+    document.getElementById('upload-proc-title').textContent = 'Detecting document type…';
+    await delay(200); setProcStep(2,'done');
+
+    setProcStep(3,'active');
+    const questions = await runModePipeline(upload.extractedText, {
+      qtype, difficulty, count,
+      pageCount: upload.pageCount || 1,
+      onProgress: (msg) => {
+        document.getElementById('upload-proc-title').textContent = msg;
+      }
+    });
+    upload.questions = questions;
+    setProcStep(3,'done');
 
     setProcStep(4,'active');
-    document.getElementById('upload-proc-title').textContent = 'Generating questions…';
-    const questions = await generateFromContent(upload.extractedText, qtype, difficulty, count);
-    upload.questions = questions;
-    setProcStep(4,'done');
+    document.getElementById('upload-proc-title').textContent = 'Deduplicating & ranking…';
+    await delay(300); setProcStep(4,'done');
 
     setProcStep(5,'active');
     document.getElementById('upload-proc-title').textContent = 'AI quality check…';
-    await delay(500); setProcStep(5,'done');
+    await delay(400); setProcStep(5,'done');
 
     setTimeout(() => {
       goUploadStep(3);
