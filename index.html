@@ -6379,11 +6379,15 @@ button:active {
           </div>
           <div class="ai-field">
             <label class="ai-field-label">Count</label>
-            <select class="ai-select" id="upload-count">
+            <select class="ai-select" id="upload-count" onchange="showCoveragePanel()">
               <option value="3">3</option>
               <option value="5" selected>5</option>
               <option value="8">8</option>
               <option value="10">10</option>
+              <option value="15">15</option>
+              <option value="20">20</option>
+              <option value="25">25</option>
+              <option value="30">30</option>
             </select>
           </div>
         </div>
@@ -6450,6 +6454,9 @@ button:active {
       </div>
       <div class="upload-footer-actions">
         <button class="btn-upload-cancel" onclick="closeUploadModal()">Cancel</button>
+        <div id="upload-coverage-panel" style="display:none;flex:1;text-align:left;">
+          <div id="upload-coverage-text" style="font-family:var(--font-mono);font-size:10px;color:var(--white-muted);line-height:1.7;letter-spacing:0.04em;"></div>
+        </div>
         <button class="btn-upload-process" id="btn-upload-process"
                 onclick="startUploadProcessing()" disabled>
           ✦ Generate Exam
@@ -6888,21 +6895,7 @@ button:active {
         <button class="btn-sg-generate" id="btn-sg-generate" onclick="runSG()">
           ✦ Generate
         </button>
-        <button class="btn-sg-regen"   id="btn-sg-regen"   style="display:none;" onclick="resetSGToForm()">← Redo</button>
-        <button class="btn-sg-insert"  id="btn-sg-insert"  style="display:none;" onclick="insertSGContent()">Insert into Block</button>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- Toast container -->
-<div id="toast-container"></div>
-
-<!-- ============================================================
-     JAVASCRIPT
-     ============================================================ -->
-<script>
+        <button class="btn-sg-regen"   id="b
 // ============================================================
 // CONFIG — Supabase
 // ============================================================
@@ -9807,6 +9800,7 @@ function closeUploadModal() {
 }
 
 function resetUploadModal() {
+  hideCoveragePanel();
   upload.file = null; upload.extractedText = ''; upload.questions = []; upload.selectedIdx = new Set();
   goUploadStep(1);
   document.getElementById('upload-file-input').value = '';
@@ -9851,6 +9845,7 @@ function onFileSelected(input) {
   document.getElementById('upload-file-size').textContent = formatFileSize(file.size);
   document.getElementById('upload-file-selected').classList.add('visible');
   document.getElementById('btn-upload-process').disabled = false;
+    showCoveragePanel();
   document.getElementById('upload-footer-info').textContent = `Ready: ${file.name}`;
 }
 
@@ -9909,6 +9904,10 @@ async function extractPDFText(file) {
     }
     const pdf = await window.pdfjsLib.getDocument({data: new Uint8Array(arrayBuffer)}).promise;
     upload.pageCount = pdf.numPages;
+    // Auto-recommend count based on page count
+    const rec = recommendCount(pdf.numPages);
+    const countSel = document.getElementById('upload-count');
+    if (countSel) countSel.value = String(rec);
     const pages = [];
     for (let i = 1; i <= Math.min(pdf.numPages, 30); i++) {
       const page = await pdf.getPage(i);
@@ -10219,7 +10218,8 @@ async function validateQuestions(questions, onProgress, targetCount) {
 
 
 async function runModePipeline(content, options) {
-  const { qtype, difficulty, count, pageCount, onProgress } = options;
+  const { qtype, difficulty, pageCount, onProgress } = options;
+  const count = Math.max(1, Math.min(30, parseInt(options.count) || 5)); // clamp 1–30
   const mode = detectUploadMode(content.length, pageCount || 1);
   const _pipelineStart = Date.now();
   const LATENCY_GUARD_MS = 55000; // skip validation if pipeline > 55s
@@ -10250,7 +10250,9 @@ async function runModePipeline(content, options) {
 
   if (mode === 'standard') {
     const chunks = chunkText(content, 10000, 500, pageCount || 1).slice(0, 5);
-    const qPerChunk = Math.max(2, Math.ceil(count / chunks.length));
+    const MAX_PER_CHUNK = 8;
+    let qPerChunk = Math.max(2, Math.ceil(count / chunks.length));
+    qPerChunk = Math.min(qPerChunk, MAX_PER_CHUNK);
     const allQ = [];
     for (let i = 0; i < chunks.length; i++) {
       const chunk_meta = chunks[i];
@@ -10327,6 +10329,43 @@ function updateProcUI(title, sub, showMode) {
 }
 
 
+// ── Coverage Intelligence + Count Recommendation ─────────────
+function recommendCount(pageCount) {
+  if (pageCount <= 5)  return 5;
+  if (pageCount <= 15) return 10;
+  if (pageCount <= 40) return 15;
+  return 20;
+}
+
+function showCoveragePanel() {
+  const pages    = upload.pageCount || 0;
+  const content  = upload.extractedText || '';
+  const count    = parseInt(document.getElementById('upload-count').value) || 5;
+  const mode     = detectUploadMode(content.length, pages);
+  const modeLabel = mode === 'quick' ? 'Quick' : mode === 'standard' ? 'Standard' : 'Deep';
+  const chunkCount = mode === 'quick' ? 1
+    : mode === 'standard' ? Math.min(5, Math.ceil(content.length / 10000))
+    : Math.ceil(content.length / 8000);
+
+  const panel = document.getElementById('upload-coverage-panel');
+  const text  = document.getElementById('upload-coverage-text');
+  if (!panel || !text || !pages) return;
+
+  const lines = [
+    'Document: ' + pages + ' page' + (pages !== 1 ? 's' : '') + '  ·  ' + modeLabel + ' Mode',
+    'Coverage: Full document  ·  ' + chunkCount + ' section' + (chunkCount !== 1 ? 's' : ''),
+    'Generating: ' + count + ' question' + (count !== 1 ? 's' : ''),
+  ];
+  text.innerHTML = lines.join('<br>');
+  panel.style.display = 'flex';
+}
+
+function hideCoveragePanel() {
+  const panel = document.getElementById('upload-coverage-panel');
+  if (panel) panel.style.display = 'none';
+}
+
+
 async function startUploadProcessing() {
   const pastedText = document.getElementById('upload-paste-text').value.trim();
   const qtype      = document.getElementById('upload-qtype').value;
@@ -10389,7 +10428,7 @@ async function startUploadProcessing() {
 
   } catch (err) {
     console.error('Upload error:', err);
-    showToast(err.message || 'Processing failed', 'error');
+    showToast('Processing failed — please try again.', 'error');
     goUploadStep(1);
     document.getElementById('btn-upload-process').style.display = '';
     document.getElementById('btn-upload-process').disabled = false;
@@ -11352,6 +11391,24 @@ async function sendResetEmail() {
 // ============================================================
 // SERVICE WORKER REGISTRATION
 // ============================================================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.log('SW failed:', err));
+  });
+}
+
+// ============================================================
+// INIT — check session on load
+// ============================================================
+(function init() {
+  initIntro();
+  if (sb.restoreSession()) {
+    enterDashboard();
+  }
+})();
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
