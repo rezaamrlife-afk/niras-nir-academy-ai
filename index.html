@@ -6339,15 +6339,46 @@ button:active {
       <!-- STEP 1: Upload -->
       <div class="upload-step-panel active" id="upanel-1">
         <!-- MODE SELECTOR -->
-        <div id="upload-mode-selector" style="display:flex;gap:8px;margin-bottom:16px;">
-          <button id="upload-mode-btn-1" class="upload-mode-btn active" onclick="selectUploadMode(1)">
-            <span style="font-size:11px;letter-spacing:0.08em;font-family:var(--font-mono);">⚡ MODE 1</span>
-            <span style="font-size:10px;color:var(--white-muted);display:block;margin-top:2px;">Fast · Automatic</span>
-          </button>
-          <button id="upload-mode-btn-2" class="upload-mode-btn" onclick="selectUploadMode(2)">
-            <span style="font-size:11px;letter-spacing:0.08em;font-family:var(--font-mono);">◈ MODE 2</span>
-            <span style="font-size:10px;color:var(--white-muted);display:block;margin-top:2px;">Smart · Chapter select</span>
-          </button>
+        <div id="upload-mode-selector" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+
+          <!-- Buttons row -->
+          <div style="display:flex;gap:8px;">
+            <button id="upload-mode-btn-1" class="upload-mode-btn active" onclick="selectUploadMode(1)">
+              <span style="font-size:11px;letter-spacing:0.08em;font-family:var(--font-mono);">⚡ MODE 1</span>
+              <span style="font-size:10px;color:var(--white-muted);display:block;margin-top:2px;">Fast &amp; Automatic</span>
+            </button>
+            <button id="upload-mode-btn-2" class="upload-mode-btn" onclick="selectUploadMode(2)">
+              <span style="font-size:11px;letter-spacing:0.08em;font-family:var(--font-mono);">◈ MODE 2</span>
+              <span style="font-size:10px;color:var(--white-muted);display:block;margin-top:2px;">Smart · Chapter Select</span>
+            </button>
+          </div>
+
+          <!-- Live explanation panel — updates on mode change -->
+          <div id="upload-mode-explain" style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.15);border-radius:8px;padding:12px 14px;">
+            <div id="upload-mode-explain-m1" style="">
+              <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;color:var(--gold-dim);margin-bottom:6px;">⚡ MODE 1 — FAST &amp; AUTOMATIC</div>
+              <ul style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:3px;">
+                <li style="font-size:12px;color:var(--white-dim);">Upload → AI generates questions instantly</li>
+                <li style="font-size:12px;color:var(--white-dim);">No manual selection needed</li>
+                <li style="font-size:12px;color:var(--white-dim);">Best for quick practice or small files</li>
+              </ul>
+            </div>
+            <div id="upload-mode-explain-m2" style="display:none;">
+              <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;color:var(--gold-dim);margin-bottom:6px;">◈ MODE 2 — SMART CHAPTER SELECTION</div>
+              <ul style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:3px;">
+                <li style="font-size:12px;color:var(--white-dim);">AI analyzes full document structure first</li>
+                <li style="font-size:12px;color:var(--white-dim);">You choose chapters or page ranges</li>
+                <li style="font-size:12px;color:var(--white-dim);">More control over question generation</li>
+                <li style="font-size:12px;color:var(--white-dim);">Best for books, PDFs, and long documents</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Helper hint -->
+          <div style="font-size:11px;color:var(--white-muted);padding:0 2px;">
+            Not sure? &nbsp;<span style="color:var(--gold-dim);">Mode 1</span> for quick results &nbsp;·&nbsp; <span style="color:var(--gold-dim);">Mode 2</span> for structured learning
+          </div>
+
         </div>
 
         <!-- Drop zone -->
@@ -10093,6 +10124,11 @@ function selectUploadMode(mode) {
   _uploadMode = mode;
   document.getElementById('upload-mode-btn-1').classList.toggle('active', mode === 1);
   document.getElementById('upload-mode-btn-2').classList.toggle('active', mode === 2);
+  // Update explanation panel
+  const m1 = document.getElementById('upload-mode-explain-m1');
+  const m2 = document.getElementById('upload-mode-explain-m2');
+  if (m1) m1.style.display = mode === 1 ? '' : 'none';
+  if (m2) m2.style.display = mode === 2 ? '' : 'none';
 }
 
 // ── Adaptive full PDF extraction (Mode 2 only) ───────────────
