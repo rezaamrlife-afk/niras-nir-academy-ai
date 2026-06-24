@@ -5688,6 +5688,28 @@ input[type=number] { -moz-appearance: textfield; }
 }
 .btn-forgot-send:hover { background: var(--gold-light); }
 
+/* ——— Upload Mode Selector ——— */
+.upload-mode-btn {
+  flex: 1;
+  background: var(--black-soft);
+  border: 1px solid var(--black-border);
+  color: var(--white-dim);
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition);
+}
+.upload-mode-btn.active {
+  border-color: var(--gold);
+  color: var(--white);
+  background: rgba(201,168,76,0.08);
+}
+.upload-mode-btn:hover:not(.active) {
+  border-color: rgba(201,168,76,0.4);
+  color: var(--white);
+}
+
 /* ——— UI Foundation Layer (Phase 1) ——— */
 
 /* Step 2: Global active state — tactile feedback on all buttons */
@@ -6316,6 +6338,18 @@ button:active {
 
       <!-- STEP 1: Upload -->
       <div class="upload-step-panel active" id="upanel-1">
+        <!-- MODE SELECTOR -->
+        <div id="upload-mode-selector" style="display:flex;gap:8px;margin-bottom:16px;">
+          <button id="upload-mode-btn-1" class="upload-mode-btn active" onclick="selectUploadMode(1)">
+            <span style="font-size:11px;letter-spacing:0.08em;font-family:var(--font-mono);">⚡ MODE 1</span>
+            <span style="font-size:10px;color:var(--white-muted);display:block;margin-top:2px;">Fast · Automatic</span>
+          </button>
+          <button id="upload-mode-btn-2" class="upload-mode-btn" onclick="selectUploadMode(2)">
+            <span style="font-size:11px;letter-spacing:0.08em;font-family:var(--font-mono);">◈ MODE 2</span>
+            <span style="font-size:10px;color:var(--white-muted);display:block;margin-top:2px;">Smart · Chapter select</span>
+          </button>
+        </div>
+
         <!-- Drop zone -->
         <div class="upload-dropzone" id="upload-dropzone">
           <input type="file" id="upload-file-input"
@@ -6395,6 +6429,40 @@ button:active {
         </div>
       </div>
 
+      <!-- MODE 2: Scope Selection Panel -->
+      <div id="upload-mode2-panel" class="upload-step-panel" style="display:none;">
+        <div style="padding:20px 24px;">
+          <div id="upload-m2-status" style="font-family:var(--font-mono);font-size:11px;color:var(--gold-dim);letter-spacing:0.08em;margin-bottom:16px;"></div>
+          <div id="upload-m2-chapters" style="display:none;">
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--white-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">Select Chapters</div>
+            <div id="upload-m2-chapter-list" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;"></div>
+          </div>
+          <div id="upload-m2-pagerange" style="display:none;">
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--white-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">Select Page Range</div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:10px;color:var(--white-muted);">From page</label>
+                <input type="number" id="upload-m2-page-from" min="1" value="1"
+                  style="width:70px;background:var(--black-soft);border:1px solid var(--black-border);color:var(--white);padding:8px;border-radius:6px;font-family:var(--font-mono);font-size:13px;text-align:center;">
+              </div>
+              <span style="color:var(--white-muted);margin-top:14px;">—</span>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:10px;color:var(--white-muted);">To page</label>
+                <input type="number" id="upload-m2-page-to" min="1" value="10"
+                  style="width:70px;background:var(--black-soft);border:1px solid var(--black-border);color:var(--white);padding:8px;border-radius:6px;font-family:var(--font-mono);font-size:13px;text-align:center;">
+              </div>
+              <div style="margin-top:14px;font-family:var(--font-mono);font-size:10px;color:var(--white-muted);">
+                of <span id="upload-m2-total-pages">?</span> pages
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:16px;">
+            <button onclick="cancelMode2()" style="flex:1;background:none;border:1px solid var(--black-border);color:var(--white-dim);font-family:var(--font-mono);font-size:12px;padding:9px;border-radius:var(--radius);cursor:pointer;">← Back</button>
+            <button id="upload-m2-confirm" onclick="confirmMode2Scope()" style="flex:2;background:var(--gold);border:none;color:var(--black);font-family:var(--font-mono);font-size:12px;font-weight:600;padding:9px;border-radius:var(--radius);cursor:pointer;">Generate from Selection →</button>
+          </div>
+        </div>
+      </div>
+
       <!-- STEP 2: Processing -->
       <div class="upload-step-panel" id="upanel-2">
         <div class="upload-processing">
@@ -6460,7 +6528,7 @@ button:active {
           <div id="upload-coverage-text" style="font-family:var(--font-mono);font-size:10px;color:var(--white-muted);line-height:1.7;letter-spacing:0.04em;"></div>
         </div>
         <button class="btn-upload-process" id="btn-upload-process"
-                onclick="startUploadProcessing()" disabled>
+                onclick="handleUploadGenerate()" disabled>
           ✦ Generate Exam
         </button>
         <button class="btn-upload-insert" id="btn-upload-insert"
@@ -10006,6 +10074,257 @@ function emitPipeline(type, message, meta) {
   if (type === 'error') {
     clearRetryCountdown();
     showToast(message, 'error');
+  }
+}
+
+
+// ============================================================
+// MODE 2 — SMART INPUT LAYER
+// Mode 1 pipeline is NEVER touched by anything below.
+// Mode 2 only determines WHAT TEXT enters runModePipeline.
+// ============================================================
+
+let _uploadMode = 1;            // 1 = Mode 1 (default), 2 = Mode 2
+let _m2PagesArray = [];         // per-page text for scope filtering
+let _m2StructureResult = null;  // result from detectStructure()
+
+// ── Mode selector ────────────────────────────────────────────
+function selectUploadMode(mode) {
+  _uploadMode = mode;
+  document.getElementById('upload-mode-btn-1').classList.toggle('active', mode === 1);
+  document.getElementById('upload-mode-btn-2').classList.toggle('active', mode === 2);
+}
+
+// ── Adaptive full PDF extraction (Mode 2 only) ───────────────
+async function extractPDFTextFull(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  if (!window.pdfjsLib) {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  const pdf      = await window.pdfjsLib.getDocument({data: new Uint8Array(arrayBuffer)}).promise;
+  const total    = pdf.numPages;
+  const limit    = total <= 60 ? total : Math.min(total, 100); // adaptive: ≤60 full, >60 cap 100
+  upload.pageCount = total;
+  _m2PagesArray    = [];
+
+  for (let i = 1; i <= limit; i++) {
+    try {
+      const page    = await pdf.getPage(i);
+      const tc      = await page.getTextContent();
+      const pageText = tc.items.map(it => it.str).join(' ').trim();
+      _m2PagesArray.push({ page: i, text: pageText });
+    } catch (e) {
+      _m2PagesArray.push({ page: i, text: '' });
+    }
+  }
+
+  const fullText = _m2PagesArray.map(p => p.text).join('\n');
+  // Validate completeness (at least 80% pages have content)
+  const nonEmpty = _m2PagesArray.filter(p => p.text.length > 20).length;
+  if (nonEmpty < limit * 0.2) {
+    // Extraction too sparse → fallback to Mode 1
+    console.warn('[NIRAS] Mode 2 extraction sparse → fallback to Mode 1');
+    selectUploadMode(1);
+    return null;
+  }
+  return fullText;
+}
+
+// ── Light structure detection (first 5000 chars only) ─────────
+async function detectStructure(text) {
+  const sample = text.slice(0, 5000);
+
+  // Regex-based chapter detection (no AI, zero cost, instant)
+  const chapterPatterns = [
+    /^(Chapter|CHAPTER|Unit|UNIT|Section|SECTION|Part|PART)\s+(\d+|[IVXivx]+)[:\s\-–—]/gm,
+    /^\d+\.\s+[A-Z][^\n]{3,50}$/gm,
+    /^(Introduction|Conclusion|Overview|Summary|Appendix)[:\s]/gim,
+  ];
+
+  const found = [];
+  for (const pattern of chapterPatterns) {
+    const matches = [...sample.matchAll(pattern)];
+    matches.forEach(m => {
+      const title = m[0].trim();
+      if (title && !found.find(f => f.title === title)) {
+        found.push({ title, charPos: m.index });
+      }
+    });
+  }
+
+  if (found.length >= 2) {
+    // Map chapters to approximate page ranges
+    const totalChars = text.length;
+    const chapters = found.map((ch, i) => {
+      const nextPos = found[i+1]?.charPos || totalChars;
+      const pageStart = Math.floor((ch.charPos / totalChars) * (upload.pageCount || 1)) + 1;
+      const pageEnd   = Math.min(
+        Math.floor((nextPos / totalChars) * (upload.pageCount || 1)) + 1,
+        upload.pageCount || 1
+      );
+      return { title: ch.title, pageStart, pageEnd };
+    });
+    return { structured: true, chapters };
+  }
+
+  return { structured: false, chapters: [] };
+}
+
+// ── Show Mode 2 scope UI ──────────────────────────────────────
+function showMode2ScopeUI(structureResult) {
+  _m2StructureResult = structureResult;
+  const panel    = document.getElementById('upload-mode2-panel');
+  const statusEl = document.getElementById('upload-m2-status');
+  const chapDiv  = document.getElementById('upload-m2-chapters');
+  const rangeDiv = document.getElementById('upload-m2-pagerange');
+  const totalEl  = document.getElementById('upload-m2-total-pages');
+
+  if (totalEl) totalEl.textContent = upload.pageCount || '?';
+
+  if (structureResult.structured && structureResult.chapters.length >= 2) {
+    // Show chapter selector
+    statusEl.textContent = '✔ Chapters detected — select scope';
+    chapDiv.style.display  = 'block';
+    rangeDiv.style.display = 'none';
+
+    const list = document.getElementById('upload-m2-chapter-list');
+    list.innerHTML = structureResult.chapters.map((ch, i) => `
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--black-soft);border:1px solid var(--black-border);border-radius:6px;cursor:pointer;">
+        <input type="checkbox" data-idx="${i}" checked
+          style="accent-color:var(--gold);width:14px;height:14px;">
+        <div>
+          <div style="font-size:13px;color:var(--white);">${escHtml(ch.title)}</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--white-muted);">
+            pages ${ch.pageStart}–${ch.pageEnd}
+          </div>
+        </div>
+      </label>`).join('');
+  } else {
+    // Show page range selector
+    statusEl.textContent = '⚠ No chapters detected — select page range';
+    chapDiv.style.display  = 'none';
+    rangeDiv.style.display = 'block';
+
+    const toInput = document.getElementById('upload-m2-page-to');
+    if (toInput) toInput.value = Math.min(10, upload.pageCount || 10);
+    const maxInput = document.getElementById('upload-m2-page-from');
+    if (maxInput) maxInput.max = upload.pageCount || 999;
+  }
+
+  // Show Mode 2 panel, hide main step 1
+  document.getElementById('upanel-1').style.display = 'none';
+  panel.style.display = 'block';
+}
+
+// ── Cancel Mode 2 → go back ──────────────────────────────────
+function cancelMode2() {
+  document.getElementById('upload-mode2-panel').style.display = 'none';
+  document.getElementById('upanel-1').style.display = '';
+}
+
+// ── Filter text by scope ──────────────────────────────────────
+function filterTextByScope() {
+  if (!_m2PagesArray || _m2PagesArray.length === 0) return null;
+
+  if (_m2StructureResult?.structured) {
+    // Chapter-based filter
+    const checkboxes = document.querySelectorAll('#upload-m2-chapter-list input[type=checkbox]');
+    const selectedChapters = [];
+    checkboxes.forEach(cb => {
+      if (cb.checked) {
+        const idx = parseInt(cb.dataset.idx);
+        if (_m2StructureResult.chapters[idx]) selectedChapters.push(_m2StructureResult.chapters[idx]);
+      }
+    });
+    if (selectedChapters.length === 0) return null;
+
+    // Collect pages that belong to selected chapters
+    const selectedPages = new Set();
+    selectedChapters.forEach(ch => {
+      for (let p = ch.pageStart; p <= ch.pageEnd; p++) selectedPages.add(p);
+    });
+    return _m2PagesArray.filter(p => selectedPages.has(p.page)).map(p => p.text).join('\n');
+
+  } else {
+    // Page range filter
+    const from = parseInt(document.getElementById('upload-m2-page-from').value) || 1;
+    const to   = parseInt(document.getElementById('upload-m2-page-to').value)   || 10;
+    return _m2PagesArray.filter(p => p.page >= from && p.page <= to).map(p => p.text).join('\n');
+  }
+}
+
+// ── Confirm Mode 2 scope → feed into Mode 1 pipeline ─────────
+async function confirmMode2Scope() {
+  const filteredText = filterTextByScope();
+  if (!filteredText || filteredText.trim().length < 50) {
+    showToast('No content in selected scope — please adjust selection.', 'error');
+    return;
+  }
+
+  // Hide Mode 2 panel, proceed with filtered text
+  document.getElementById('upload-mode2-panel').style.display = 'none';
+
+  // Set as extractedText → Mode 1 pipeline will use this
+  upload.extractedText = filteredText;
+  upload.pageCount     = _m2PagesArray.length;
+
+  // ── NOW RUN EXACT MODE 1 PIPELINE (unchanged) ──
+  startUploadProcessing();
+}
+
+// ── Override Generate button for Mode 2 ──────────────────────
+async function handleUploadGenerate() {
+  if (_uploadMode === 1) {
+    // ── MODE 1: exact current flow ──────────────────────────
+    startUploadProcessing();
+    return;
+  }
+
+  // ── MODE 2: smart pre-processing ────────────────────────
+  const pastedText = document.getElementById('upload-paste-text').value.trim();
+  if (pastedText) {
+    // Pasted text: no PDF extraction needed, skip to scope
+    _m2PagesArray = pastedText.split('\n').map((line, i) => ({ page: i+1, text: line }));
+    upload.pageCount = _m2PagesArray.length;
+    const structure = await detectStructure(pastedText);
+    showMode2ScopeUI(structure);
+    return;
+  }
+
+  if (!upload.file) {
+    showToast('Please upload a file first.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-upload-process');
+  btn.disabled = true;
+  btn.textContent = 'Analysing…';
+  emitPipeline('extract', 'Extracting full document…', {});
+
+  try {
+    const fullText = await extractPDFTextFull(upload.file);
+    if (!fullText) {
+      // Fallback triggered inside extractPDFTextFull
+      btn.disabled    = false;
+      btn.textContent = '✦ Generate Exam';
+      startUploadProcessing();
+      return;
+    }
+
+    const structure = await detectStructure(fullText);
+    upload.extractedText = fullText; // store for reference
+    showMode2ScopeUI(structure);
+
+  } catch (e) {
+    console.error('[NIRAS] Mode 2 extraction failed:', e);
+    showToast('Mode 2 failed — switching to Mode 1.', 'error');
+    selectUploadMode(1);
+    startUploadProcessing();
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '✦ Generate Exam';
   }
 }
 
