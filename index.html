@@ -6374,8 +6374,8 @@ button:active {
             </div>
           </div>
 
-          <!-- Helper hint -->
-          <div style="font-size:11px;color:var(--white-muted);padding:0 2px;">
+          <!-- Smart recommendation hint -->
+          <div id="upload-mode-recommendation" style="font-size:11px;color:var(--white-muted);padding:0 2px;">
             Not sure? &nbsp;<span style="color:var(--gold-dim);">Mode 1</span> for quick results &nbsp;·&nbsp; <span style="color:var(--gold-dim);">Mode 2</span> for structured learning
           </div>
 
@@ -9955,6 +9955,8 @@ function onFileSelected(input) {
   document.getElementById('btn-upload-process').disabled = false;
     showCoveragePanel();
   document.getElementById('upload-footer-info').textContent = `Ready: ${file.name}`;
+  // Smart mode recommendation based on file
+  updateModeRecommendation(file);
 }
 
 function onPasteInput() {
@@ -10118,6 +10120,27 @@ function emitPipeline(type, message, meta) {
 let _uploadMode = 1;            // 1 = Mode 1 (default), 2 = Mode 2
 let _m2PagesArray = [];         // per-page text for scope filtering
 let _m2StructureResult = null;  // result from detectStructure()
+
+// ── Smart mode recommendation ─────────────────────────────────
+function updateModeRecommendation(file) {
+  const el = document.getElementById('upload-mode-recommendation');
+  if (!el) return;
+
+  const isPDF   = file?.type === 'application/pdf';
+  const sizeMB  = (file?.size || 0) / (1024 * 1024);
+  const isLarge = sizeMB > 1.5;
+
+  if (isPDF && isLarge) {
+    // Large PDF → recommend Mode 2
+    el.innerHTML = '<span style="color:var(--gold);">◈ Recommended: Mode 2</span> <span style="color:var(--white-muted);">— structured PDF detected</span>';
+  } else if (isPDF) {
+    el.innerHTML = '<span style="color:var(--gold-dim);">⚡ Recommended: Mode 1</span> <span style="color:var(--white-muted);">— small PDF, fast generation</span>';
+  } else {
+    // Word / TXT / Image → Mode 1
+    el.innerHTML = '<span style="color:var(--gold-dim);">⚡ Recommended: Mode 1</span> <span style="color:var(--white-muted);">— best for this file type</span>';
+  }
+}
+
 
 // ── Mode selector ────────────────────────────────────────────
 function selectUploadMode(mode) {
