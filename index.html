@@ -6397,6 +6397,7 @@ button:active {
           <div class="upload-processing-sub" id="upload-proc-sub">Reading your file and preparing for AI analysis…</div>
           <div id="upload-mode-badge" style="display:none;margin-top:8px;font-family:var(--font-mono);font-size:10px;letter-spacing:0.12em;color:var(--gold-dim);background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:20px;padding:3px 12px;"></div>
           <div id="upload-active-chunk" style="margin-top:6px;font-family:var(--font-mono);font-size:10px;color:var(--white-muted);letter-spacing:0.06em;min-height:14px;"></div>
+          <div id="upload-retry-countdown" style="margin-top:4px;font-family:var(--font-mono);font-size:11px;color:var(--gold-dim);font-weight:500;letter-spacing:0.08em;min-height:16px;transition:opacity 0.3s;"></div>
           <div class="upload-progress-bar"><div class="upload-progress-fill"></div></div>
           <div class="upload-processing-steps">
             <div class="upload-proc-step" id="proc-step-1">
@@ -9024,25 +9025,86 @@ async function groqChat(systemPrompt, userPrompt) {
 }
 
 // ─── Retry wrapper for Groq API ──────────────────────────────
-async function groqWithRetry(systemPrompt, userPrompt) {
-  const delays  = [3000, 6000, 12000, 24000];
-  const retryOn = [429, 503];
+// ── Retry Countdown System ────────────────────────────────────
+let _retryCountdownInterval = null;
+
+function clearRetryCountdown() {
+  if (_retryCountdownInterval) {
+    clearInterval(_retryCountdownInterval);
+    _retryCountdownInterval = null;
+  }
+  const el = document.getElementById('upload-retry-countdown');
+  if (el) el.textContent = '';
+}
+
+function retryCountdown(delayMs) {
+  return new Promise(resolve => {
+    let remaining = Math.round(delayMs / 1000);
+    clearRetryCountdown();
+
+    const tick = () => {
+      emitPipeline('retry_tick', 'Retry in ' + remaining + ' second' + (remaining !== 1 ? 's' : '') + '…', { remainingSeconds: remaining });
+      remaining--;
+      if (remaining < 0) {
+        clearRetryCountdown();
+        emitPipeline('retry_tick', '', { remainingSeconds: 0 });
+        resolve();
+      }
+    };
+
+    tick(); // immediate first tick
+    _retryCountdownInterval = setInterval(tick, 1000);
+  });
+}
+
+
+// Single retry-safe entry point for ALL Groq calls
+async function groqWithRetry(systemPrompt, userPrompt, maxTokens) {
+  const delays     = [3000, 6000, 12000, 24000];
+  const retryOn    = [429, 503];
+  const maxAttempts = delays.length + 1;
   let lastErr;
 
-  for (let attempt = 0; attempt <= delays.length; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      return await groqChat(systemPrompt, userPrompt);
+      // All calls go through groqChatWithTokens (single fetch point)
+      return await groqChatWithTokens(systemPrompt, userPrompt, maxTokens || 2000);
     } catch (err) {
       lastErr = err;
       const status  = err?.status || err?.response?.status;
-      const isRetry = retryOn.includes(status) || err?.name === 'TimeoutError' || String(err).includes('timeout');
+      const isRetry = retryOn.includes(status)
+                   || err?.name === 'TimeoutError'
+                   || String(err).includes('timeout')
+                   || String(err).includes('network');
+
       if (!isRetry || attempt === delays.length) break;
-      const wait = delays[attempt];
-      console.warn(`[NIRAS] Groq retry attempt ${attempt + 1} after ${wait}ms — status: ${status}`);
-      showToast(`AI service busy — retrying in ${wait/1000}s…`, 'info');
-      await new Promise(r => setTimeout(r, wait));
+
+      const wait        = delays[attempt];
+      const attemptNum  = attempt + 1;
+      const retryMsgs   = [
+        'AI is busy — retrying automatically…',
+        'Optimizing request for better stability…',
+        'Still processing — retrying in ' + (wait/1000) + 's…',
+        'Final retry attempt — almost there…'
+      ];
+      const msg = retryMsgs[attempt] || 'Retrying…';
+
+      console.warn('[NIRAS] Groq retry attempt ' + attemptNum + ' after ' + wait + 'ms — status: ' + status);
+
+      // Emit to pipeline UI
+      emitPipeline('retry', msg, {
+        attempt:     attemptNum,
+        maxAttempts: delays.length,
+        delay:       wait,
+        status
+      });
+
+      await retryCountdown(wait);
     }
   }
+
+  // Final failure — friendly message
+  emitPipeline('error', 'This is taking longer than expected. Please try again in a moment.', {});
   throw lastErr;
 }
 
@@ -9740,6 +9802,7 @@ function openUploadModal() {
 }
 
 function closeUploadModal() {
+  clearRetryCountdown();
   document.getElementById('upload-modal').classList.remove('open');
 }
 
@@ -9913,6 +9976,29 @@ function emitPipeline(type, message, meta) {
     const ac = document.getElementById('upload-active-chunk');
     if (ac) ac.textContent = meta.activeChunk;
   }
+  // Retry event
+  if (type === 'retry') {
+    const retryInfo = meta.attempt && meta.maxAttempts
+      ? ' (' + meta.attempt + '/' + meta.maxAttempts + ')'
+      : '';
+    showToast(message + retryInfo, 'info');
+  }
+  // Retry tick: live countdown display
+  if (type === 'retry_tick') {
+    const cd = document.getElementById('upload-retry-countdown');
+    if (cd) cd.textContent = message;
+  }
+  // Retry success / pipeline done: clear countdown
+  if (type === 'done' || type === 'generate' || type === 'chunk') {
+    clearRetryCountdown();
+    const cd = document.getElementById('upload-retry-countdown');
+    if (cd) cd.textContent = '';
+  }
+  // Error event
+  if (type === 'error') {
+    clearRetryCountdown();
+    showToast(message, 'error');
+  }
 }
 
 
@@ -10040,7 +10126,7 @@ async function analyzeDocumentIntelligence(text) {
   const system = 'You are an educational content analyzer. Return ONLY valid JSON, no markdown.';
   const user   = 'Analyze this educational document and return JSON: {"content_type":"textbook|lecture_notes|ielts|exam_paper|article|other","subject_area":"brief subject","difficulty":"beginner|intermediate|advanced","exam_style":"academic|language|general"}. Document: "' + sample + '"';
   try {
-    const raw = await groqChatWithTokens(system, user, 300);
+    const raw = await groqWithRetry(system, user, 300);
     return JSON.parse(raw.replace(/```json|```/g, '').trim());
   } catch (e) {
     console.warn('[NIRAS] Document intelligence failed:', e.message);
@@ -10095,7 +10181,7 @@ async function validateQuestions(questions, onProgress, targetCount) {
     const user   = 'Review these exam questions and return a JSON array of numbers to KEEP (e.g. [1,2,4,5]):\n\n' + payload;
 
     try {
-      const raw  = await groqChatWithTokens(system, user, 300);
+      const raw  = await groqWithRetry(system, user, 300);
       const clean = raw.replace(/```json|```/g, '').trim();
       const keep  = JSON.parse(clean);
       if (Array.isArray(keep)) {
