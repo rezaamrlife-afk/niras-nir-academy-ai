@@ -6396,6 +6396,7 @@ button:active {
           <div class="upload-processing-title" id="upload-proc-title">Extracting Content</div>
           <div class="upload-processing-sub" id="upload-proc-sub">Reading your file and preparing for AI analysis…</div>
           <div id="upload-mode-badge" style="display:none;margin-top:8px;font-family:var(--font-mono);font-size:10px;letter-spacing:0.12em;color:var(--gold-dim);background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:20px;padding:3px 12px;"></div>
+          <div id="upload-active-chunk" style="margin-top:6px;font-family:var(--font-mono);font-size:10px;color:var(--white-muted);letter-spacing:0.06em;min-height:14px;"></div>
           <div class="upload-progress-bar"><div class="upload-progress-fill"></div></div>
           <div class="upload-processing-steps">
             <div class="upload-proc-step" id="proc-step-1">
@@ -9875,6 +9876,46 @@ function loadScript(src) {
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+// ── Real-time Pipeline Event System ──────────────────────────
+const PipelineEvents = {
+  _listeners: [],
+  emit(event) { this._listeners.forEach(fn => fn(event)); },
+  on(fn)      { this._listeners.push(fn); },
+  clear()     { this._listeners = []; }
+};
+
+function emitPipeline(type, message, meta) {
+  PipelineEvents.emit({ type, message, meta: meta || {} });
+  // Always update proc title
+  const t = document.getElementById('upload-proc-title');
+  if (t) t.textContent = message;
+  // Update sub if meta has detail
+  if (meta && (meta.pageStart || meta.pct !== undefined)) {
+    const s = document.getElementById('upload-proc-sub');
+    if (s) {
+      const parts = [];
+      if (meta.chunkIndex !== undefined && meta.chunkTotal)
+        parts.push('Section ' + (meta.chunkIndex+1) + ' of ' + meta.chunkTotal);
+      if (meta.pageStart && meta.pageEnd)
+        parts.push('pages ' + meta.pageStart + '–' + meta.pageEnd);
+      if (meta.pct !== undefined)
+        parts.push(meta.pct + '% of document');
+      if (parts.length) s.textContent = parts.join('  ·  ');
+    }
+  }
+  // Update mode badge
+  if (meta && meta.modeBadge) {
+    const b = document.getElementById('upload-mode-badge');
+    if (b) { b.textContent = meta.modeBadge; b.style.display = 'inline-flex'; }
+  }
+  // Update active chunk display
+  if (meta && meta.activeChunk !== undefined) {
+    const ac = document.getElementById('upload-active-chunk');
+    if (ac) ac.textContent = meta.activeChunk;
+  }
+}
+
+
 // ============================================================
 // MODE ENGINE — NIRAS Upload Pipeline
 // ============================================================
@@ -9895,12 +9936,23 @@ function smartSample(text, maxChars) {
   return start + '\n\n[...]\n\n' + mid + '\n\n[...]\n\n' + end;
 }
 
-function chunkText(text, chunkSize, overlap) {
+function chunkText(text, chunkSize, overlap, totalPages) {
   const chunks = [];
-  let i = 0;
+  const totalChars = text.length;
+  let i = 0, idx = 0;
   while (i < text.length) {
-    chunks.push(text.slice(i, Math.min(i + chunkSize, text.length)));
-    if (i + chunkSize >= text.length) break;
+    const charStart = i;
+    const charEnd   = Math.min(i + chunkSize, text.length);
+    const pageStart = totalPages ? Math.floor((charStart / totalChars) * totalPages) + 1 : null;
+    const pageEnd   = totalPages ? Math.min(Math.ceil((charEnd / totalChars) * totalPages), totalPages) : null;
+    chunks.push({
+      text:      text.slice(charStart, charEnd),
+      charStart, charEnd,
+      pageStart, pageEnd,
+      index:     idx++,
+      pct:       Math.round((charEnd / totalChars) * 100)
+    });
+    if (charEnd >= text.length) break;
     i += chunkSize - overlap;
   }
   return chunks;
@@ -10016,7 +10068,7 @@ async function generateFromContentWithTokens(content, qtype, difficulty, count, 
 }
 
 // ── Quality Validation Layer (Standard + Deep only) ──────────
-async function validateQuestions(questions, onProgress) {
+async function validateQuestions(questions, onProgress, targetCount) {
   if (!questions || questions.length === 0) return questions;
 
   // Split into batches of max 20 to avoid token spike
@@ -10064,6 +10116,18 @@ async function validateQuestions(questions, onProgress) {
   }
 
   console.log('[NIRAS] Validation: ' + questions.length + ' → ' + validatedAll.length + ' questions kept');
+
+  // Quality preservation fallback: if validation removed too much, restore top rejected
+  const target = targetCount || questions.length;
+  if (validatedAll.length < target * 0.7) {
+    const kept = new Set(validatedAll.map(q => q.stem));
+    const rejected = questions.filter(q => !kept.has(q.stem));
+    const needed   = Math.ceil(target * 0.7) - validatedAll.length;
+    const restored = rejected.slice(0, needed);
+    console.warn('[NIRAS] Fallback: restoring ' + restored.length + ' questions to meet 70% threshold');
+    validatedAll.push(...restored);
+  }
+
   return validatedAll;
 }
 
@@ -10071,6 +10135,8 @@ async function validateQuestions(questions, onProgress) {
 async function runModePipeline(content, options) {
   const { qtype, difficulty, count, pageCount, onProgress } = options;
   const mode = detectUploadMode(content.length, pageCount || 1);
+  const _pipelineStart = Date.now();
+  const LATENCY_GUARD_MS = 55000; // skip validation if pipeline > 55s
   console.log('[NIRAS] Mode:', mode, '| chars:', content.length, '| pages:', pageCount);
 
   if (onProgress) onProgress('Analysing document structure…');
@@ -10079,60 +10145,85 @@ async function runModePipeline(content, options) {
 
   // Show real AI insight to user
   const modeLabel = mode === 'quick' ? '⚡ Quick Mode' : mode === 'standard' ? '◆ Standard Mode' : '◈ Deep Mode';
-  const modeReason = mode === 'quick'
-    ? ('Small document — ' + (pageCount||'?') + ' pages')
-    : mode === 'standard'
-    ? ('Medium document — ' + (pageCount||'?') + ' pages detected')
-    : ('Large document — ' + (pageCount||'?') + ' pages, chunked analysis');
-  updateProcUI(
-    intel.subject_area ? 'Detected: ' + intel.subject_area : 'Content structure analysed',
-    modeReason,
-    modeLabel
+  const chunks_preview = mode === 'quick' ? 1 : mode === 'standard' ? Math.min(5, Math.ceil(content.length/10000)) : Math.ceil(content.length/8000);
+  emitPipeline('mode',
+    intel.subject_area ? 'Detected: ' + intel.subject_area : 'Content analysed',
+    {
+      modeBadge:   modeLabel,
+      mode,
+      chunkTotal:  chunks_preview,
+      activeChunk: (pageCount||'?') + ' pages · ' + chunks_preview + ' sections to analyse'
+    }
   );
   await delay(800);
 
   if (mode === 'quick') {
-    if (onProgress) onProgress('Generating questions…');
+    emitPipeline('generate', 'Generating questions…', { mode: 'quick' });
     return await generateFromContentWithTokens(smartSample(content, 12000), qtype, difficulty, count, 2000);
   }
 
   if (mode === 'standard') {
-    const chunks = chunkText(content, 10000, 500).slice(0, 5);
+    const chunks = chunkText(content, 10000, 500, pageCount || 1).slice(0, 5);
     const qPerChunk = Math.max(2, Math.ceil(count / chunks.length));
     const allQ = [];
     for (let i = 0; i < chunks.length; i++) {
-      if (onProgress) {
-        const pct = Math.round(((i+1)/chunks.length)*100);
-        onProgress('Section ' + (i+1) + ' of ' + chunks.length + '  ·  ' + pct + '% complete');
-      }
-      const q = await generateFromContentWithTokens(chunks[i], qtype, difficulty, qPerChunk, 1500);
+      const chunk_meta = chunks[i];
+      emitPipeline('chunk',
+        'Processing section ' + (i+1) + ' of ' + chunks.length + '…',
+        {
+          chunkIndex: i, chunkTotal: chunks.length,
+          pageStart:  chunk_meta.pageStart, pageEnd: chunk_meta.pageEnd,
+          pct:        chunk_meta.pct,
+          activeChunk: 'Section ' + (i+1) + '/' + chunks.length + (chunk_meta.pageStart ? '  ·  pages ' + chunk_meta.pageStart + '–' + chunk_meta.pageEnd : '')
+        }
+      );
+      emitPipeline('generate', 'Generating questions from section ' + (i+1) + '…', { chunkIndex: i, chunkTotal: chunks.length });
+      const q = await generateFromContentWithTokens(chunks[i].text, qtype, difficulty, qPerChunk, 1500);
       allQ.push(...q);
       if (i < chunks.length - 1) await delay(1000);
     }
     const deduped = deduplicateQuestions(allQ, 0.70).slice(0, count);
-    if (onProgress) onProgress('AI quality check — reviewing questions…');
-    return await validateQuestions(deduped, onProgress);
+    console.log('[NIRAS] Trace: raw=' + allQ.length + ' → deduped=' + deduped.length);
+    emitPipeline('dedup', 'Removing duplicates — ' + allQ.length + ' → ' + deduped.length + ' questions', {});
+    emitPipeline('validate', 'AI quality check — reviewing ' + deduped.length + ' questions…', {});
+    if (Date.now() - _pipelineStart > LATENCY_GUARD_MS) {
+      console.warn('[NIRAS] Latency guard triggered — skipping validation');
+      return deduped;
+    }
+    return await validateQuestions(deduped, onProgress, count);
   }
 
   // Deep mode — concurrency 3
-  const chunks = chunkText(content, 8000, 800);
+  const chunks = chunkText(content, 8000, 800, pageCount || 1);
   const sem = createSemaphore(3);
   const results = new Array(chunks.length).fill(null);
   let completed = 0;
-  await Promise.all(chunks.map((chunk, i) =>
+  await Promise.all(chunks.map((_, i) =>
     sem(async () => {
-      results[i] = await generateFromContentWithTokens(chunk, qtype, difficulty, 2, 1200);
+      results[i] = await generateFromContentWithTokens(chunks[i].text, qtype, difficulty, 2, 1200);
       completed++;
-      if (onProgress) {
-        const pct = Math.round((completed/chunks.length)*100);
-        onProgress('Deep analysis: section ' + completed + ' of ' + chunks.length + '  ·  ' + pct + '% complete');
-      }
+      const d_meta = chunks[i];
+      emitPipeline('chunk',
+        'Deep analysis: section ' + completed + ' of ' + chunks.length + '…',
+        {
+          chunkIndex: completed-1, chunkTotal: chunks.length,
+          pageStart:  d_meta.pageStart, pageEnd: d_meta.pageEnd,
+          pct:        Math.round((completed/chunks.length)*100),
+          activeChunk: 'Section ' + completed + '/' + chunks.length + (d_meta.pageStart ? '  ·  pages ' + d_meta.pageStart + '–' + d_meta.pageEnd : '')
+        }
+      );
     })
   ));
   const allQ = results.flat().filter(Boolean);
-  const ranked = rankByDiversity(deduplicateQuestions(allQ, 0.60), count);
-  if (onProgress) onProgress('AI quality check — reviewing questions…');
-  return await validateQuestions(ranked, onProgress);
+  const _deduped = deduplicateQuestions(allQ, 0.60);
+  const ranked = rankByDiversity(_deduped, count);
+  console.log('[NIRAS] Trace: raw=' + allQ.length + ' → deduped=' + _deduped.length + ' → ranked=' + ranked.length);
+  emitPipeline('validate', 'AI quality check — reviewing ' + ranked.length + ' questions…', {});
+  if (Date.now() - _pipelineStart > LATENCY_GUARD_MS) {
+    console.warn('[NIRAS] Latency guard triggered — skipping validation');
+    return ranked;
+  }
+  return await validateQuestions(ranked, onProgress, count);
 }
 
 
