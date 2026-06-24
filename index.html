@@ -9036,6 +9036,7 @@ async function groqWithRetry(systemPrompt, userPrompt) {
       const isRetry = retryOn.includes(status) || err?.name === 'TimeoutError' || String(err).includes('timeout');
       if (!isRetry || attempt === delays.length) break;
       const wait = delays[attempt];
+      console.warn(`[NIRAS] Groq retry attempt ${attempt + 1} after ${wait}ms — status: ${status}`);
       showToast(`AI service busy — retrying in ${wait/1000}s…`, 'info');
       await new Promise(r => setTimeout(r, wait));
     }
@@ -9884,6 +9885,7 @@ async function startUploadProcessing() {
 
   try {
     setProcStep(1,'active'); await delay(100);
+    document.getElementById('upload-proc-title').textContent = 'Extracting document…';
     let content = '';
     if (upload.file)  content = await extractTextFromFile(upload.file);
     if (pastedText)   content = pastedText + (content ? '\n\n'+content : '');
@@ -9894,7 +9896,7 @@ async function startUploadProcessing() {
     }
     // Truncation warning
     if (content.length > 12000) {
-      showToast('Large document detected — analysing first portion only.', 'info');
+      showToast('Large document detected. The most relevant sections will be analysed.', 'info');
     }
     upload.extractedText = content.slice(0, 12000);
     setProcStep(1,'done');
@@ -10073,9 +10075,22 @@ function deleteUploadQ(idx) {
 }
 
 function insertUploadedQuestions() {
+  // Refresh target in case sections were added after modal opened
+  const freshSel = document.getElementById('upload-target-section');
+  if (freshSel && freshSel.value) upload.targetSection = freshSel.value;
+  else if (builder.sections.length > 0) upload.targetSection = builder.sections[0].id;
+
   const secId = upload.targetSection || builder.sections[0]?.id;
   const sec   = builder.sections.find(s => s.id === secId);
-  if (!sec) { showToast(builder.sections.length === 0 ? 'Add a section to your exam first' : 'No target section found', 'error'); return; }
+  if (!sec) {
+    if (builder.sections.length === 0) {
+      showToast('Please add a section to your exam before inserting questions.', 'error');
+      setTimeout(() => populateUploadSectionSelect(), 300);
+    } else {
+      showToast('Please select a target section from the dropdown.', 'error');
+    }
+    return;
+  }
 
   let inserted = 0;
   [...upload.selectedIdx].forEach(idx => {
