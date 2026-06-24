@@ -7468,6 +7468,9 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     const activePage = document.querySelector('.page.active')?.id;
     if (activePage === 'page-auth') showPage('landing');
+    // Close upload modal on ESC
+    const uploadModal = document.getElementById('upload-modal');
+    if (uploadModal && uploadModal.classList.contains('open')) closeUploadModal();
   }
 });
 
@@ -9905,9 +9908,11 @@ function openUploadModal() {
 function closeUploadModal() {
   clearRetryCountdown();
   document.getElementById('upload-modal').classList.remove('open');
+  resetUploadModal();
 }
 
 function resetUploadModal() {
+  clearRetryCountdown();
   hideCoveragePanel();
   upload.file = null; upload.extractedText = ''; upload.questions = []; upload.selectedIdx = new Set();
   goUploadStep(1);
@@ -9918,6 +9923,18 @@ function resetUploadModal() {
   document.getElementById('btn-upload-process').style.display = '';
   document.getElementById('btn-upload-insert').style.display  = 'none';
   document.getElementById('upload-footer-info').textContent = 'Supported: PDF, Word, TXT, Images';
+  // Reset Mode 2 state
+  _uploadMode = 1;
+  _m2PagesArray = [];
+  _m2StructureResult = null;
+  const m2panel = document.getElementById('upload-mode2-panel');
+  if (m2panel) m2panel.style.display = 'none';
+  const p1 = document.getElementById('upanel-1');
+  if (p1) p1.style.display = '';
+  selectUploadMode(1);
+  // Reset recommendation hint
+  const recEl = document.getElementById('upload-mode-recommendation');
+  if (recEl) recEl.innerHTML = 'Not sure? &nbsp;<span style="color:var(--gold-dim);">Mode 1</span> for quick results &nbsp;&middot;&nbsp; <span style="color:var(--gold-dim);">Mode 2</span> for structured learning';
 }
 
 function populateUploadSectionSelect() {
