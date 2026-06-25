@@ -9962,6 +9962,7 @@ function resetUploadModal() {
   _m3Blocks = [];
   _m3PagesArray = [];
   _m3OcrResults = {};
+  upload._preProcessed = false;
   const m3panel = document.getElementById('upload-mode3-panel');
   if (m3panel) m3panel.style.display = 'none';
   const m2panel = document.getElementById('upload-mode2-panel');
@@ -10386,6 +10387,7 @@ async function confirmMode2Scope() {
   // Set as extractedText → Mode 1 pipeline will use this
   upload.extractedText = filteredText;
   upload.pageCount     = _m2PagesArray.length;
+  upload._preProcessed = true; // skip gate — text already validated by Mode 2
 
   // ── NOW RUN EXACT MODE 1 PIPELINE (unchanged) ──
   startUploadProcessing();
@@ -10688,6 +10690,8 @@ async function confirmMode3Scope(runOCR) {
   // Feed to Mode 1 pipeline — UNCHANGED
   upload.extractedText = finalText;
   upload.pageCount     = _m3PagesArray.length;
+  upload._preProcessed = true; // skip gate — text already merged by Mode 3 OCR
+
   startUploadProcessing();
 }
 
@@ -11124,54 +11128,48 @@ async function startUploadProcessing() {
     let content = '';
     if (upload.file)  content = await extractTextFromFile(upload.file);
     if (pastedText)   content = pastedText + (content ? '\n\n'+content : '');
-    if (!content.trim()) {
-      const isPDF = upload.file?.type === 'application/pdf';
-      if (isPDF) {
+    // ── PRE-MODE INGESTION GATE ──────────────────────────────
+    // Skip gate if text was already validated by Mode 2 or Mode 3
+    if (!upload._preProcessed) {
+      if (!content.trim()) {
+        const isPDF = upload.file?.type === 'application/pdf';
+        if (isPDF) {
+          throw new Error(
+            'No readable text detected in this PDF.\n' +
+            'NIRAS can only generate questions from PDFs that contain selectable text.\n' +
+            'This usually happens when the file is scanned, image-based, corrupted, or exported without a text layer.\n' +
+            'Solution: upload a text-based PDF, or use Mode 3 for OCR assistance.'
+          );
+        } else {
+          throw new Error('No content found in file. Please try a different file or paste text instead.');
+        }
+      }
+
+      const _pageCount  = upload.pageCount || 1;
+      const _totalChars = content.length;
+      const _avgChars   = Math.round(_totalChars / _pageCount);
+      const _letters    = (content.match(/[a-zA-Z؀-ۿЀ-ӿ]/g) || []).length;
+      const _alphaRatio = _totalChars > 0 ? _letters / _totalChars : 0;
+      const _isScanned  = upload.file?.type === 'application/pdf' && (
+        _avgChars < 50 || (_totalChars < 500 && _pageCount > 1) || _alphaRatio < 0.3
+      );
+
+      if (_isScanned) {
+        const reason = _avgChars < 50
+          ? `Only ${_avgChars} chars/page extracted (expected 300+).`
+          : _alphaRatio < 0.3
+          ? `Text quality too low (${Math.round(_alphaRatio*100)}% readable characters).`
+          : `Too little text extracted (${_totalChars} total chars).`;
+        emitPipeline('error', 'PDF could not be read — it appears to be scanned or image-based.', {});
         throw new Error(
-          'No readable text detected in this PDF.\n' +
-          'NIRAS can only generate questions from PDFs that contain selectable text.\n' +
-          'This usually happens when the file is scanned, image-based, corrupted, or exported without a text layer.\n' +
-          'Solution: upload a text-based PDF, or paste the content manually.'
+          `PDF ingestion failed: ${reason} ` +
+          `This PDF appears to be scanned or image-based. ` +
+          `Try Mode 3 (OCR) for scanned documents.`
         );
-      } else {
-        throw new Error('No content found in file. Please try a different file or paste text instead.');
       }
     }
-
-    // ── PRE-MODE INGESTION GATE ──────────────────────────────
-    // Runs BEFORE both Mode 1 and Mode 2 — does not touch either
-    const _pageCount  = upload.pageCount || 1;
-    const _totalChars = content.length;
-    const _avgChars   = Math.round(_totalChars / _pageCount);
-
-    // Text entropy check — ratio of real letters to total chars
-    const _letters    = (content.match(/[a-zA-Z؀-ۿЀ-ӿ]/g) || []).length;
-    const _alphaRatio = _totalChars > 0 ? _letters / _totalChars : 0;
-
-    // HARD STOP — scanned / image-based / corrupt PDF
-    const _isScanned = upload.file?.type === 'application/pdf' && (
-      _avgChars < 50 ||
-      (_totalChars < 500 && _pageCount > 1) ||
-      _alphaRatio < 0.3
-    );
-
-    if (_isScanned) {
-      const reason = _avgChars < 50
-        ? `Only ${_avgChars} chars/page extracted (expected 300+).`
-        : _alphaRatio < 0.3
-        ? `Text quality too low (${Math.round(_alphaRatio*100)}% readable characters).`
-        : `Too little text extracted (${_totalChars} total chars).`;
-
-      emitPipeline('error',
-        'PDF could not be read — it appears to be scanned or image-based.',
-        {}
-      );
-      throw new Error(
-        `PDF ingestion failed: ${reason} ` +
-        `This PDF appears to be scanned or image-based and cannot be processed. ` +
-        `Please use a text-based PDF, or paste the text content manually.`
-      );
-    }
+    // Reset flag for next use
+    upload._preProcessed = false;
 
     // Soft warning — low quality but not zero
     if (content.length < 500 && upload.file?.type === 'application/pdf') {
