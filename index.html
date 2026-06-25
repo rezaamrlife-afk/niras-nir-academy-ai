@@ -9991,7 +9991,8 @@ function resetUploadModal() {
   _m3Blocks = [];
   _m3PagesArray = [];
   _m3OcrResults = {};
-  upload._preProcessed = false;
+  upload._preProcessed  = false;
+  upload._m3OcrSource   = false;
   const m3panel = document.getElementById('upload-mode3-panel');
   if (m3panel) m3panel.style.display = 'none';
   window._m4Result = null;
@@ -10755,6 +10756,25 @@ async function runMode3OCR(pdfDoc, selectedBlocks) {
 }
 
 // ── Confirm Mode 3 → merge → feed Mode 1 pipeline ────────────
+// ── normalizeText — Mode 3 OCR output cleaner ────────────────
+// Applied ONLY before Mode 3 feeds into pipeline
+function normalizeText(text) {
+  if (!text) return '';
+  return text
+    .split('\n')
+    // Remove duplicate consecutive lines
+    .filter((line, i, arr) => i === 0 || line.trim() !== arr[i-1].trim())
+    // Remove lines that are pure noise (< 3 chars)
+    .filter(line => line.trim().length > 2 || line.trim() === '')
+    .join('\n')
+    // Collapse 3+ blank lines to 2
+    .replace(/\n{3,}/g, '\n\n')
+    // Collapse repeated whitespace within lines
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
+
+
 async function confirmMode3Scope(runOCR) {
   // Get selected blocks
   const checkboxes = document.querySelectorAll('#upload-m3-block-list input[type=checkbox]');
@@ -10802,22 +10822,37 @@ async function confirmMode3Scope(runOCR) {
 
   // Merge: OCR results override page text where available
   const CONFIDENCE_THRESHOLD = 70; // Tesseract: 0–100
+
+  // PATCH 1 — strict single-source rule:
+  // If OCR confidence ≥ threshold → use OCR text ONLY
+  // Else → use PDF extracted text ONLY
+  // NEVER mix both sources
+  const ocrPageCount = Object.keys(_m3OcrResults).length;
+  const highConfOcr  = Object.values(_m3OcrResults)
+    .filter(r => r && r.confidence >= CONFIDENCE_THRESHOLD).length;
+  const useOcrSource = ocrPageCount > 0 && highConfOcr > 0;
+
   const mergedPages = _m3PagesArray.map(p => {
     const ocrResult = _m3OcrResults[p.page];
-    let text = p.text;
-    if (ocrResult) {
-      if (ocrResult.confidence >= CONFIDENCE_THRESHOLD) {
-        text = ocrResult.text;  // high confidence → use OCR
-      } else if (ocrResult.text.length > p.text.length * 1.5) {
-        text = ocrResult.text;  // OCR got much more text → use it anyway
-        console.warn('[NIRAS] Mode 3: low confidence OCR (' + ocrResult.confidence + ') but used (more text)');
-      }
-      // else: low confidence + not more text → keep PDF text
+    let text;
+    if (useOcrSource) {
+      // OCR mode: use OCR if high confidence, else empty (not mix)
+      text = (ocrResult && ocrResult.confidence >= CONFIDENCE_THRESHOLD)
+        ? ocrResult.text
+        : '';
+    } else {
+      // PDF mode: use original extracted text only
+      text = p.text;
     }
     return { page: p.page, text };
   });
 
-  const finalText = mergedPages.map(p => p.text).join('\n').trim();
+  console.log('[NIRAS] Mode 3 source:', useOcrSource ? 'OCR' : 'PDF',
+    '| OCR pages:', ocrPageCount, '| high-conf:', highConfOcr);
+
+  // PATCH 3 — normalize before pipeline
+  const rawText   = mergedPages.map(p => p.text).join('\n').trim();
+  const finalText = normalizeText(rawText);
 
   // ── Mode 3 Text Quality Gate ─────────────────────────────────
   // Applied ONLY in Mode 3, before pipeline — Mode 1/2 untouched
@@ -10840,9 +10875,11 @@ async function confirmMode3Scope(runOCR) {
   document.getElementById('upload-mode3-panel').style.display = 'none';
 
   // Feed to Mode 1 pipeline — UNCHANGED
-  upload.extractedText = finalText;
-  upload.pageCount     = _m3PagesArray.length;
-  upload._preProcessed = true; // skip gate — text already merged by Mode 3 OCR
+  upload.extractedText  = finalText;
+  upload.pageCount      = _m3PagesArray.length;
+  upload._preProcessed  = true; // skip gate — text already merged by Mode 3 OCR
+  // PATCH 4 — stronger dedup threshold for OCR source (noisier text)
+  upload._m3OcrSource   = useOcrSource;
 
   startUploadProcessing();
 }
@@ -12007,7 +12044,9 @@ async function runModePipeline(content, options) {
       allQ.push(...q);
       if (i < chunks.length - 1) await delay(1000);
     }
-    const deduped = deduplicateQuestions(allQ, 0.70).slice(0, count);
+    // PATCH 4: tighter dedup for OCR source
+    const _dedupThreshold = upload._m3OcrSource ? 0.75 : 0.70;
+    const deduped = deduplicateQuestions(allQ, _dedupThreshold).slice(0, count);
     console.log('[NIRAS] Trace: raw=' + allQ.length + ' → deduped=' + deduped.length);
     emitPipeline('dedup', 'Removing duplicates — ' + allQ.length + ' → ' + deduped.length + ' questions', {});
     emitPipeline('validate', 'AI quality check — reviewing ' + deduped.length + ' questions…', {});
@@ -12040,7 +12079,9 @@ async function runModePipeline(content, options) {
     })
   ));
   const allQ = results.flat().filter(Boolean);
-  const _deduped = deduplicateQuestions(allQ, 0.60);
+  // PATCH 4: tighter dedup for OCR source
+  const _deepDedupThreshold = upload._m3OcrSource ? 0.75 : 0.60;
+  const _deduped = deduplicateQuestions(allQ, _deepDedupThreshold);
   const ranked = rankByDiversity(_deduped, count);
   console.log('[NIRAS] Trace: raw=' + allQ.length + ' → deduped=' + _deduped.length + ' → ranked=' + ranked.length);
   emitPipeline('validate', 'AI quality check — reviewing ' + ranked.length + ' questions…', {});
