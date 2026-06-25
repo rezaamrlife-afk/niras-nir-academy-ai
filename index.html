@@ -10787,14 +10787,52 @@ async function startUploadProcessing() {
     if (upload.file)  content = await extractTextFromFile(upload.file);
     if (pastedText)   content = pastedText + (content ? '\n\n'+content : '');
     if (!content.trim()) throw new Error('No content found in file. Try pasting text instead.');
-    // Scanned PDF detection
-    if (content.length < 500 && upload.file?.type === 'application/pdf') {
-      showToast('This PDF may be image-based. Text extraction may be limited — try pasting text instead.', 'error');
+
+    // ── PRE-MODE INGESTION GATE ──────────────────────────────
+    // Runs BEFORE both Mode 1 and Mode 2 — does not touch either
+    const _pageCount  = upload.pageCount || 1;
+    const _totalChars = content.length;
+    const _avgChars   = Math.round(_totalChars / _pageCount);
+
+    // Text entropy check — ratio of real letters to total chars
+    const _letters    = (content.match(/[a-zA-Z؀-ۿЀ-ӿ]/g) || []).length;
+    const _alphaRatio = _totalChars > 0 ? _letters / _totalChars : 0;
+
+    // HARD STOP — scanned / image-based / corrupt PDF
+    const _isScanned = upload.file?.type === 'application/pdf' && (
+      _avgChars < 50 ||
+      (_totalChars < 500 && _pageCount > 1) ||
+      _alphaRatio < 0.3
+    );
+
+    if (_isScanned) {
+      const reason = _avgChars < 50
+        ? `Only ${_avgChars} chars/page extracted (expected 300+).`
+        : _alphaRatio < 0.3
+        ? `Text quality too low (${Math.round(_alphaRatio*100)}% readable characters).`
+        : `Too little text extracted (${_totalChars} total chars).`;
+
+      emitPipeline('error',
+        'PDF could not be read — it appears to be scanned or image-based.',
+        {}
+      );
+      throw new Error(
+        `PDF ingestion failed: ${reason} ` +
+        `This PDF appears to be scanned or image-based and cannot be processed. ` +
+        `Please use a text-based PDF, or paste the text content manually.`
+      );
     }
+
+    // Soft warning — low quality but not zero
+    if (content.length < 500 && upload.file?.type === 'application/pdf') {
+      showToast('Low text content detected — question quality may be limited.', 'error');
+    }
+
     // Truncation warning
     if (content.length > 12000) {
       showToast('Large document detected. The most relevant sections will be analysed.', 'info');
     }
+
     upload.extractedText = content.slice(0, 12000);
     setProcStep(1,'done');
 
