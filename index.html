@@ -11323,11 +11323,7 @@ async function confirmMode4Execute() {
   if (!filteredText || filteredText.trim().length < 50) {
     showToast('Selected content too short. Include more content types.', 'error'); return;
   }
-  const letters    = (filteredText.match(/[a-zA-Z؀-ۿ]/g) || []).length;
-  const alphaRatio = filteredText.length > 0 ? letters / filteredText.length : 0;
-  if (alphaRatio < 0.3) {
-    showToast('Selected content has low text quality. Include reading passages.', 'error'); return;
-  }
+  // Mode 4: skip alphaRatio gate — Mode 4 semantic analysis already validated quality
   document.getElementById('upload-mode4-panel').style.display = 'none';
 
   // Mode 4 → Prompt 2 path (block-structured generation)
@@ -11452,11 +11448,17 @@ OUTPUT FORMAT (strict JSON, no text outside):
   ]
 }`;
 
+  // Trim clean_text to avoid token overflow (max 500 chars per block)
+  const trimmedBlocks = topBlocks.map(b => ({
+    ...b,
+    clean_text: (b.clean_text || '').slice(0, 500)
+  }));
+
   const user = `Generate ${count} exam questions.
 Type: ${qtype || 'mixed'} | Difficulty: ${difficulty || 'medium'}
 
 BLOCKS:
-${JSON.stringify(topBlocks, null, 0)}
+${JSON.stringify(trimmedBlocks, null, 0)}
 
 Return ONLY valid JSON with "questions" array. No text outside JSON.`;
 
