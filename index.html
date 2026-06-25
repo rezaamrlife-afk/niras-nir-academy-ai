@@ -12078,8 +12078,13 @@ async function startUploadProcessing() {
     setProcStep(1,'active'); await delay(100);
     document.getElementById('upload-proc-title').textContent = 'Extracting document…';
     let content = '';
-    if (upload.file)  content = await extractTextFromFile(upload.file);
-    if (pastedText)   content = pastedText + (content ? '\n\n'+content : '');
+    // If Mode 2/3/4 already processed text → use it directly
+    if (upload._preProcessed && upload.extractedText) {
+      content = upload.extractedText;
+    } else {
+      if (upload.file)  content = await extractTextFromFile(upload.file);
+      if (pastedText)   content = pastedText + (content ? '\n\n'+content : '');
+    }
     // ── PRE-MODE INGESTION GATE ──────────────────────────────
     // Skip gate if text was already validated by Mode 2 or Mode 3
     if (!upload._preProcessed) {
