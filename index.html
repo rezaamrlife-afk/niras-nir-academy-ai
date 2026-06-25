@@ -11448,146 +11448,181 @@ function smartTrim(text, maxLen) {
 
 
 async function generateFromBlocksPrompt2(blocks, count, qtype, difficulty) {
-  // Rank and filter blocks
-  const rankedBlocks = prompt2RankBlocks(blocks);
 
-  if (rankedBlocks.length === 0) {
-    console.warn('[NIRAS] Prompt2: no scoreable blocks after ranking');
-    return [];
-  }
+  // ── PHASE 1: PASSAGE EXTRACTION (deterministic JS — no LLM) ──
 
-  // Cap blocks to avoid token overflow — take top 10
-  const topBlocks = rankedBlocks.slice(0, 10);
+  // PHASE 1A: Unit detection — scan for unit/chapter boundaries
+  const unitBoundaryPattern = /^(unit|chapter|lesson|part|section)\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b/i;
+  const numberedHeadingPattern = /^(\d{1,2})\.\s+[A-Z]/;
+  const allCapsShortPattern = /^[A-Z\s]{3,40}$/;
 
-  const system = `You are a UNIVERSAL EXAM QUESTION GENERATION ENGINE.
-You receive structured text blocks from any educational document.
-Process EACH block independently. Generate questions ONLY from each block's own text.
-
-STEP 0 — SKIP BLOCK IF:
-- clean_text word count < 50 → skip (return nothing for this block)
-- block_scope = "continuation" → skip
-- section_type is NOISE or HEADER_OR_FOOTER → skip
-
-STEP 1 — CONFIDENCE GATE (per block):
-- confidence ≥ 0.85 → allowed: MCQ, SHORT_ANSWER, TRUE_FALSE, FILL_BLANK, VOCABULARY
-- confidence 0.70–0.84 → allowed: MCQ, TRUE_FALSE, FILL_BLANK, VOCABULARY
-- confidence < 0.70 → allowed: TRUE_FALSE, VOCABULARY only
-- block_scope = "partial" → REMOVE SHORT_ANSWER from allowed types
-
-STEP 2 — LEVEL DETECTION (infer from vocabulary/syntax):
-- A2: simple factual, basic vocabulary
-- B1: standard comprehension, common vocabulary
-- B2: inference required, multi-sentence understanding
-- C1: abstract/academic reasoning, technical vocabulary
-
-STEP 3 — SECTION TYPE → QUESTION TYPE MAPPING:
-- READING_PASSAGE → MCQ, SHORT_ANSWER, TRUE_FALSE
-- COMPREHENSION_QUESTION → MCQ, TRUE_FALSE
-- VOCABULARY_EXERCISE → FILL_BLANK, VOCABULARY
-- GRAMMAR_EXPLANATION → FILL_BLANK, TRUE_FALSE
-- TABLE_OR_DIAGRAM → MCQ, FILL_BLANK
-- INSTRUCTION → TRUE_FALSE, SHORT_ANSWER
-Final allowed = STEP 1 gate ∩ STEP 3 mapping
-
-STEP 4 — GENERATION RULES:
-MCQ: 4 options (A-D), 1 correct, distractors from same block text
-TRUE_FALSE: directly verifiable in text, no inference beyond text
-SHORT_ANSWER: answer extractable from text, FORBIDDEN if block_scope=partial
-FILL_BLANK: remove 1 content word, provide word_bank of 4-5 options
-VOCABULARY: target word from text, meaning-in-context only
-
-STEP 5 — HARD RULES:
-- ONLY use information in clean_text — NEVER external knowledge
-- source_sentence MUST be exact substring of clean_text
-- NEVER cross-reference between blocks
-- Max 5 questions per block
-- Start response with { and end with } — NO markdown, NO explanation
-
-OUTPUT FORMAT (strict JSON only):
-{
-  "questions": [
-    {
-      "question_id": "{{block_id}}_q1",
-      "block_id": "{{block_id}}",
-      "type": "MCQ",
-      "question_text": "...",
-      "options": {"A":"...","B":"...","C":"...","D":"..."},
-      "correct_answer": "B",
-      "source_sentence": "exact substring from clean_text",
-      "difficulty": "medium",
-      "estimated_level": "B1",
-      "confidence": 0.87,
-      "stem": "...",
-      "qtype": "mcq",
-      "points": 1,
-      "ai_verified": true
-    },
-    {
-      "question_id": "{{block_id}}_q2",
-      "type": "FILL_BLANK",
-      "question_text": "The scientist discovered a new _____ in the lab.",
-      "word_bank": ["method", "result", "compound", "theory", "experiment"],
-      "correct_answer": "compound",
-      "source_sentence": "exact substring",
-      "confidence": 0.85,
-      "stem": "The scientist discovered a new _____ in the lab.",
-      "qtype": "fill",
-      "points": 1,
-      "ai_verified": true
+  let currentUnit = 'Unit 1';
+  let unitIndex   = 1;
+  const blocksWithUnit = blocks.map(b => {
+    const text = (b.clean_text || '').trim();
+    const firstLine = text.split('\n')[0].trim();
+    if (unitBoundaryPattern.test(firstLine) ||
+        numberedHeadingPattern.test(firstLine) ||
+        (allCapsShortPattern.test(firstLine) && firstLine.split(' ').length <= 6)) {
+      unitIndex++;
+      currentUnit = firstLine.slice(0, 40) || ('Unit ' + unitIndex);
     }
-  ]
-}`;
-
-  // Send only essential fields — smaller payload, cleaner for model
-  const trimmedBlocks = topBlocks.map(b => ({
-    block_id:     b.block_id,
-    section_type: b.section_type,
-    clean_text:   smartTrim(b.clean_text, 500),
-    confidence:   b.confidence,
-    block_scope:  b.block_scope,
-    question_ready: b.question_ready || false,
-    _score:       b._score || 0
-  }));
-
-  // JS pre-filter: remove blocks that would fail Step 0 (< 50 words or continuation)
-  const viableBlocks = trimmedBlocks.filter(b => {
-    const wc = (b.clean_text || '').split(/\s+/).filter(w => w.length > 0).length;
-    return wc >= 50 && b.block_scope !== 'continuation';
+    return { ...b, _unit: currentUnit, _unitIndex: unitIndex };
   });
 
-  if (viableBlocks.length === 0) {
-    console.warn('[NIRAS] Prompt2: no viable blocks after Step 0 pre-filter');
-    return [];
+  // PHASE 1B: Filter — only viable READING_PASSAGE blocks
+  const filtered = blocksWithUnit.filter(b => {
+    const wc = (b.clean_text || '').split(/\s+/).filter(w => w.length > 0).length;
+    return b.section_type === 'READING_PASSAGE' &&
+           wc >= 80 &&
+           b.block_scope !== 'continuation' &&
+           (b.confidence || 0) >= 0.60;
+  });
+
+  if (filtered.length === 0) {
+    // Fallback: relax filters — accept any block with wc >= 50
+    const relaxed = blocksWithUnit.filter(b => {
+      const wc = (b.clean_text || '').split(/\s+/).filter(w => w.length > 0).length;
+      return wc >= 50 && b.block_scope !== 'continuation' &&
+             !['NOISE','HEADER_OR_FOOTER','ANSWER_KEY','INSTRUCTION'].includes(b.section_type);
+    });
+    if (relaxed.length === 0) {
+      console.warn('[NIRAS] Prompt2 Phase 1: no viable passages found');
+      return [];
+    }
+    filtered.push(...relaxed.slice(0, 5));
   }
 
-  const countPerType = Math.max(1, Math.ceil(count / Math.max(viableBlocks.length, 1)));
+  // PHASE 1C: Random selection — prefer passages from different units
+  const passagesPerExam = Math.min(3, filtered.length);
+  const selected = [];
+  const usedUnits = new Set();
 
-  const user = `Generate ${count} exam questions total from the blocks below.
-Target: ~${countPerType} question(s) per block where content permits.
+  // First pass: one passage per unit
+  for (const b of filtered) {
+    if (selected.length >= passagesPerExam) break;
+    if (!usedUnits.has(b._unit)) {
+      selected.push(b);
+      usedUnits.add(b._unit);
+    }
+  }
+  // Second pass: fill remaining from any unit
+  for (const b of filtered) {
+    if (selected.length >= passagesPerExam) break;
+    if (!selected.includes(b)) selected.push(b);
+  }
+
+  console.log('[NIRAS] Prompt2 Phase 1: filtered=' + filtered.length +
+    ' → selected=' + selected.length + ' passages from ' + usedUnits.size + ' units');
+
+  // Trim each passage (sentence-safe)
+  const questionsPerPassage = Math.max(1, Math.ceil(count / selected.length));
+  const passages = selected.map(b => ({
+    block_id:     b.block_id,
+    unit:         b._unit,
+    section_type: b.section_type,
+    clean_text:   smartTrim(b.clean_text, 600),
+    confidence:   b.confidence || 0,
+    block_scope:  b.block_scope
+  }));
+
+  // ── PHASE 2: QUESTION GENERATION (single LLM call) ───────────
+
+  const system = `You are a UNIVERSAL READING PASSAGE EXTRACTOR and EXAM QUESTION GENERATOR.
+You receive pre-filtered READING_PASSAGE blocks. Generate questions ONLY from these passages.
+
+PHASE 2 — QUESTION GENERATION RULES:
+
+STEP 1 — CONFIDENCE GATE (per passage):
+- confidence ≥ 0.85 → ALL types: MCQ, SHORT_ANSWER, TRUE_FALSE, FILL_BLANK, VOCABULARY
+- confidence 0.60–0.84 → restricted: MCQ, TRUE_FALSE, FILL_BLANK, VOCABULARY
+- confidence < 0.60 → minimal: TRUE_FALSE, VOCABULARY only
+- block_scope = "partial" → REMOVE SHORT_ANSWER
+
+STEP 2 — LEVEL DETECTION (infer from text):
+A2: simple factual / B1: standard comprehension / B2: inference required / C1: academic/abstract
+
+STEP 3 — QUESTION RULES:
+MCQ: 4 options (A-D), 1 correct, distractors ONLY from passage text, no external knowledge
+TRUE_FALSE: directly verifiable in passage, no ambiguity
+SHORT_ANSWER: answer extractable as phrase from passage, FORBIDDEN if block_scope=partial
+FILL_BLANK: remove 1 content word, word_bank of 4 options including correct answer
+VOCABULARY: target word from passage, meaning-in-context only
+
+STEP 4 — ANTI-HALLUCINATION:
+Before each question: verify answer exists in clean_text
+source_sentence MUST be exact substring of clean_text
+If source_sentence not found → replace with TRUE_FALSE
+
+STEP 5 — SELF-CHECK before output:
+✔ total questions = passages × questions_per_passage
+✔ every source_sentence is exact substring of its passage
+✔ no external knowledge used
+✔ valid JSON only
+
+HARD RULES:
+- ONLY use text from the provided passage — NEVER external knowledge
+- source_sentence = exact substring always
+- No markdown, no explanation — Start response with { end with }`;
+
+  const user = `Generate exactly ${questionsPerPassage} questions per passage (${selected.length} passages = ${questionsPerPassage * selected.length} total questions).
 Question types: ${qtype || 'mixed'} | Difficulty: ${difficulty || 'medium'}
 
-Apply STEP 0–5 rules strictly for each block.
-Return ONLY valid JSON object with "questions" array. Start with { end with }.
+Distribute question types evenly. If a type is blocked by confidence gate → use TRUE_FALSE instead.
 
-BLOCKS:
-${JSON.stringify(viableBlocks, null, 0)}`;
+Return ONLY valid JSON. Start with { end with }.
 
-  const payloadSize = JSON.stringify(trimmedBlocks).length;
-  console.log('[NIRAS DEBUG] STEP 4: trimmedBlocks payload size =', payloadSize, 'chars |', Math.round(payloadSize/4), 'est tokens');
-  console.log('[NIRAS DEBUG] STEP 5: calling groqChatWithTokens | model =', GROQ_MODEL, '| max_tokens = 3000');
+PASSAGES:
+${JSON.stringify(passages, null, 0)}
+
+OUTPUT FORMAT:
+{
+  "status": "generated",
+  "units_detected": ${unitIndex},
+  "passages_selected": ${selected.length},
+  "total_questions": ${questionsPerPassage * selected.length},
+  "exam": [
+    {
+      "passage_id": "block_id",
+      "unit": "Unit 1",
+      "estimated_level": "B1",
+      "confidence_gate": "full|restricted|minimal",
+      "passage_text": "exact clean_text",
+      "questions": [
+        {
+          "question_id": "block_id_q1",
+          "type": "MCQ",
+          "question_text": "...",
+          "options": {"A":"...","B":"...","C":"...","D":"..."},
+          "correct_answer": "B",
+          "source_sentence": "exact substring",
+          "confidence": 0.91,
+          "stem": "...",
+          "qtype": "mcq",
+          "points": 1,
+          "ai_verified": true
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "units_detected": ${unitIndex},
+    "passages_selected": ${selected.length},
+    "total_questions": ${questionsPerPassage * selected.length},
+    "passages_from_different_units": ${usedUnits.size > 1}
+  }
+}`;
 
   try {
-    // Use larger model for Prompt2 — 8b-instant too small for structured JSON
-    const raw = await groqChatWithTokens(system, user, 3000);
+    const raw = await groqChatWithTokens(system, user, 3500);
     console.log('[NIRAS DEBUG] STEP 6: raw response length =', raw.length);
-  console.log('[NIRAS DEBUG] STEP 7: raw response first 500 chars:', raw.slice(0, 500));
-    // Strip markdown fences and any leading/trailing non-JSON text
+    console.log('[NIRAS DEBUG] STEP 7: raw response first 500 chars:', raw.slice(0, 500));
+
     let clean = raw.replace(/```json|```/g, '').trim();
-    // Extract first JSON object or array
     const jsonStart = clean.search(/[\[{]/);
     const jsonEnd   = Math.max(clean.lastIndexOf(']'), clean.lastIndexOf('}'));
     if (jsonStart === -1 || jsonEnd === -1) {
-      console.warn('[NIRAS] Prompt2: no JSON structure found in response');
+      console.warn('[NIRAS] Prompt2: no JSON found');
       return [];
     }
     clean = clean.slice(jsonStart, jsonEnd + 1);
@@ -11595,155 +11630,58 @@ ${JSON.stringify(viableBlocks, null, 0)}`;
     let parsed;
     try {
       parsed = JSON.parse(clean);
-      console.log('[NIRAS DEBUG] STEP 8: JSON.parse SUCCESS | type =', Array.isArray(parsed) ? 'array' : 'object',
-        '| has questions:', Array.isArray(parsed) ? 'N/A' : !!parsed.questions);
+      console.log('[NIRAS DEBUG] STEP 8: JSON.parse SUCCESS');
     } catch (parseErr) {
-      console.warn('[NIRAS DEBUG] STEP 8 FAIL: JSON.parse error =', parseErr.message);
-      console.warn('[NIRAS DEBUG] STEP 8 clean string (first 300):', clean.slice(0, 300));
-      // Try to extract questions array directly
+      console.warn('[NIRAS DEBUG] STEP 8 FAIL:', parseErr.message);
       const arrMatch = clean.match(/"questions"\s*:\s*(\[[\s\S]*?\])/);
       if (arrMatch) {
-        parsed = { questions: JSON.parse(arrMatch[1]) };
-      } else {
-        console.warn('[NIRAS] Prompt2: JSON parse failed:', parseErr.message);
-        return [];
+        try { parsed = { exam: [{ questions: JSON.parse(arrMatch[1]) }] }; }
+        catch (e2) { return []; }
+      } else { return []; }
+    }
+
+    // Extract questions from exam[] or questions[] format
+    let allQuestions = [];
+    if (parsed.exam && Array.isArray(parsed.exam)) {
+      for (const passage of parsed.exam) {
+        const qs = passage.questions || [];
+        // Attach passage_text as metadata
+        qs.forEach(q => { q._passage_text = passage.passage_text || ''; });
+        allQuestions.push(...qs);
       }
+    } else if (Array.isArray(parsed)) {
+      allQuestions = parsed;
+    } else if (parsed.questions) {
+      allQuestions = parsed.questions;
     }
 
-    // Handle both {questions:[]} and [] formats
-    const questions = Array.isArray(parsed)
-      ? parsed
-      : (parsed.questions || []);
+    console.log('[NIRAS DEBUG] STEP 9: questions count =', allQuestions.length);
 
-    console.log('[NIRAS DEBUG] STEP 9: questions count =', questions.length);
-    if (!questions || questions.length === 0) {
-      console.warn('[NIRAS DEBUG] STEP 9 FAIL: questions array is empty after parse');
-      return [];
-    }
+    if (!allQuestions || allQuestions.length === 0) return [];
 
     // Normalize to Mode 1/2/3 compatible format
-    return questions.map((q, i) => ({
-      stem:          q.question_text || q.stem || 'Question ' + (i+1),
-      qtype:         (q.type || q.qtype || 'mcq').toLowerCase(),
-      difficulty:    q.difficulty || difficulty || 'medium',
-      points:        q.points || 1,
-      options:       q.options ? Object.values(q.options) : (q.options_list || []),
-      correct_index: q.options
-        ? Object.keys(q.options).indexOf(q.correct_answer)
-        : (q.correct_index || 0),
+    return allQuestions.map((q, i) => ({
+      stem:           q.question_text || q.stem || ('Question ' + (i + 1)),
+      qtype:          (q.type || q.qtype || 'mcq').toLowerCase(),
+      difficulty:     q.difficulty || difficulty || 'medium',
+      points:         q.points || 1,
+      options:        q.options ? Object.values(q.options) : (q.options_list || []),
+      correct_index:  q.options ? Object.keys(q.options).indexOf(q.correct_answer) : (q.correct_index || 0),
       correct_answer: q.correct_answer,
-      explanation:   q.source_sentence || '',
+      word_bank:      q.word_bank || [],
+      explanation:    q.source_sentence || '',
       source_sentence: q.source_sentence || '',
-      block_id:      q.block_id || '',
-      ai_verified:   true
+      passage_text:   q._passage_text || '',
+      block_id:       q.block_id || '',
+      ai_verified:    true
     }));
+
   } catch (e) {
-    console.error('[NIRAS DEBUG] STEP ERROR: Prompt2 exception:', e.message);
-    console.error('[NIRAS DEBUG] stack:', e.stack);
+    console.error('[NIRAS DEBUG] STEP ERROR:', e.message, e.stack);
     return [];
   }
 }
 
-
-// ============================================================
-// MODE ENGINE — NIRAS Upload Pipeline
-// ============================================================
-
-function detectUploadMode(contentLength, pageCount) {
-  if (pageCount <= 8  || contentLength <= 8000)  return 'quick';
-  if (pageCount <= 40 || contentLength <= 35000) return 'standard';
-  return 'deep';
-}
-
-function smartSample(text, maxChars) {
-  if (text.length <= maxChars) return text;
-  const zone = Math.floor(maxChars / 3);
-  const start = text.slice(0, zone);
-  const mid   = text.slice(Math.floor(text.length/2) - Math.floor(zone/2),
-                            Math.floor(text.length/2) + Math.floor(zone/2));
-  const end   = text.slice(-zone);
-  return start + '\n\n[...]\n\n' + mid + '\n\n[...]\n\n' + end;
-}
-
-function chunkText(text, chunkSize, overlap, totalPages) {
-  const chunks = [];
-  const totalChars = text.length;
-  let i = 0, idx = 0;
-  while (i < text.length) {
-    const charStart = i;
-    const charEnd   = Math.min(i + chunkSize, text.length);
-    const pageStart = totalPages ? Math.floor((charStart / totalChars) * totalPages) + 1 : null;
-    const pageEnd   = totalPages ? Math.min(Math.ceil((charEnd / totalChars) * totalPages), totalPages) : null;
-    chunks.push({
-      text:      text.slice(charStart, charEnd),
-      charStart, charEnd,
-      pageStart, pageEnd,
-      index:     idx++,
-      pct:       Math.round((charEnd / totalChars) * 100)
-    });
-    if (charEnd >= text.length) break;
-    i += chunkSize - overlap;
-  }
-  return chunks;
-}
-
-function jaccardSimilarity(a, b) {
-  const setA = new Set(a.split(' ').filter(w => w.length > 3));
-  const setB = new Set(b.split(' ').filter(w => w.length > 3));
-  if (!setA.size || !setB.size) return 0;
-  const inter = [...setA].filter(w => setB.has(w)).length;
-  return inter / (setA.size + setB.size - inter);
-}
-
-function deduplicateQuestions(questions, threshold) {
-  const stems = [];
-  return questions.filter(q => {
-    const s = (q.stem || '').toLowerCase().replace(/[^a-z0-9 ]/g, '');
-    const isDup = stems.some(seen => jaccardSimilarity(seen, s) > threshold);
-    if (!isDup) stems.push(s);
-    return !isDup;
-  });
-}
-
-function rankByDiversity(questions, targetCount) {
-  const types = ['mcq','true_false','short_answer','fill_blank','matching','ordering'];
-  const buckets = {};
-  types.forEach(t => { buckets[t] = []; });
-  questions.forEach(q => { (buckets[q.qtype] || buckets.mcq).push(q); });
-  const result = [];
-  let safety = 0;
-  while (result.length < targetCount && safety++ < 500) {
-    let added = false;
-    for (const t of types) {
-      if (buckets[t].length && result.length < targetCount) {
-        result.push(buckets[t].shift());
-        added = true;
-      }
-    }
-    if (!added) break;
-  }
-  return result;
-}
-
-function createSemaphore(limit) {
-  let active = 0;
-  const queue = [];
-  return function acquire(fn) {
-    return new Promise((resolve, reject) => {
-      const run = async () => {
-        active++;
-        try { resolve(await fn()); }
-        catch (e) { reject(e); }
-        finally {
-          active--;
-          if (queue.length) queue.shift()();
-        }
-      };
-      if (active < limit) run();
-      else queue.push(run);
-    });
-  };
-}
 
 async function groqChatWithTokens(systemPrompt, userPrompt, maxTokens) {
   const r = await fetch('/api/groq', {
