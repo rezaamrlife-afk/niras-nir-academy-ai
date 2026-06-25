@@ -11829,6 +11829,92 @@ async function validateQuestions(questions, onProgress, targetCount) {
 }
 
 
+// ── Jaccard similarity for deduplication ─────────────────────
+function jaccardSimilarity(a, b) {
+  const sa = new Set(a.toLowerCase().split(/\s+/));
+  const sb = new Set(b.toLowerCase().split(/\s+/));
+  const inter = [...sa].filter(x => sb.has(x)).length;
+  const union = new Set([...sa, ...sb]).size;
+  return union ? inter / union : 0;
+}
+
+function deduplicateQuestions(questions, threshold) {
+  threshold = threshold || 0.70;
+  const result = [];
+  for (const q of questions) {
+    const isDup = result.some(r => jaccardSimilarity(r.stem || '', q.stem || '') > threshold);
+    if (!isDup) result.push(q);
+  }
+  return result;
+}
+
+function rankByDiversity(questions, count) {
+  const types = ['mcq','tf','short','fill','match','order','mixed'];
+  const byType = {};
+  for (const q of questions) {
+    const t = q.qtype || 'mcq';
+    if (!byType[t]) byType[t] = [];
+    byType[t].push(q);
+  }
+  const result = [];
+  let safety = 0;
+  while (result.length < count && safety < 1000) {
+    safety++;
+    let added = false;
+    for (const t of types) {
+      if (byType[t] && byType[t].length > 0 && result.length < count) {
+        result.push(byType[t].shift());
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+  return result;
+}
+
+function createSemaphore(n) {
+  let active = 0;
+  const queue = [];
+  return fn => new Promise((resolve, reject) => {
+    const run = async () => {
+      active++;
+      try { resolve(await fn()); }
+      catch (e) { reject(e); }
+      finally {
+        active--;
+        if (queue.length) queue.shift()();
+      }
+    };
+    if (active < n) run();
+    else queue.push(run);
+  });
+}
+
+
+// ── chunkText with page metadata ─────────────────────────────
+function chunkText(text, chunkSize, overlap, totalPages) {
+  const chunks = [];
+  const totalChars = text.length;
+  let i = 0, idx = 0;
+  while (i < text.length) {
+    const charStart = i;
+    const charEnd   = Math.min(i + chunkSize, text.length);
+    const pageStart = totalPages ? Math.floor((charStart / totalChars) * totalPages) + 1 : null;
+    const pageEnd   = totalPages ? Math.min(Math.ceil((charEnd / totalChars) * totalPages), totalPages) : null;
+    chunks.push({
+      text:      text.slice(charStart, charEnd),
+      charStart, charEnd,
+      pageStart, pageEnd,
+      index:     idx++,
+      pct:       Math.round((charEnd / totalChars) * 100)
+    });
+    if (charEnd >= text.length) break;
+    i += chunkSize - overlap;
+  }
+  return chunks;
+}
+
+
 async function runModePipeline(content, options) {
   const { qtype, difficulty, pageCount, onProgress } = options;
   const count = Math.max(1, Math.min(30, parseInt(options.count) || 5)); // clamp 1–30
