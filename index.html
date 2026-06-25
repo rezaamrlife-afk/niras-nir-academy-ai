@@ -10042,7 +10042,7 @@ async function extractPDFText(file) {
       pages.push(content.items.map(item => item.str).join(' '));
     }
     return pages.join('\n\n');
-  } catch (err) { console.error('PDF error:', err); return ''; }
+  } catch (err) { console.warn('[NIRAS] PDF extraction failed:', err); return ''; }
 }
 
 async function extractWordText(file) {
@@ -10786,7 +10786,19 @@ async function startUploadProcessing() {
     let content = '';
     if (upload.file)  content = await extractTextFromFile(upload.file);
     if (pastedText)   content = pastedText + (content ? '\n\n'+content : '');
-    if (!content.trim()) throw new Error('No content found in file. Try pasting text instead.');
+    if (!content.trim()) {
+      const isPDF = upload.file?.type === 'application/pdf';
+      if (isPDF) {
+        throw new Error(
+          'No readable text detected in this PDF.\n' +
+          'NIRAS can only generate questions from PDFs that contain selectable text.\n' +
+          'This usually happens when the file is scanned, image-based, corrupted, or exported without a text layer.\n' +
+          'Solution: upload a text-based PDF, or paste the content manually.'
+        );
+      } else {
+        throw new Error('No content found in file. Please try a different file or paste text instead.');
+      }
+    }
 
     // ── PRE-MODE INGESTION GATE ──────────────────────────────
     // Runs BEFORE both Mode 1 and Mode 2 — does not touch either
