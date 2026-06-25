@@ -9176,7 +9176,7 @@ async function groqChat(systemPrompt, userPrompt) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: GROQ_MODEL,
-      temperature: 0.7,
+      temperature: 0.1,  // low temp = deterministic JSON output
       max_tokens: 2000,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -10438,9 +10438,14 @@ async function handleUploadGenerate() {
   }
 
   // ── MODE 4: Document Intelligence ───────────────────────
-  // Orchestrator: runs Mode3 OCR first, then Mode4 analysis
-  // Mode 4 NEVER calls pipeline — handleUploadGenerate does
+  // If Mode 4 panel is already showing → user clicked Generate Exam by mistake
+  // Route to confirmMode4Execute instead of re-running Mode 4
   if (_uploadMode === 4) {
+    const m4panel = document.getElementById('upload-mode4-panel');
+    if (m4panel && m4panel.style.display !== 'none') {
+      confirmMode4Execute();
+      return;
+    }
     if (!upload.file || upload.file.type !== 'application/pdf') {
       showToast('Mode 4 requires a PDF file.', 'error'); return;
     }
@@ -11288,10 +11293,13 @@ async function runMode3HeadlessForMode4(file) {
 
 // ── confirmMode4Execute — orchestrator owns pipeline trigger ──
 async function confirmMode4Execute() {
+  console.log('[NIRAS DEBUG] STEP 1: confirmMode4Execute entered');
   const m4Result = window._m4Result;
   if (!m4Result || m4Result.status === 'fatal_error') {
+    console.warn('[NIRAS DEBUG] STEP 1 FAIL: no m4Result or fatal_error status');
     showToast('No analysis result available.', 'error'); return;
   }
+  console.log('[NIRAS DEBUG] STEP 1 OK: m4Result status =', m4Result.status, '| blocks =', m4Result.blocks?.length);
   const checkboxes = document.querySelectorAll('#upload-m4-structure input[type=checkbox]');
   const selectedTypes = new Set();
   checkboxes.forEach(cb => { if (cb.checked) selectedTypes.add(cb.dataset.type); });
@@ -11300,7 +11308,9 @@ async function confirmMode4Execute() {
   }
   // Guard 1: Empty selection
   const selectedBlocks = m4Result.blocks.filter(b => selectedTypes.has(b.section_type));
+  console.log('[NIRAS DEBUG] STEP 2: selectedTypes =', [...selectedTypes], '| selectedBlocks =', selectedBlocks.length);
   if (!selectedBlocks || selectedBlocks.length === 0) {
+    console.warn('[NIRAS DEBUG] STEP 2 FAIL: selectedBlocks is empty');
     showToast('No valid reading passages found for question generation.', 'error'); return;
   }
 
@@ -11330,6 +11340,8 @@ async function confirmMode4Execute() {
   // Mode 4: skip alphaRatio gate — Mode 4 semantic analysis already validated quality
   document.getElementById('upload-mode4-panel').style.display = 'none';
 
+  console.log('[NIRAS DEBUG] STEP 3: blocksForPipeline =', blocksForPipeline.length,
+    '| eligibleBlocks =', eligibleBlocks.length, '| retryBlocks =', retryBlocks.length);
   // Mode 4 → Prompt 2 path (block-structured generation)
   // Fallback to standard pipeline if Prompt2 returns empty
   const qtype      = document.getElementById('upload-qtype')?.value || 'mixed';
@@ -11342,15 +11354,19 @@ async function confirmMode4Execute() {
 
   const p2questions = await generateFromBlocksPrompt2(blocksForPipeline, count, qtype, difficulty);
 
+  console.log('[NIRAS DEBUG] STEP 9b: p2questions count =', p2questions ? p2questions.length : 'null');
   if (p2questions && p2questions.length > 0) {
     // Prompt2 success — go directly to review
     upload.questions = p2questions;
+    console.log('[NIRAS DEBUG] STEP 10: calling goUploadStep(3) + renderUploadReview with', p2questions.length, 'questions');
     goUploadStep(3);
     renderUploadReview(p2questions);
+    console.log('[NIRAS DEBUG] STEP 11: renderUploadReview completed');
   } else {
+    console.warn('[NIRAS DEBUG] STEP 9b FAIL: p2questions empty — falling back to Mode 1');
     // Fallback: standard Mode 1 pipeline with joined text
     console.warn('[NIRAS] Prompt2 returned empty — fallback to Mode 1 pipeline');
-    showToast('Switching to standard generation mode…', 'info');
+    showToast('AI returned no questions — trying standard mode…', 'info');
     upload.extractedText  = filteredText;
     upload.pageCount      = _m3PagesArray.length;
     upload._preProcessed  = true;
@@ -11449,6 +11465,8 @@ QUALITY RULES:
 - No invented facts, no cross-block referencing
 - Prefer quality over quantity
 
+IMPORTANT: You MUST respond with ONLY a JSON object. No explanation, no markdown fences, no text before or after. Start your response with { and end with }.
+
 OUTPUT FORMAT (strict JSON, no text outside):
 {
   "questions": [
@@ -11470,10 +11488,15 @@ OUTPUT FORMAT (strict JSON, no text outside):
   ]
 }`;
 
-  // Trim clean_text to avoid token overflow (max 500 chars per block)
+  // Send only essential fields — smaller payload, cleaner for model
   const trimmedBlocks = topBlocks.map(b => ({
-    ...b,
-    clean_text: smartTrim(b.clean_text, 500)
+    block_id:     b.block_id,
+    section_type: b.section_type,
+    clean_text:   smartTrim(b.clean_text, 500),
+    confidence:   b.confidence,
+    block_scope:  b.block_scope,
+    question_ready: b.question_ready || false,
+    _score:       b._score || 0
   }));
 
   const user = `Generate ${count} exam questions.
@@ -11484,8 +11507,15 @@ ${JSON.stringify(trimmedBlocks, null, 0)}
 
 Return ONLY valid JSON with "questions" array. No text outside JSON.`;
 
+  const payloadSize = JSON.stringify(trimmedBlocks).length;
+  console.log('[NIRAS DEBUG] STEP 4: trimmedBlocks payload size =', payloadSize, 'chars |', Math.round(payloadSize/4), 'est tokens');
+  console.log('[NIRAS DEBUG] STEP 5: calling groqChatWithTokens | model =', GROQ_MODEL, '| max_tokens = 3000');
+
   try {
-    const raw = await groqWithRetry(system, user, 2500);
+    // Use larger model for Prompt2 — 8b-instant too small for structured JSON
+    const raw = await groqChatWithTokens(system, user, 3000);
+    console.log('[NIRAS DEBUG] STEP 6: raw response length =', raw.length);
+  console.log('[NIRAS DEBUG] STEP 7: raw response first 500 chars:', raw.slice(0, 500));
     // Strip markdown fences and any leading/trailing non-JSON text
     let clean = raw.replace(/```json|```/g, '').trim();
     // Extract first JSON object or array
@@ -11500,7 +11530,11 @@ Return ONLY valid JSON with "questions" array. No text outside JSON.`;
     let parsed;
     try {
       parsed = JSON.parse(clean);
+      console.log('[NIRAS DEBUG] STEP 8: JSON.parse SUCCESS | type =', Array.isArray(parsed) ? 'array' : 'object',
+        '| has questions:', Array.isArray(parsed) ? 'N/A' : !!parsed.questions);
     } catch (parseErr) {
+      console.warn('[NIRAS DEBUG] STEP 8 FAIL: JSON.parse error =', parseErr.message);
+      console.warn('[NIRAS DEBUG] STEP 8 clean string (first 300):', clean.slice(0, 300));
       // Try to extract questions array directly
       const arrMatch = clean.match(/"questions"\s*:\s*(\[[\s\S]*?\])/);
       if (arrMatch) {
@@ -11516,8 +11550,9 @@ Return ONLY valid JSON with "questions" array. No text outside JSON.`;
       ? parsed
       : (parsed.questions || []);
 
+    console.log('[NIRAS DEBUG] STEP 9: questions count =', questions.length);
     if (!questions || questions.length === 0) {
-      console.warn('[NIRAS] Prompt2: returned empty questions array');
+      console.warn('[NIRAS DEBUG] STEP 9 FAIL: questions array is empty after parse');
       return [];
     }
 
@@ -11538,7 +11573,8 @@ Return ONLY valid JSON with "questions" array. No text outside JSON.`;
       ai_verified:   true
     }));
   } catch (e) {
-    console.error('[NIRAS] Prompt2 failed:', e.message);
+    console.error('[NIRAS DEBUG] STEP ERROR: Prompt2 exception:', e.message);
+    console.error('[NIRAS DEBUG] stack:', e.stack);
     return [];
   }
 }
@@ -11650,7 +11686,7 @@ async function groqChatWithTokens(systemPrompt, userPrompt, maxTokens) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: GROQ_MODEL,
-      temperature: 0.7,
+      temperature: 0.1,
       max_tokens: maxTokens,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -11658,9 +11694,18 @@ async function groqChatWithTokens(systemPrompt, userPrompt, maxTokens) {
       ]
     })
   });
-  if (!r.ok) { const err = new Error('Groq error ' + r.status); err.status = r.status; throw err; }
+  console.log('[NIRAS DEBUG] STEP 5b: /api/groq response status =', r.status);
+  if (!r.ok) {
+    console.error('[NIRAS DEBUG] STEP 5b FAIL: Groq HTTP error', r.status);
+    const err = new Error('Groq error ' + r.status); err.status = r.status; throw err;
+  }
   const data = await r.json();
-  return data.choices?.[0]?.message?.content || '';
+  const msg = data.choices?.[0]?.message?.content;
+  if (!msg || msg.trim().length === 0) {
+    console.error('[NIRAS] Groq returned empty content. Full response:', JSON.stringify(data).slice(0, 200));
+    throw new Error('Groq returned empty response');
+  }
+  return msg;
 }
 
 async function analyzeDocumentIntelligence(text) {
