@@ -10921,6 +10921,10 @@ function m4ClassifySegment(text) {
   const letters    = (text.match(/[a-zA-Z\u0600-\u06FF]/g) || []).length;
   const alphaRatio = text.length > 0 ? letters / text.length : 0;
   if (alphaRatio < 0.25) return { type: 'NOISE', confidence: 0.85 };
+  // Copyright/credits → always NOISE
+  if (/\b(copyright|reprinted by permission|all rights reserved|unauthorized photocopying|oxford university press|isbn[:\s]|doi[:\s])\b/i.test(text)) {
+    return { type: 'NOISE', confidence: 0.97 };
+  }
 
   const lower = text.toLowerCase();
 
@@ -11481,9 +11485,31 @@ ${JSON.stringify(trimmedBlocks, null, 0)}
 Return ONLY valid JSON with "questions" array. No text outside JSON.`;
 
   try {
-    const raw     = await groqWithRetry(system, user, 2500);
-    const clean   = raw.replace(/\`\`\`json|\`\`\`/g, '').trim();
-    const parsed  = JSON.parse(clean.slice(clean.search(/[\[{]/)));
+    const raw = await groqWithRetry(system, user, 2500);
+    // Strip markdown fences and any leading/trailing non-JSON text
+    let clean = raw.replace(/```json|```/g, '').trim();
+    // Extract first JSON object or array
+    const jsonStart = clean.search(/[\[{]/);
+    const jsonEnd   = Math.max(clean.lastIndexOf(']'), clean.lastIndexOf('}'));
+    if (jsonStart === -1 || jsonEnd === -1) {
+      console.warn('[NIRAS] Prompt2: no JSON structure found in response');
+      return [];
+    }
+    clean = clean.slice(jsonStart, jsonEnd + 1);
+
+    let parsed;
+    try {
+      parsed = JSON.parse(clean);
+    } catch (parseErr) {
+      // Try to extract questions array directly
+      const arrMatch = clean.match(/"questions"\s*:\s*(\[[\s\S]*?\])/);
+      if (arrMatch) {
+        parsed = { questions: JSON.parse(arrMatch[1]) };
+      } else {
+        console.warn('[NIRAS] Prompt2: JSON parse failed:', parseErr.message);
+        return [];
+      }
+    }
 
     // Handle both {questions:[]} and [] formats
     const questions = Array.isArray(parsed)
