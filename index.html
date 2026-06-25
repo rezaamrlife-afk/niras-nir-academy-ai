@@ -11528,90 +11528,71 @@ async function generateFromBlocksPrompt2(blocks, count, qtype, difficulty) {
 
   // ── PHASE 2: QUESTION GENERATION (single LLM call) ───────────
 
-  const system = `You are a UNIVERSAL READING PASSAGE EXTRACTOR and EXAM QUESTION GENERATOR.
-You receive pre-filtered READING_PASSAGE blocks. Generate questions ONLY from these passages.
+  const system = `You are a READING COMPREHENSION EXAM GENERATOR.
 
-PHASE 2 — QUESTION GENERATION RULES:
+You receive ONLY pre-filtered reading passages from an educational document.
+Your ONLY job is to generate questions FROM THE PASSAGE TEXT ITSELF.
 
-STEP 1 — CONFIDENCE GATE (per passage):
-- confidence ≥ 0.85 → ALL types: MCQ, SHORT_ANSWER, TRUE_FALSE, FILL_BLANK, VOCABULARY
-- confidence 0.60–0.84 → restricted: MCQ, TRUE_FALSE, FILL_BLANK, VOCABULARY
-- confidence < 0.60 → minimal: TRUE_FALSE, VOCABULARY only
-- block_scope = "partial" → REMOVE SHORT_ANSWER
+CRITICAL RULE — READ BEFORE ANYTHING ELSE:
+EVERY question MUST be about a SPECIFIC FACT, EVENT, PERSON, or IDEA
+that is EXPLICITLY written in passage_text.
 
-STEP 2 — LEVEL DETECTION (infer from text):
-A2: simple factual / B1: standard comprehension / B2: inference required / C1: academic/abstract
+FORBIDDEN questions — NEVER generate these:
+❌ "What is the main topic of this chapter?"
+❌ "What is the purpose of learning X?"
+❌ "Which chapter covers X?" / "What does this unit teach?"
+❌ Any question about chapter number, unit number, or document structure
+❌ Any question answerable WITHOUT reading passage_text
 
-STEP 3 — QUESTION RULES:
-MCQ: 4 options (A-D), 1 correct, distractors ONLY from passage text, no external knowledge
-TRUE_FALSE: directly verifiable in passage, no ambiguity
-SHORT_ANSWER: answer extractable as phrase from passage, FORBIDDEN if block_scope=partial
-FILL_BLANK: remove 1 content word, word_bank of 4 options including correct answer
-VOCABULARY: target word from passage, meaning-in-context only
+REQUIRED questions — generate ONLY these:
+✅ "According to the passage, why did X happen?"
+✅ "What happened when the author tried to Y?"
+✅ "Based on the passage, which statement about Z is true?"
+✅ Questions where the answer is a specific sentence or phrase in passage_text
 
-STEP 4 — ANTI-HALLUCINATION:
-Before each question: verify answer exists in clean_text
-source_sentence MUST be exact substring of clean_text
-If source_sentence not found → replace with TRUE_FALSE
+STEP 1 — READ PASSAGE:
+Read passage_text completely. Identify 10+ specific facts, events, people, numbers.
+NEVER generate a question without first identifying its source fact.
 
-STEP 5 — SELF-CHECK before output:
-✔ total questions = passages × questions_per_passage
-✔ every source_sentence is exact substring of its passage
-✔ no external knowledge used
-✔ valid JSON only
+STEP 2 — DETECT LEVEL: A2 / B1 / B2 / C1 from vocabulary/syntax. Affects phrasing only.
 
-HARD RULES:
-- ONLY use text from the provided passage — NEVER external knowledge
-- source_sentence = exact substring always
-- No markdown, no explanation — Start response with { end with }`;
+STEP 3 — GENERATE QUESTIONS per type:
+MCQ: ask about SPECIFIC fact | 4 options A-D | 1 correct | 3 distractors from passage only
+TRUE_FALSE: paraphrase a SPECIFIC sentence | clearly true/false from passage only
+SHORT_ANSWER: specific detail/reason/result | answer = phrase from passage_text
+FILL_BLANK: take sentence from passage | remove 1 content word | word_bank of 4 options
+VOCABULARY: pick word with context clues nearby | ask meaning-in-context | 4 options
 
-  const user = `Generate exactly ${questionsPerPassage} questions per passage (${selected.length} passages = ${questionsPerPassage * selected.length} total questions).
+STEP 4 — VERIFY EACH QUESTION before including:
+✔ Answer explicitly in passage_text?
+✔ source_sentence = EXACT substring of passage_text?
+✔ Impossible to answer WITHOUT reading passage_text?
+✔ No mention of chapter/unit/structure?
+If ANY check fails → discard → generate replacement
+
+STEP 5 — FILL COUNT:
+If verified questions < requested count → add FILL_BLANK from passage sentences
+Never return fewer questions than requested.
+
+HARD GUARANTEES:
+- zero questions about chapter/unit/document structure
+- source_sentence = exact substring of passage_text always
+- zero hallucination / zero external knowledge
+- exact question count always delivered
+- Start response with { end with } — NO markdown, NO explanation`;
+
+  const user = `Generate EXACTLY ${questionsPerPassage} questions per passage.
 Question types: ${qtype || 'mixed'} | Difficulty: ${difficulty || 'medium'}
 
-Distribute question types evenly. If a type is blocked by confidence gate → use TRUE_FALSE instead.
+Distribute types evenly. For each passage: read fully, identify facts, then generate.
 
 Return ONLY valid JSON. Start with { end with }.
 
-PASSAGES:
-${JSON.stringify(passages, null, 0)}
+INPUT:
+${JSON.stringify({ passages: passages, settings: { questions_per_passage: questionsPerPassage, requested_types: qtype || 'mixed', difficulty: difficulty || 'medium' } }, null, 0)}
 
 OUTPUT FORMAT:
-{
-  "status": "generated",
-  "units_detected": ${unitIndex},
-  "passages_selected": ${selected.length},
-  "total_questions": ${questionsPerPassage * selected.length},
-  "exam": [
-    {
-      "passage_id": "block_id",
-      "unit": "Unit 1",
-      "estimated_level": "B1",
-      "confidence_gate": "full|restricted|minimal",
-      "passage_text": "exact clean_text",
-      "questions": [
-        {
-          "question_id": "block_id_q1",
-          "type": "MCQ",
-          "question_text": "...",
-          "options": {"A":"...","B":"...","C":"...","D":"..."},
-          "correct_answer": "B",
-          "source_sentence": "exact substring",
-          "confidence": 0.91,
-          "stem": "...",
-          "qtype": "mcq",
-          "points": 1,
-          "ai_verified": true
-        }
-      ]
-    }
-  ],
-  "summary": {
-    "units_detected": ${unitIndex},
-    "passages_selected": ${selected.length},
-    "total_questions": ${questionsPerPassage * selected.length},
-    "passages_from_different_units": ${usedUnits.size > 1}
-  }
-}`;
+{"status":"generated","total_questions":${questionsPerPassage * passages.length},"exam":[{"passage_id":"id","unit":"Unit 1","estimated_level":"B1","questions":[{"question_id":"id_q1","type":"MCQ","question_text":"According to the passage...","options":{"A":"...","B":"...","C":"...","D":"..."},"correct_answer":"B","source_sentence":"exact substring","confidence":0.91,"stem":"...","qtype":"mcq","points":1,"ai_verified":true}]}],"summary":{"passages_used":${passages.length},"total_questions":${questionsPerPassage * passages.length},"forbidden_patterns_detected":0}}`;
 
   try {
     const raw = await groqChatWithTokens(system, user, 3500);
