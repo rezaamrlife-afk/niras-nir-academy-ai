@@ -6351,6 +6351,10 @@ button:active {
               <span style="font-size:11px;letter-spacing:0.08em;font-family:var(--font-mono);">◈ MODE 2</span>
               <span style="font-size:10px;color:var(--white-muted);display:block;margin-top:2px;">Smart · Chapter Select</span>
             </button>
+            <button id="upload-mode-btn-3" class="upload-mode-btn" onclick="selectUploadMode(3)">
+              <span style="font-size:11px;letter-spacing:0.08em;font-family:var(--font-mono);">◉ MODE 3</span>
+              <span style="font-size:10px;color:var(--white-muted);display:block;margin-top:2px;">OCR · Scanned PDFs</span>
+            </button>
           </div>
 
           <!-- Live explanation panel — updates on mode change -->
@@ -6370,6 +6374,15 @@ button:active {
                 <li style="font-size:12px;color:var(--white-dim);">You choose chapters or page ranges</li>
                 <li style="font-size:12px;color:var(--white-dim);">More control over question generation</li>
                 <li style="font-size:12px;color:var(--white-dim);">Best for books, PDFs, and long documents</li>
+              </ul>
+            </div>
+            <div id="upload-mode-explain-m3" style="display:none;">
+              <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;color:var(--gold-dim);margin-bottom:6px;">◉ MODE 3 — OCR ASSISTED (SCANNED PDFs)</div>
+              <ul style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:3px;">
+                <li style="font-size:12px;color:var(--white-dim);">Analyzes each page block independently</li>
+                <li style="font-size:12px;color:var(--white-dim);">You choose which blocks need OCR</li>
+                <li style="font-size:12px;color:var(--white-dim);">OCR runs only on selected blocks</li>
+                <li style="font-size:12px;color:var(--white-dim);">Best for scanned books and image-based PDFs</li>
               </ul>
             </div>
           </div>
@@ -6490,6 +6503,25 @@ button:active {
           <div style="display:flex;gap:8px;margin-top:16px;">
             <button onclick="cancelMode2()" style="flex:1;background:none;border:1px solid var(--black-border);color:var(--white-dim);font-family:var(--font-mono);font-size:12px;padding:9px;border-radius:var(--radius);cursor:pointer;">← Back</button>
             <button id="upload-m2-confirm" onclick="confirmMode2Scope()" style="flex:2;background:var(--gold);border:none;color:var(--black);font-family:var(--font-mono);font-size:12px;font-weight:600;padding:9px;border-radius:var(--radius);cursor:pointer;">Generate from Selection →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODE 3: OCR Analysis Panel -->
+      <div id="upload-mode3-panel" class="upload-step-panel" style="display:none;">
+        <div style="padding:20px 24px;">
+          <div id="upload-m3-status" style="font-family:var(--font-mono);font-size:11px;color:var(--gold-dim);letter-spacing:0.08em;margin-bottom:14px;"></div>
+          <div id="upload-m3-block-list" style="display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto;margin-bottom:14px;"></div>
+          <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+            <button onclick="m3SelectAll(true)" style="font-family:var(--font-mono);font-size:10px;padding:5px 10px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);color:var(--gold-dim);border-radius:4px;cursor:pointer;">Select All OCR</button>
+            <button onclick="m3SelectAll(false)" style="font-family:var(--font-mono);font-size:10px;padding:5px 10px;background:none;border:1px solid var(--black-border);color:var(--white-muted);border-radius:4px;cursor:pointer;">Deselect All</button>
+            <button onclick="m3AutoSelect()" style="font-family:var(--font-mono);font-size:10px;padding:5px 10px;background:none;border:1px solid rgba(201,168,76,0.3);color:var(--gold-dim);border-radius:4px;cursor:pointer;">Auto-select flagged</button>
+          </div>
+          <div id="upload-m3-ocr-progress" style="display:none;font-family:var(--font-mono);font-size:10px;color:var(--white-muted);margin-bottom:10px;"></div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="cancelMode3()" style="flex:1;background:none;border:1px solid var(--black-border);color:var(--white-dim);font-family:var(--font-mono);font-size:12px;padding:9px;border-radius:var(--radius);cursor:pointer;">← Back</button>
+            <button id="upload-m3-skip" onclick="confirmMode3Scope(false)" style="flex:1;background:none;border:1px solid var(--black-border);color:var(--white-dim);font-family:var(--font-mono);font-size:12px;padding:9px;border-radius:var(--radius);cursor:pointer;">Skip OCR →</button>
+            <button id="upload-m3-confirm" onclick="confirmMode3Scope(true)" style="flex:2;background:var(--gold);border:none;color:var(--black);font-family:var(--font-mono);font-size:12px;font-weight:600;padding:9px;border-radius:var(--radius);cursor:pointer;">Run OCR &amp; Generate →</button>
           </div>
         </div>
       </div>
@@ -9923,10 +9955,15 @@ function resetUploadModal() {
   document.getElementById('btn-upload-process').style.display = '';
   document.getElementById('btn-upload-insert').style.display  = 'none';
   document.getElementById('upload-footer-info').textContent = 'Supported: PDF, Word, TXT, Images';
-  // Reset Mode 2 state
+  // Reset Mode 2 + 3 state
   _uploadMode = 1;
   _m2PagesArray = [];
   _m2StructureResult = null;
+  _m3Blocks = [];
+  _m3PagesArray = [];
+  _m3OcrResults = {};
+  const m3panel = document.getElementById('upload-mode3-panel');
+  if (m3panel) m3panel.style.display = 'none';
   const m2panel = document.getElementById('upload-mode2-panel');
   if (m2panel) m2panel.style.display = 'none';
   const p1 = document.getElementById('upanel-1');
@@ -10164,11 +10201,15 @@ function selectUploadMode(mode) {
   _uploadMode = mode;
   document.getElementById('upload-mode-btn-1').classList.toggle('active', mode === 1);
   document.getElementById('upload-mode-btn-2').classList.toggle('active', mode === 2);
+  const btn3 = document.getElementById('upload-mode-btn-3');
+  if (btn3) btn3.classList.toggle('active', mode === 3);
   // Update explanation panel
   const m1 = document.getElementById('upload-mode-explain-m1');
   const m2 = document.getElementById('upload-mode-explain-m2');
+  const m3 = document.getElementById('upload-mode-explain-m3');
   if (m1) m1.style.display = mode === 1 ? '' : 'none';
   if (m2) m2.style.display = mode === 2 ? '' : 'none';
+  if (m3) m3.style.display = mode === 3 ? '' : 'none';
 }
 
 // ── Adaptive full PDF extraction (Mode 2 only) ───────────────
@@ -10358,6 +10399,12 @@ async function handleUploadGenerate() {
     return;
   }
 
+  // ── MODE 3: OCR assisted ────────────────────────────────
+  if (_uploadMode === 3) {
+    await runMode3();
+    return;
+  }
+
   // ── MODE 2: smart pre-processing ────────────────────────
   const pastedText = document.getElementById('upload-paste-text').value.trim();
   if (pastedText) {
@@ -10396,6 +10443,297 @@ async function handleUploadGenerate() {
   } catch (e) {
     console.error('[NIRAS] Mode 2 extraction failed:', e);
     showToast('Mode 2 failed — switching to Mode 1.', 'error');
+    selectUploadMode(1);
+    startUploadProcessing();
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '✦ Generate Exam';
+  }
+}
+
+
+// ============================================================
+// MODE 3 — OCR ASSISTED LAYER
+// Completely isolated from Mode 1 and Mode 2 pipelines.
+// Only enriches upload.extractedText before pipeline runs.
+// ============================================================
+
+const M3_BLOCK_SIZE    = 3;   // pages per block
+const M3_OCR_THRESHOLD = 80;  // avgChars/page below this = needs OCR
+const M3_MAX_OCR_MOBILE  = 5; // max pages OCR on mobile
+const M3_MAX_OCR_DESKTOP = 15;// max pages OCR on desktop
+
+let _m3Blocks      = [];   // [{pageStart, pageEnd, avgChars, status, text}]
+let _m3PagesArray  = [];   // per-page text (same structure as _m2PagesArray)
+let _m3OcrResults  = {};   // {pageNum: ocrText}
+
+// ── Device detection for OCR cap ─────────────────────────────
+function m3IsMobile() {
+  return window.innerWidth <= 768 || /Mobi|Android/i.test(navigator.userAgent);
+}
+function m3MaxOcrPages() {
+  return m3IsMobile() ? M3_MAX_OCR_MOBILE : M3_MAX_OCR_DESKTOP;
+}
+
+// ── Segment pages into blocks + quality analysis ──────────────
+function m3BuildBlocks(pagesArray) {
+  const blocks = [];
+  for (let i = 0; i < pagesArray.length; i += M3_BLOCK_SIZE) {
+    const slice     = pagesArray.slice(i, i + M3_BLOCK_SIZE);
+    const pageStart = slice[0].page;
+    const pageEnd   = slice[slice.length - 1].page;
+    const totalChars = slice.reduce((s, p) => s + p.text.length, 0);
+    const avgChars   = Math.round(totalChars / slice.length);
+    const allText    = slice.map(p => p.text).join(' ');
+    const letters    = (allText.match(/[a-zA-Z؀-ۿЀ-ӿ]/g) || []).length;
+    const alphaRatio = allText.length > 0 ? letters / allText.length : 0;
+    // Numeric score 0–100: higher = more OCR needed
+    const densityScore = Math.max(0, Math.min(50, Math.round((1 - Math.min(avgChars, M3_OCR_THRESHOLD) / M3_OCR_THRESHOLD) * 50)));
+    const entropyScore = Math.max(0, Math.min(50, Math.round((1 - Math.min(alphaRatio, 0.6) / 0.6) * 50)));
+    const ocrScore     = densityScore + entropyScore;  // 0–100
+    const status       = ocrScore >= 70 ? 'OCR_REQUIRED' : ocrScore >= 30 ? 'OCR_MIXED' : 'TEXT_READY';
+    // Only pre-check high-confidence OCR blocks (score >= 70)
+    const selectedForOCR = ocrScore >= 70;
+    blocks.push({
+      pageStart, pageEnd, avgChars, alphaRatio, ocrScore,
+      text:   allText,
+      status,
+      selectedForOCR
+    });
+  }
+  return blocks;
+}
+
+// ── Render Mode 3 UI ─────────────────────────────────────────
+function showMode3UI(blocks) {
+  _m3Blocks = blocks;
+  const statusEl = document.getElementById('upload-m3-status');
+  const listEl   = document.getElementById('upload-m3-block-list');
+  const flagged  = blocks.filter(b => b.status === 'OCR_REQUIRED').length;
+  const maxOCR   = m3MaxOcrPages();
+
+  statusEl.textContent = `${blocks.length} blocks analysed · ${flagged} need OCR · max ${maxOCR} pages per session`;
+
+  listEl.innerHTML = blocks.map((b, i) => {
+    const isOCR    = b.status === 'OCR_REQUIRED';
+    const color    = isOCR ? 'rgba(255,160,60,0.15)' : 'rgba(80,200,120,0.08)';
+    const border   = isOCR ? 'rgba(255,160,60,0.3)' : 'rgba(80,200,120,0.25)';
+    const icon     = isOCR ? '⚠' : '✔';
+    const iconCol  = isOCR ? '#FFA03C' : '#50C878';
+    const label    = b.status === 'OCR_REQUIRED' ? 'OCR Required' : b.status === 'OCR_MIXED' ? 'Mixed' : 'Text Ready';
+    return `
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;
+        background:${color};border:1px solid ${border};border-radius:6px;cursor:pointer;">
+        <input type="checkbox" data-idx="${i}" ${b.selectedForOCR && isOCR ? 'checked' : ''}
+          ${!isOCR ? 'disabled style="opacity:0.3"' : ''}
+          style="accent-color:var(--gold);width:14px;height:14px;">
+        <span style="color:${iconCol};font-size:13px;">${icon}</span>
+        <div style="flex:1;">
+          <div style="font-size:13px;color:var(--white);">Pages ${b.pageStart}–${b.pageEnd}</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--white-muted);">
+            ${label} · ${b.avgChars} chars/page · score ${b.ocrScore || 0}/100
+          </div>
+        </div>
+      </label>`;
+  }).join('');
+
+  // Show panel
+  document.getElementById('upanel-1').style.display = 'none';
+  document.getElementById('upload-mode3-panel').style.display = 'block';
+}
+
+// ── Select/deselect all OCR blocks ───────────────────────────
+function m3SelectAll(state) {
+  document.querySelectorAll('#upload-m3-block-list input[type=checkbox]:not(:disabled)')
+    .forEach(cb => { cb.checked = state; });
+}
+
+// ── Auto-select only flagged blocks ──────────────────────────
+function m3AutoSelect() {
+  document.querySelectorAll('#upload-m3-block-list input[type=checkbox]').forEach(cb => {
+    const idx = parseInt(cb.dataset.idx);
+    if (!cb.disabled) cb.checked = _m3Blocks[idx]?.status === 'OCR_REQUIRED';
+  });
+}
+
+// ── Cancel Mode 3 → go back ──────────────────────────────────
+function cancelMode3() {
+  document.getElementById('upload-mode3-panel').style.display = 'none';
+  document.getElementById('upanel-1').style.display = '';
+}
+
+// ── Load Tesseract.js lazily ──────────────────────────────────
+async function loadTesseract() {
+  if (window.Tesseract) return;
+  await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js');
+}
+
+// ── OCR a single page via canvas ─────────────────────────────
+async function m3OcrPage(pdfDoc, pageNum) {
+  const page    = await pdfDoc.getPage(pageNum);
+  const scale   = 1.5;
+  const vp      = page.getViewport({ scale });
+  const canvas  = document.createElement('canvas');
+  canvas.width  = vp.width;
+  canvas.height = vp.height;
+  const ctx     = canvas.getContext('2d');
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+  const result     = await Tesseract.recognize(canvas, 'eng', { logger: () => {} });
+  const confidence = result.data.confidence || 0;  // 0–100
+  return { text: result.data.text || '', confidence };
+}
+
+// ── Run OCR on selected blocks ────────────────────────────────
+async function runMode3OCR(pdfDoc, selectedBlocks) {
+  const progressEl = document.getElementById('upload-m3-ocr-progress');
+  progressEl.style.display = 'block';
+
+  const maxPages = m3MaxOcrPages();
+  let processed  = 0;
+
+  for (const block of selectedBlocks) {
+    for (let p = block.pageStart; p <= block.pageEnd; p++) {
+      if (processed >= maxPages) {
+        console.warn('[NIRAS] Mode 3: OCR page cap reached (' + maxPages + ')');
+        progressEl.textContent = 'OCR cap reached (' + maxPages + ' pages). Remaining blocks use extracted text.';
+        return;
+      }
+      progressEl.textContent = 'OCR processing page ' + p + ' of ' + block.pageEnd + '…';
+      try {
+        const ocrResult = await m3OcrPage(pdfDoc, p);
+        _m3OcrResults[p] = ocrResult;  // {text, confidence}
+      } catch (e) {
+        console.warn('[NIRAS] OCR failed for page ' + p + ':', e.message);
+        _m3OcrResults[p] = '';
+      }
+      processed++;
+    }
+  }
+  progressEl.textContent = 'OCR complete — ' + processed + ' pages processed.';
+}
+
+// ── Confirm Mode 3 → merge → feed Mode 1 pipeline ────────────
+async function confirmMode3Scope(runOCR) {
+  // Get selected blocks
+  const checkboxes = document.querySelectorAll('#upload-m3-block-list input[type=checkbox]');
+  const selectedBlocks = [];
+  checkboxes.forEach(cb => {
+    if (cb.checked) {
+      const idx = parseInt(cb.dataset.idx);
+      if (_m3Blocks[idx]) selectedBlocks.push(_m3Blocks[idx]);
+    }
+  });
+
+  // Budget warning
+  if (runOCR && selectedBlocks.length > 0) {
+    const selectedPages = selectedBlocks.reduce((s, b) => s + (b.pageEnd - b.pageStart + 1), 0);
+    const maxOCR = m3MaxOcrPages();
+    if (selectedPages > maxOCR) {
+      showToast(
+        'Selection exceeds OCR limit (' + maxOCR + ' pages on this device). ' +
+        'Only the first ' + maxOCR + ' pages will be processed.',
+        'info'
+      );
+    }
+  }
+
+  if (runOCR && selectedBlocks.length > 0) {
+    // Load Tesseract + run OCR on selected blocks
+    const btn = document.getElementById('upload-m3-confirm');
+    btn.textContent = 'Loading OCR engine…';
+    btn.disabled = true;
+    try {
+      await loadTesseract();
+      // Re-extract PDF for OCR (need pdfDoc reference)
+      const arrayBuffer = await upload.file.arrayBuffer();
+      const pdfDoc = await window.pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+      btn.textContent = 'Running OCR…';
+      await runMode3OCR(pdfDoc, selectedBlocks);
+    } catch (e) {
+      console.error('[NIRAS] Mode 3 OCR error:', e);
+      showToast('OCR failed — using extracted text only.', 'error');
+    } finally {
+      btn.textContent = 'Run OCR & Generate →';
+      btn.disabled = false;
+    }
+  }
+
+  // Merge: OCR results override page text where available
+  const CONFIDENCE_THRESHOLD = 70; // Tesseract: 0–100
+  const mergedPages = _m3PagesArray.map(p => {
+    const ocrResult = _m3OcrResults[p.page];
+    let text = p.text;
+    if (ocrResult) {
+      if (ocrResult.confidence >= CONFIDENCE_THRESHOLD) {
+        text = ocrResult.text;  // high confidence → use OCR
+      } else if (ocrResult.text.length > p.text.length * 1.5) {
+        text = ocrResult.text;  // OCR got much more text → use it anyway
+        console.warn('[NIRAS] Mode 3: low confidence OCR (' + ocrResult.confidence + ') but used (more text)');
+      }
+      // else: low confidence + not more text → keep PDF text
+    }
+    return { page: p.page, text };
+  });
+
+  const finalText = mergedPages.map(p => p.text).join('\n').trim();
+
+  if (!finalText || finalText.length < 50) {
+    showToast('No readable content after processing. Please try pasting text instead.', 'error');
+    return;
+  }
+
+  // Hide Mode 3 panel
+  document.getElementById('upload-mode3-panel').style.display = 'none';
+
+  // Feed to Mode 1 pipeline — UNCHANGED
+  upload.extractedText = finalText;
+  upload.pageCount     = _m3PagesArray.length;
+  startUploadProcessing();
+}
+
+// ── Mode 3 main entry point ───────────────────────────────────
+async function runMode3() {
+  if (!upload.file || upload.file.type !== 'application/pdf') {
+    showToast('Mode 3 requires a PDF file.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-upload-process');
+  btn.disabled    = true;
+  btn.textContent = 'Analysing pages…';
+  _m3PagesArray   = [];
+  _m3OcrResults   = {};
+
+  try {
+    if (!window.pdfjsLib) {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    const arrayBuffer = await upload.file.arrayBuffer();
+    const pdf         = await window.pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+    upload.pageCount  = pdf.numPages;
+
+    // Extract all pages (up to 100)
+    const limit = Math.min(pdf.numPages, 100);
+    for (let i = 1; i <= limit; i++) {
+      try {
+        const page     = await pdf.getPage(i);
+        const tc       = await page.getTextContent();
+        const pageText = tc.items.map(it => it.str).join(' ').trim();
+        _m3PagesArray.push({ page: i, text: pageText });
+      } catch (e) {
+        _m3PagesArray.push({ page: i, text: '' });
+      }
+    }
+
+    const blocks = m3BuildBlocks(_m3PagesArray);
+    showMode3UI(blocks);
+
+  } catch (e) {
+    console.error('[NIRAS] Mode 3 analysis failed:', e);
+    showToast('Analysis failed — switching to Mode 1.', 'error');
     selectUploadMode(1);
     startUploadProcessing();
   } finally {
@@ -10882,7 +11220,11 @@ async function startUploadProcessing() {
 
   } catch (err) {
     console.error('Upload error:', err);
-    showToast('Processing failed — please try again.', 'error');
+    // Show specific message if available (e.g. scanned PDF), else generic fallback
+    const userMsg = err?.message && err.message.length < 300
+      ? err.message.split('\n')[0]
+      : 'Processing failed — please try again.';
+    showToast(userMsg, 'error');
     goUploadStep(1);
     document.getElementById('btn-upload-process').style.display = '';
     document.getElementById('btn-upload-process').disabled = false;
