@@ -6551,7 +6551,7 @@ button:active {
           <div id="upload-m4-routing" style="font-family:var(--font-mono);font-size:10px;color:var(--white-muted);margin-bottom:14px;padding:10px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.15);border-radius:6px;"></div>
           <div style="display:flex;gap:8px;">
             <button onclick="cancelMode4()" style="flex:1;background:none;border:1px solid var(--black-border);color:var(--white-dim);font-family:var(--font-mono);font-size:12px;padding:9px;border-radius:var(--radius);cursor:pointer;">← Back</button>
-            <button id="upload-m4-confirm" onclick="confirmMode4Route()" style="flex:2;background:var(--gold);border:none;color:var(--black);font-family:var(--font-mono);font-size:12px;font-weight:600;padding:9px;border-radius:var(--radius);cursor:pointer;">Apply Intelligence &amp; Generate →</button>
+            <button id="upload-m4-confirm" onclick="confirmMode4Execute()" style="flex:2;background:var(--gold);border:none;color:var(--black);font-family:var(--font-mono);font-size:12px;font-weight:600;padding:9px;border-radius:var(--radius);cursor:pointer;">Apply Intelligence &amp; Generate →</button>
           </div>
         </div>
       </div>
@@ -7064,7 +7064,6 @@ button:active {
     </div>
   </div>
 </div>
-
 <script>
 // ============================================================
 // CONFIG — Supabase
@@ -9995,7 +9994,7 @@ function resetUploadModal() {
   upload._preProcessed = false;
   const m3panel = document.getElementById('upload-mode3-panel');
   if (m3panel) m3panel.style.display = 'none';
-  _m4AnalysisResult = null;
+  window._m4Result = null;
   const m4panel = document.getElementById('upload-mode4-panel');
   if (m4panel) m4panel.style.display = 'none';
   const m2panel = document.getElementById('upload-mode2-panel');
@@ -10438,9 +10437,33 @@ async function handleUploadGenerate() {
     return;
   }
 
-  // ── MODE 4: Document Intelligence (decides only) ────────
+  // ── MODE 4: Document Intelligence ───────────────────────
+  // Orchestrator: runs Mode3 OCR first, then Mode4 analysis
+  // Mode 4 NEVER calls pipeline — handleUploadGenerate does
   if (_uploadMode === 4) {
-    await runMode4();
+    if (!upload.file || upload.file.type !== 'application/pdf') {
+      showToast('Mode 4 requires a PDF file.', 'error'); return;
+    }
+    const btn = document.getElementById('btn-upload-process');
+    btn.disabled = true; btn.textContent = 'Running OCR…';
+    emitPipeline('mode', 'Mode 4: Running OCR…', { modeBadge: '◎ Mode 4' });
+    try {
+      // Step 1: Headless OCR (Mode 3 extraction without UI/pipeline)
+      const pagesArray = await runMode3HeadlessForMode4(upload.file);
+      // Step 2: Mode 4 semantic analysis — returns JSON only, NEVER calls pipeline
+      const m4Result   = runMode4SemanticAnalysis(pagesArray, 0);
+      window._m4Result = m4Result;
+      console.log('[NIRAS] Mode 4 output:', JSON.stringify(m4Result, null, 2));
+      // Step 3: Show UI — user selects content types
+      showMode4UI(m4Result);
+    } catch (e) {
+      console.error('[NIRAS] Mode 4 failed:', e);
+      showToast('Document analysis failed — switching to Mode 1.', 'error');
+      selectUploadMode(1);
+      startUploadProcessing();
+    } finally {
+      btn.disabled = false; btn.textContent = '✦ Generate Exam';
+    }
     return;
   }
 
@@ -10854,248 +10877,440 @@ async function runMode3() {
 
 
 // ============================================================
-// MODE 4 — DOCUMENT INTELLIGENCE
-// RULE: Mode 4 NEVER executes — only decides.
-// Modes 1/2/3 are called unchanged after routing decision.
+// MODE 4 — DOCUMENT INTELLIGENCE (SEMANTIC LAYER)
+// ============================================================
+// HARD RULES:
+// - Mode 4 MUST NOT trigger or execute any downstream pipeline
+// - Mode 4 MUST return structured JSON only
+// - All execution decisions belong to handleUploadGenerate()
+// - No OCR execution here — reads _m3PagesArray only
+// - Mode 1 / 2 / 3 are NEVER called from inside Mode 4
 // ============================================================
 
-let _m4AnalysisResult = null;  // stores Mode 4 JSON output
+const M4_VERSION = '1.0.0';
 
-// ── Per-page content classifier ──────────────────────────────
+// ─── STEP 1+2: Normalize input + Paragraph segmentation ─────
+function m4SegmentText(pagesArray) {
+  // Merge all pages into single stream (page boundaries = soft breaks only)
+  const fullText = pagesArray.map(p => p.text || '').join('\n');
+
+  // Hard boundary patterns (always split)
+  const hardBoundary = /(\n{2,}|(?:^|\n)(?:\d+\.|[A-Z]\.|\([0-9]+\)|[-•*→])\s)/;
+
+  // Split into raw segments
+  const rawSegments = fullText
+    .split(/\n{2,}/)
+    .flatMap(seg => {
+      // Sub-split on numbered/bullet patterns
+      return seg.split(/(?=\n\s*(?:\d+[.)]\s|[A-Z][.)]\s|[IVX]+[.)]\s|[-•*→]\s))/);
+    })
+    .map(s => s.replace(/\n/g, ' ').trim())
+    .filter(s => s.length > 0);
+
+  return rawSegments;
+}
+
+// ─── STEP 3: Classify segment into 9 types ──────────────────
 function m4ClassifySegment(text) {
-  if (!text || text.length < 20) return 'noise_block';
+  if (!text || text.trim().length === 0) return { type: 'NOISE', confidence: 1.0 };
+
+  const words = text.trim().split(/\s+/);
+  const wc    = words.length;
+  if (wc < 5) return { type: 'NOISE', confidence: 0.95 };
+
   const letters    = (text.match(/[a-zA-Z\u0600-\u06FF]/g) || []).length;
   const alphaRatio = text.length > 0 ? letters / text.length : 0;
-  if (alphaRatio < 0.25) return 'ocr_block';
-  const hasAnswerKey      = /\b(answer key|answers?:|key:)\b/i.test(text);
-  const hasMultipleChoice = /^[A-D][).]\s/m.test(text);
-  const hasQPattern       = /^\s*(\d+[.)] |Q\d+[\s.:] |Question\s*\d+)/im.test(text);
-  const hasOptions        = (text.match(/^[A-D][).]/gm) || []).length >= 2;
-  if (hasAnswerKey)                                    return 'noise_block';
-  if (hasQPattern || hasMultipleChoice || hasOptions)  return 'question_block';
-  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 15);
-  if (sentences.length >= 2 && text.length > 100)     return 'reading_block';
-  return 'question_block';
-}
+  if (alphaRatio < 0.25) return { type: 'NOISE', confidence: 0.85 };
 
-function m4ClassifyPage(pageText) {
-  if (!pageText || pageText.length < 20) return 'ocr_block';
-  const paragraphs = pageText
-    .split(/\n{2,}/)
-    .map(p => p.replace(/\n/g, ' ').trim())
-    .filter(p => p.length > 15);
-  if (paragraphs.length === 0) return 'ocr_block';
-  const typeCounts = { reading_block: 0, question_block: 0, ocr_block: 0, noise_block: 0 };
-  paragraphs.forEach(p => { const t = m4ClassifySegment(p); typeCounts[t]++; });
-  return Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0][0];
-}
+  const lower = text.toLowerCase();
 
-// ── Build routing plan from classified blocks ─────────────────
-function m4BuildRoutingPlan(classifiedPages) {
-  const reading_blocks  = classifiedPages.filter(p => p.type === 'reading_block');
-  const question_blocks = classifiedPages.filter(p => p.type === 'question_block');
-  const ocr_blocks      = classifiedPages.filter(p => p.type === 'ocr_block');
-  const noise_blocks    = classifiedPages.filter(p => p.type === 'noise_block');
-  const total           = classifiedPages.length || 1;
-
-  // Routing decision — primary_mode as string per spec
-  let primary_mode = 'mode1';
-  let routing_reason = '';
-  let confidence = 0;
-
-  const ocrRatio     = ocr_blocks.length / total;
-  const readingRatio = reading_blocks.length / total;
-  const questionRatio= question_blocks.length / total;
-
-  if (ocrRatio > 0.5) {
-    primary_mode   = 'mode3';
-    confidence     = Math.round(ocrRatio * 100) / 100;
-    routing_reason = 'Majority of content is scanned or image-based. OCR processing required.';
-  } else if (readingRatio > questionRatio && reading_blocks.length >= 2) {
-    primary_mode   = 'mode2';
-    confidence     = Math.round(readingRatio * 100) / 100;
-    routing_reason = 'Document contains structured reading passages. Smart chapter selection recommended.';
-  } else {
-    primary_mode   = 'mode1';
-    confidence     = Math.round(Math.max(questionRatio, 1 - ocrRatio) * 100) / 100;
-    routing_reason = 'Document is text-based with clear structure. Fast generation recommended.';
+  // ANSWER_KEY: letter/number sequences
+  if (/^(\d+\.\s*[A-D]\s*[,.]?\s*){3,}/.test(text) ||
+      /answer\s*key/i.test(text)) {
+    return { type: 'ANSWER_KEY', confidence: 0.92 };
   }
 
-  const warnings = [];
-  if (noise_blocks.length > 3)
-    warnings.push('Answer key sections detected — may reduce question quality.');
-  if (ocr_blocks.length > 0 && primary_mode !== 'mode3')
-    warnings.push(ocr_blocks.length + ' pages may contain scanned content.');
+  // HEADER_OR_FOOTER: short, all-caps or page-number-like
+  if (wc < 10 && (/^[A-Z\s\d]+$/.test(text.trim()) || /^\d+$/.test(text.trim()))) {
+    return { type: 'HEADER_OR_FOOTER', confidence: 0.80 };
+  }
 
-  const modeLabel = primary_mode === 'mode3' ? 'Mode 3 (OCR)'
-                  : primary_mode === 'mode2' ? 'Mode 2 (Structured)'
-                  :                            'Mode 1 (Fast)';
+  // TABLE_OR_DIAGRAM: columnar or tab-separated
+  if ((text.match(/\t/g) || []).length >= 2 ||
+      (text.match(/\s{4,}/g) || []).length >= 3) {
+    return { type: 'TABLE_OR_DIAGRAM', confidence: 0.85 };
+  }
 
-  // user_message per spec
-  const user_message = [
-    'Advanced Document Intelligence Mode (Mode 4) activated.',
-    'System detected: ' + reading_blocks.length + ' reading · '
-      + question_blocks.length + ' question · '
-      + ocr_blocks.length + ' OCR · '
-      + noise_blocks.length + ' noise segments.',
-    routing_reason,
-    'Recommended: ' + modeLabel + ' (confidence: ' + Math.round(confidence * 100) + '%)',
-  ];
+  // VOCABULARY_EXERCISE: word bank, match, fill-in
+  if (/\b(word\s*bank|match|fill\s*in|vocabulary|word\s*list)\b/i.test(lower) ||
+      /\b\w+\s*[-–]\s*\w+\b.*\b\w+\s*[-–]\s*\w+\b/.test(text)) {
+    return { type: 'VOCABULARY_EXERCISE', confidence: 0.83 };
+  }
+
+  // GRAMMAR_EXPLANATION: rule labels, grammar terms
+  if (/\b(grammar|rule:|example:|note:|tip:|structure:)\b/i.test(lower) ||
+      /\(verb\)|tense|subject|object|clause/i.test(lower)) {
+    return { type: 'GRAMMAR_EXPLANATION', confidence: 0.82 };
+  }
+
+  // INSTRUCTION: imperative directives
+  if (/^(read|answer|circle|match|complete|choose|look|write|listen|discuss|underline|find|use|make|put)/i.test(text.trim())) {
+    return { type: 'INSTRUCTION', confidence: 0.87 };
+  }
+
+  // COMPREHENSION_QUESTION: numbered question or question word
+  const hasQNum     = /^\s*\d+[.)]\s/.test(text);
+  const hasQWord    = /^(what|when|where|who|why|how|which|does|do|is|are|was|were|can|could|would)\b/i.test(text.trim());
+  const hasOptions  = (text.match(/^[A-D][).]\s/gm) || []).length >= 2;
+  if (hasQNum || hasQWord || hasOptions) {
+    return { type: 'COMPREHENSION_QUESTION', confidence: 0.86 };
+  }
+
+  // READING_PASSAGE: 3+ sentences, narrative/informational prose
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+  if (sentences.length >= 3 && wc >= 30) {
+    return { type: 'READING_PASSAGE', confidence: 0.88 };
+  }
+  if (sentences.length >= 2 && wc >= 20) {
+    return { type: 'READING_PASSAGE', confidence: 0.74 };
+  }
+
+  // Ambiguous structured → TABLE_OR_DIAGRAM (never NOISE per spec)
+  return { type: 'TABLE_OR_DIAGRAM', confidence: 0.55 };
+}
+
+// ─── STEP 4: Block scope detection ──────────────────────────
+function m4DetectScope(text, isFirst, isLast) {
+  if (isFirst) {
+    const firstChar = text.trim()[0];
+    if (firstChar && firstChar === firstChar.toLowerCase() && /[a-z]/.test(firstChar)) {
+      return 'continuation';
+    }
+    if (/^(and|but|however|therefore|additionally|furthermore)\b/i.test(text.trim())) {
+      return 'continuation';
+    }
+  }
+  if (isLast) {
+    if (!/[.!?]$/.test(text.trim())) return 'partial';
+  }
+  const hasTerminal = /[.!?]$/.test(text.trim());
+  const hasOpenList = /\d+\.\s+\w/.test(text) && (text.match(/\d+\.\s+/g) || []).length < 3;
+  if (!hasTerminal || hasOpenList) return 'partial';
+  return 'complete';
+}
+
+// ─── STEP 5: Validation (deterministic) ─────────────────────
+function m4ValidateBlock(block, chunkN, blockM) {
+  const errors = [], warnings = [];
+  const expectedId = `chunk${chunkN}_block${blockM}`;
+  if (block.block_id !== expectedId) errors.push(`block_id mismatch: ${block.block_id}`);
+  if (!['READING_PASSAGE','COMPREHENSION_QUESTION','VOCABULARY_EXERCISE',
+        'GRAMMAR_EXPLANATION','INSTRUCTION','ANSWER_KEY','TABLE_OR_DIAGRAM',
+        'HEADER_OR_FOOTER','NOISE'].includes(block.section_type))
+    errors.push(`invalid section_type: ${block.section_type}`);
+  if (typeof block.confidence !== 'number' || block.confidence < 0 || block.confidence > 1)
+    errors.push('confidence out of range');
+  if (!block.clean_text || !block.clean_text.trim())
+    errors.push('clean_text is empty');
+  if (block.section_type === 'READING_PASSAGE') {
+    const wc = (block.clean_text || '').split(/\s+/).length;
+    if (wc < 80) warnings.push(`word_count ${wc} < 80 — question_ready forced false`);
+    if (wc < 30) warnings.push(`word_count ${wc} < 30`);
+  }
+  return { errors, warnings };
+}
+
+// ─── STEP 6: Post-processor (deterministic, no LLM) ─────────
+function m4PostProcess(blocks, chunkN) {
+  const stopwords = new Set(['the','a','an','is','in','of','to','and','for','on','at','it']);
+
+  function tokenize(text) {
+    return text.toLowerCase().split(/\s+/).filter(w => !stopwords.has(w) && w.length > 2);
+  }
+  function jaccard(a, b) {
+    const sa = new Set(tokenize(a)), sb = new Set(tokenize(b));
+    const inter = [...sa].filter(x => sb.has(x)).length;
+    const union = new Set([...sa, ...sb]).size;
+    return union ? inter / union : 0;
+  }
+
+  // Re-index sequentially
+  let idx = 1;
+  const processed = [];
+  for (let i = 0; i < blocks.length; i++) {
+    const block = { ...blocks[i] };
+
+    // NOISE re-check
+    const wc = (block.clean_text || '').split(/\s+/).filter(w => w.length > 0).length;
+    if (wc < 5 && block.section_type !== 'NOISE') {
+      block.section_type     = 'NOISE';
+      block._auto_reclassified = true;
+      block._reclassify_reason = `word count ${wc} < 5`;
+    }
+
+    // Overlap detection
+    if (processed.length > 0) {
+      const prev  = processed[processed.length - 1];
+      const score = jaccard(prev.clean_text || '', block.clean_text || '');
+      if (score > 0.6) {
+        prev._merge_warning       = true;
+        prev._merge_overlap_score = Math.round(score * 100) / 100;
+        continue; // skip duplicate
+      }
+    }
+
+    // block_scope normalization
+    if (i === 0 && block.clean_text && /^[a-z]/.test(block.clean_text.trim())) {
+      block.block_scope = 'continuation';
+    }
+    if (i === blocks.length - 1 && !/[.!?]$/.test((block.clean_text || '').trim())) {
+      block.block_scope = 'partial';
+    }
+
+    // Re-assign IDs
+    block.paragraph_index = idx++;
+    block.block_id        = `chunk${chunkN}_block${block.paragraph_index}`;
+    processed.push(block);
+  }
+  return processed;
+}
+
+// ─── STEP 7: question_ready flag ────────────────────────────
+function m4SetQuestionReady(block) {
+  if (block.section_type !== 'READING_PASSAGE') return block;
+  const wc  = (block.clean_text || '').split(/\s+/).filter(w => w.length > 0).length;
+  const qr  = block.block_scope === 'complete' &&
+              block.confidence   >= 0.80 &&
+              wc                 >= 80;
+  block.question_ready = qr;
+  if (qr) {
+    block.suggested_question_types = ['MCQ', 'TRUE_FALSE', 'SHORT_ANSWER'];
+    if (wc >= 150) block.suggested_question_types.push('FILL_BLANK');
+  } else {
+    block.question_ready = false;
+  }
+  return block;
+}
+
+// ─── MAIN: runMode4SemanticAnalysis ─────────────────────────
+// Pure analysis — returns JSON only. NEVER calls pipeline.
+function runMode4SemanticAnalysis(pagesArray, chunkN) {
+  chunkN = chunkN || 0;
+
+  // Guard
+  if (!pagesArray || pagesArray.length === 0) {
+    return {
+      mode4_version: M4_VERSION,
+      chunk_id: `chunk${chunkN}`,
+      status: 'fatal_error',
+      message: 'Mode 3 OCR output is empty or unavailable',
+      blocks: [],
+      chunk_summary: {},
+      validation_report: { total_errors: 1, total_warnings: 0 }
+    };
+  }
+
+  // Step 1+2: segment
+  const segments = m4SegmentText(pagesArray);
+
+  // Step 3+4: classify + scope
+  let rawBlocks = segments.map((seg, i) => {
+    const { type, confidence } = m4ClassifySegment(seg);
+    const scope = m4DetectScope(seg, i === 0, i === segments.length - 1);
+    return {
+      block_id:        `chunk${chunkN}_block${i + 1}`,
+      section_type:    type,
+      clean_text:      seg.trim(),
+      confidence,
+      paragraph_index: i + 1,
+      block_scope:     scope,
+      retry_needed:    confidence < 0.75,
+      _auto_reclassified: false
+    };
+  });
+
+  // Step 6: post-process (deterministic)
+  rawBlocks = m4PostProcess(rawBlocks, chunkN);
+
+  // Step 5: validate + Step 7: question_ready
+  let totalErrors = 0, totalWarnings = 0;
+  rawBlocks = rawBlocks.map((block, i) => {
+    const { errors, warnings } = m4ValidateBlock(block, chunkN, block.paragraph_index);
+    totalErrors   += errors.length;
+    totalWarnings += warnings.length;
+    block = m4SetQuestionReady(block);
+    return block;
+  });
+
+  // Build chunk_summary
+  const sectionTypes = [...new Set(rawBlocks.map(b => b.section_type))];
+  const chunk_summary = {
+    total_blocks:          rawBlocks.length,
+    partial_blocks:        rawBlocks.filter(b => b.block_scope === 'partial').map(b => b.block_id),
+    continuation_blocks:   rawBlocks.filter(b => b.block_scope === 'continuation').map(b => b.block_id),
+    retry_blocks:          rawBlocks.filter(b => b.retry_needed).map(b => b.block_id),
+    noise_blocks:          rawBlocks.filter(b => b.section_type === 'NOISE').map(b => b.block_id),
+    auto_reclassified:     rawBlocks.filter(b => b._auto_reclassified).map(b => b.block_id),
+    merge_warnings:        rawBlocks.filter(b => b._merge_warning).map(b => b.block_id),
+    question_ready_blocks: rawBlocks.filter(b => b.question_ready).map(b => b.block_id),
+    section_types_found:   sectionTypes
+  };
 
   return {
-    mode: 'mode4',
-    structure: { reading_blocks, question_blocks, ocr_blocks, noise_blocks },
-    routing: { primary_mode, confidence },
-    warnings,
-    user_message
+    mode4_version: M4_VERSION,
+    chunk_id:  `chunk${chunkN}`,
+    status:    totalErrors > 0 ? 'processed_with_warnings' : 'ok',
+    blocks:    rawBlocks,
+    chunk_summary,
+    validation_report: { total_errors: totalErrors, total_warnings: totalWarnings }
   };
 }
 
-// ── Show Mode 4 analysis UI ───────────────────────────────────
-function showMode4UI(analysisResult) {
-  _m4AnalysisResult = analysisResult;
-  const { structure, routing, warnings, user_message } = analysisResult;
+// ─── UI: showMode4UI (display only — no execution) ───────────
+function showMode4UI(m4Result) {
+  const { blocks, chunk_summary, status, mode4_version } = m4Result;
 
-  // Notifications
   const statusEl = document.getElementById('upload-m4-status');
-  if (statusEl) statusEl.textContent = user_message[0] || '';
+  if (statusEl) {
+    if (status === 'fatal_error') {
+      statusEl.textContent = 'Mode 4: ' + (m4Result.message || 'Analysis failed');
+      return;
+    }
+    statusEl.textContent = 'Mode 4 v' + mode4_version + ' — ' + blocks.length + ' blocks detected';
+  }
 
-  // Structure display
+  // Structure summary
   const structEl = document.getElementById('upload-m4-structure');
   if (structEl) {
-    const rows = [
-      { label: '📖 Reading blocks',  count: structure.reading_blocks.length,  color: '#50C878' },
-      { label: '❓ Question blocks', count: structure.question_blocks.length, color: '#C9A84C' },
-      { label: '📷 OCR blocks',      count: structure.ocr_blocks.length,      color: '#FFA03C' },
-      { label: '⊘  Noise blocks',    count: structure.noise_blocks.length,    color: '#888'    },
-    ];
-    structEl.innerHTML = rows.map(r =>
-      `<div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--black-soft);border-radius:5px;border:1px solid var(--black-border);">
-        <span style="font-size:12px;color:var(--white-dim);">${r.label}</span>
-        <span style="font-family:var(--font-mono);font-size:11px;color:${r.color};">${r.count} pages</span>
-      </div>`
-    ).join('');
+    const typeMap = {
+      READING_PASSAGE:       { icon: '📖', label: 'Reading Passages',       color: '#50C878' },
+      COMPREHENSION_QUESTION:{ icon: '❓', label: 'Comprehension Questions', color: '#C9A84C' },
+      VOCABULARY_EXERCISE:   { icon: '📚', label: 'Vocabulary Exercises',   color: '#7EC8E3' },
+      GRAMMAR_EXPLANATION:   { icon: '📝', label: 'Grammar Explanations',   color: '#A8D8A8' },
+      INSTRUCTION:           { icon: '📋', label: 'Instructions',           color: '#B8B8FF' },
+      ANSWER_KEY:            { icon: '🔑', label: 'Answer Keys',            color: '#FFA03C' },
+      TABLE_OR_DIAGRAM:      { icon: '📊', label: 'Tables / Diagrams',      color: '#D4A0FF' },
+      HEADER_OR_FOOTER:      { icon: '🔲', label: 'Headers / Footers',      color: '#888' },
+      NOISE:                 { icon: '⊘',  label: 'Noise',                  color: '#666' },
+    };
+    const counts = {};
+    blocks.forEach(b => { counts[b.section_type] = (counts[b.section_type] || 0) + 1; });
+
+    structEl.innerHTML = Object.entries(typeMap)
+      .filter(([t]) => counts[t] > 0)
+      .map(([t, { icon, label, color }]) =>
+        `<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;
+          background:var(--black-soft);border:1px solid var(--black-border);
+          border-radius:6px;cursor:pointer;">
+          <input type="checkbox" data-type="${t}" checked
+            style="accent-color:var(--gold);width:14px;height:14px;">
+          <span style="font-size:14px;">${icon}</span>
+          <span style="flex:1;font-size:12px;color:var(--white-dim);">${label}</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:${color};">
+            ${counts[t]} blocks
+          </span>
+        </label>`
+      ).join('');
+
+    const qrCount = chunk_summary.question_ready_blocks?.length || 0;
+    if (qrCount > 0) {
+      structEl.innerHTML += `<div style="margin-top:8px;font-family:var(--font-mono);
+        font-size:10px;color:var(--gold-dim);padding:6px 10px;
+        background:rgba(201,168,76,0.06);border-radius:4px;">
+        ✦ ${qrCount} reading block${qrCount > 1 ? 's' : ''} ready for question generation
+      </div>`;
+    }
   }
 
-  // Routing decision
+  // Routing info
   const routeEl = document.getElementById('upload-m4-routing');
   if (routeEl) {
-    const modeLabel = routing.primary_mode === 'mode3' ? 'Mode 3 (OCR)'
-                    : routing.primary_mode === 'mode2' ? 'Mode 2 (Structured)'
-                    :                                    'Mode 1 (Fast)';
-    const warn = warnings.length ? '<br>⚠ ' + warnings.join('<br>⚠ ') : '';
+    const warns = (m4Result.validation_report?.total_warnings || 0);
     routeEl.innerHTML =
-      user_message[2] +
-      '<br>Recommended: <strong style="color:var(--gold);">' + modeLabel + '</strong>' +
-      ' <span style="color:var(--white-muted);">(confidence: ' + Math.round((routing.confidence || 0) * 100) + '%)</span>' +
-      warn;
+      'Select content types to include in question generation.' +
+      (warns ? `<br><span style="color:#FFA03C;">⚠ ${warns} warning${warns > 1 ? 's' : ''} detected</span>` : '');
   }
 
-  // Show panel
   document.getElementById('upanel-1').style.display = 'none';
   document.getElementById('upload-mode4-panel').style.display = 'block';
 }
 
-// ── Cancel Mode 4 ─────────────────────────────────────────────
+
+// ── Mode 3 headless OCR for Mode 4 (no UI, no pipeline trigger) ──
+async function runMode3HeadlessForMode4(file) {
+  _m3PagesArray = []; _m3OcrResults = {};
+  if (!window.pdfjsLib) {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf         = await window.pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+  upload.pageCount  = pdf.numPages;
+  const limit       = Math.min(pdf.numPages, 100);
+  for (let i = 1; i <= limit; i++) {
+    try {
+      const page = await pdf.getPage(i);
+      const tc   = await page.getTextContent();
+      _m3PagesArray.push({ page: i, text: tc.items.map(it => it.str).join(' ').trim() });
+    } catch (e) { _m3PagesArray.push({ page: i, text: '' }); }
+    if (i % 10 === 0) emitPipeline('chunk', 'Extracting pages… ' + i + '/' + limit, { pct: Math.round(i/limit*100) });
+  }
+  const nonEmpty = _m3PagesArray.filter(p => p.text.length > 20).length;
+  if (nonEmpty < limit * 0.2) {
+    emitPipeline('mode', 'Mode 4: Running OCR on scanned pages…', {});
+    await loadTesseract();
+    const pdf2 = await window.pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    const maxP = m3IsMobile() ? 5 : 15;
+    let done   = 0;
+    for (let i = 0; i < _m3PagesArray.length && done < maxP; i++) {
+      if (_m3PagesArray[i].text.length < 30) {
+        try {
+          const res = await m3OcrPage(pdf2, _m3PagesArray[i].page);
+          _m3OcrResults[_m3PagesArray[i].page] = res;
+          if (res.confidence >= 70) _m3PagesArray[i].text = res.text;
+        } catch (e) { console.warn('[NIRAS] M4 headless OCR p' + _m3PagesArray[i].page, e.message); }
+        done++;
+      }
+    }
+  }
+  return _m3PagesArray;
+}
+
+// ── confirmMode4Execute — orchestrator owns pipeline trigger ──
+function confirmMode4Execute() {
+  const m4Result = window._m4Result;
+  if (!m4Result || m4Result.status === 'fatal_error') {
+    showToast('No analysis result available.', 'error'); return;
+  }
+  const checkboxes = document.querySelectorAll('#upload-m4-structure input[type=checkbox]');
+  const selectedTypes = new Set();
+  checkboxes.forEach(cb => { if (cb.checked) selectedTypes.add(cb.dataset.type); });
+  if (selectedTypes.size === 0) {
+    showToast('Please select at least one content type.', 'error'); return;
+  }
+  const selectedBlocks = m4Result.blocks.filter(b => selectedTypes.has(b.section_type));
+  const filteredText   = selectedBlocks.map(b => b.clean_text).join('\n\n');
+  if (!filteredText || filteredText.trim().length < 50) {
+    showToast('Selected content too short. Include more content types.', 'error'); return;
+  }
+  const letters    = (filteredText.match(/[a-zA-Z؀-ۿ]/g) || []).length;
+  const alphaRatio = filteredText.length > 0 ? letters / filteredText.length : 0;
+  if (alphaRatio < 0.3) {
+    showToast('Selected content has low text quality. Include reading passages.', 'error'); return;
+  }
+  document.getElementById('upload-mode4-panel').style.display = 'none';
+  // handleUploadGenerate owns pipeline execution — NOT Mode 4
+  upload.extractedText = filteredText;
+  upload.pageCount     = _m3PagesArray.length;
+  upload._preProcessed = true;
+  startUploadProcessing(); // caller responsibility
+}
+
 function cancelMode4() {
   document.getElementById('upload-mode4-panel').style.display = 'none';
   document.getElementById('upanel-1').style.display = '';
-}
-
-// ── Confirm: Mode 4 routes to correct mode — NEVER executes ──
-async function confirmMode4Route() {
-  if (!_m4AnalysisResult) return;
-  const primaryMode = _m4AnalysisResult.routing.primary_mode;
-
-  document.getElementById('upload-mode4-panel').style.display = 'none';
-
-  // Mode 4 ONLY decides — the selected mode executes unchanged
-  if (primaryMode === 'mode3') {
-    selectUploadMode(3);
-    await runMode3();            // Mode 3 — unchanged
-  } else if (primaryMode === 'mode2') {
-    await handleMode2Flow();     // Mode 2 flow — unchanged
-  } else {
-    startUploadProcessing();     // Mode 1 — unchanged
-  }
-}
-
-// ── Mode 2 flow helper (non-invasive reuse) ───────────────────
-async function handleMode2Flow() {
-  if (!upload.file) { startUploadProcessing(); return; }
-  const btn = document.getElementById('btn-upload-process');
-  btn.disabled = true;
-  btn.textContent = 'Analysing structure…';
-  try {
-    const fullText = await extractPDFTextFull(upload.file);
-    if (!fullText) { selectUploadMode(1); startUploadProcessing(); return; }
-    const structure = await detectStructure(fullText);
-    upload.extractedText = fullText;
-    showMode2ScopeUI(structure);
-  } catch (e) {
-    console.error('[NIRAS] Mode 4 → Mode 2 handoff failed:', e);
-    startUploadProcessing();
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '✦ Generate Exam';
-  }
-}
-
-// ── Mode 4 main entry point ───────────────────────────────────
-async function runMode4() {
-  if (!upload.file) { showToast('Mode 4 requires a PDF file.', 'error'); return; }
-
-  const btn = document.getElementById('btn-upload-process');
-  btn.disabled    = true;
-  btn.textContent = 'Analysing document…';
-  emitPipeline('mode', 'AI analyzing document structure…', { modeBadge: '◎ Mode 4' });
-
-  try {
-    // Extract per-page text (reuse Mode 3 pattern)
-    if (!window.pdfjsLib) {
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    }
-    const arrayBuffer = await upload.file.arrayBuffer();
-    const pdf         = await window.pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-    upload.pageCount  = pdf.numPages;
-    const limit       = Math.min(pdf.numPages, 100);
-    const pagesArray  = [];
-
-    for (let i = 1; i <= limit; i++) {
-      try {
-        const page     = await pdf.getPage(i);
-        const tc       = await page.getTextContent();
-        const pageText = tc.items.map(it => it.str).join(' ').trim();
-        pagesArray.push({ page: i, text: pageText });
-      } catch (e) {
-        pagesArray.push({ page: i, text: '' });
-      }
-    }
-
-    // Classify each page
-    const classifiedPages = pagesArray.map(p => ({
-      page: p.page,
-      text: p.text,
-      type: m4ClassifyPage(p.text)
-    }));
-
-    // Build routing plan
-    const analysisResult = m4BuildRoutingPlan(classifiedPages);
-    console.log('[NIRAS] Mode 4 analysis:', JSON.stringify(analysisResult, null, 2));
-
-    showMode4UI(analysisResult);
-
-  } catch (e) {
-    console.error('[NIRAS] Mode 4 analysis failed:', e);
-    showToast('Document analysis failed — switching to Mode 1.', 'error');
-    selectUploadMode(1);
-    startUploadProcessing();
-  } finally {
-    btn.disabled    = false;
-    btn.textContent = '✦ Generate Exam';
-  }
+  window._m4Result = null;
 }
 
 
@@ -12594,6 +12809,8 @@ if ('serviceWorker' in navigator) {
     enterDashboard();
   }
 })();
+
+
 
 </script>
 </body>
