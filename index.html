@@ -11012,10 +11012,15 @@ function m4ValidateBlock(block, chunkN, blockM) {
     errors.push('confidence out of range');
   if (!block.clean_text || !block.clean_text.trim())
     errors.push('clean_text is empty');
+  // retry_needed enforcement per spec
+  if (block.confidence < 0.75) {
+    block.retry_needed = true;
+    warnings.push('confidence ' + block.confidence + ' < 0.75 — retry_needed set true');
+  }
   if (block.section_type === 'READING_PASSAGE') {
     const wc = (block.clean_text || '').split(/\s+/).length;
-    if (wc < 80) warnings.push(`word_count ${wc} < 80 — question_ready forced false`);
-    if (wc < 30) warnings.push(`word_count ${wc} < 30`);
+    if (wc < 80) warnings.push('word_count ' + wc + ' < 80 — question_ready forced false');
+    if (wc < 30) warnings.push('word_count ' + wc + ' < 30');
   }
   return { errors, warnings };
 }
@@ -11289,8 +11294,23 @@ function confirmMode4Execute() {
   if (selectedTypes.size === 0) {
     showToast('Please select at least one content type.', 'error'); return;
   }
+  // Guard 1: Empty selection
   const selectedBlocks = m4Result.blocks.filter(b => selectedTypes.has(b.section_type));
-  const filteredText   = selectedBlocks.map(b => b.clean_text).join('\n\n');
+  if (!selectedBlocks || selectedBlocks.length === 0) {
+    showToast('No valid reading passages found for question generation.', 'error'); return;
+  }
+
+  // Guard 2: retry_needed enforcement gate
+  const eligibleBlocks = selectedBlocks.filter(b => !b.retry_needed);
+  const retryBlocks    = selectedBlocks.filter(b => b.retry_needed);
+  if (retryBlocks.length > 0) {
+    console.warn('[NIRAS] Mode 4: Skipped ' + retryBlocks.length + ' blocks with retry_needed');
+  }
+  if (eligibleBlocks.length === 0) {
+    showToast('No eligible blocks after quality filter. Try selecting different content types.', 'error'); return;
+  }
+
+  const filteredText = eligibleBlocks.map(b => b.clean_text).join('\n\n');
   if (!filteredText || filteredText.trim().length < 50) {
     showToast('Selected content too short. Include more content types.', 'error'); return;
   }
