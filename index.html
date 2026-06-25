@@ -9176,7 +9176,7 @@ async function groqChat(systemPrompt, userPrompt) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: GROQ_MODEL,
-      temperature: 0.7,
+      temperature: 0.1,  // low temp = deterministic JSON output
       max_tokens: 2000,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -10438,30 +10438,53 @@ async function handleUploadGenerate() {
   }
 
   // ── MODE 4: Document Intelligence ───────────────────────
-  // Orchestrator: runs Mode3 OCR first, then Mode4 analysis
-  // Mode 4 NEVER calls pipeline — handleUploadGenerate does
+  // If Mode 4 panel is already showing → user clicked Generate Exam by mistake
+  // Route to confirmMode4Execute instead of re-running Mode 4
   if (_uploadMode === 4) {
+    const m4panel = document.getElementById('upload-mode4-panel');
+    if (m4panel && m4panel.style.display !== 'none') {
+      confirmMode4Execute();
+      return;
+    }
     if (!upload.file || upload.file.type !== 'application/pdf') {
       showToast('Mode 4 requires a PDF file.', 'error'); return;
     }
     const btn = document.getElementById('btn-upload-process');
-    btn.disabled = true; btn.textContent = 'Running OCR…';
-    emitPipeline('mode', 'Mode 4: Running OCR…', { modeBadge: '◎ Mode 4' });
+    btn.disabled = true; btn.textContent = 'Processing…';
+    // Show processing panel so notifications are visible
+    goUploadStep(2);
+    const _m4StartTime = Date.now();
+    const _m4Timer = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - _m4StartTime) / 1000);
+      const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+      const ss = String(elapsed % 60).padStart(2, '0');
+      const ac = document.getElementById('upload-active-chunk');
+      if (ac) ac.textContent = 'Elapsed: ' + mm + ':' + ss;
+    }, 1000);
+    emitPipeline('mode', 'Processing document…', { modeBadge: '◎ Mode 4' });
     try {
       // Step 1: Headless OCR (Mode 3 extraction without UI/pipeline)
       const pagesArray = await runMode3HeadlessForMode4(upload.file);
       // Step 2: Mode 4 semantic analysis — returns JSON only, NEVER calls pipeline
-      const m4Result   = runMode4SemanticAnalysis(pagesArray, 0);
+      emitPipeline('mode', 'Analysing document structure…', { modeBadge: '◎ Mode 4', activeChunk: 'Identifying reading passages, questions and exercises' });
+    const m4Result   = runMode4SemanticAnalysis(pagesArray, 0);
       window._m4Result = m4Result;
       console.log('[NIRAS] Mode 4 output:', JSON.stringify(m4Result, null, 2));
-      // Step 3: Show UI — user selects content types
+      const rp  = m4Result.chunk_summary?.section_types_found || [];
+      const rpCount = m4Result.blocks?.filter(b => b.section_type === 'READING_PASSAGE').length || 0;
+      emitPipeline('done', rpCount + ' reading passages detected. Select content to generate questions.', { modeBadge: '◎ Mode 4' });
+      // Hide processing panel, show Mode 4 selection UI
+      goUploadStep(1);
       showMode4UI(m4Result);
     } catch (e) {
       console.error('[NIRAS] Mode 4 failed:', e);
-      showToast('Document analysis failed — switching to Mode 1.', 'error');
+      showToast('Analysis failed — switching to standard mode.', 'error');
       selectUploadMode(1);
       startUploadProcessing();
     } finally {
+      clearInterval(_m4Timer);
+      const ac = document.getElementById('upload-active-chunk');
+      if (ac) ac.textContent = '';
       btn.disabled = false; btn.textContent = '✦ Generate Exam';
     }
     return;
@@ -11263,11 +11286,11 @@ async function runMode3HeadlessForMode4(file) {
       const tc   = await page.getTextContent();
       _m3PagesArray.push({ page: i, text: tc.items.map(it => it.str).join(' ').trim() });
     } catch (e) { _m3PagesArray.push({ page: i, text: '' }); }
-    if (i % 10 === 0) emitPipeline('chunk', 'Extracting pages… ' + i + '/' + limit, { pct: Math.round(i/limit*100) });
+    emitPipeline('chunk', 'Reading page ' + i + ' of ' + limit + '…', { pct: Math.round(i/limit*100), activeChunk: 'Page ' + i + '/' + limit });
   }
   const nonEmpty = _m3PagesArray.filter(p => p.text.length > 20).length;
   if (nonEmpty < limit * 0.2) {
-    emitPipeline('mode', 'Mode 4: Running OCR on scanned pages…', {});
+    emitPipeline('mode', 'Scanning pages with OCR…', { activeChunk: 'This may take a moment' });
     await loadTesseract();
     const pdf2 = await window.pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
     const maxP = m3IsMobile() ? 5 : 15;
@@ -11288,10 +11311,13 @@ async function runMode3HeadlessForMode4(file) {
 
 // ── confirmMode4Execute — orchestrator owns pipeline trigger ──
 async function confirmMode4Execute() {
+  console.log('[NIRAS DEBUG] STEP 1: confirmMode4Execute entered');
   const m4Result = window._m4Result;
   if (!m4Result || m4Result.status === 'fatal_error') {
+    console.warn('[NIRAS DEBUG] STEP 1 FAIL: no m4Result or fatal_error status');
     showToast('No analysis result available.', 'error'); return;
   }
+  console.log('[NIRAS DEBUG] STEP 1 OK: m4Result status =', m4Result.status, '| blocks =', m4Result.blocks?.length);
   const checkboxes = document.querySelectorAll('#upload-m4-structure input[type=checkbox]');
   const selectedTypes = new Set();
   checkboxes.forEach(cb => { if (cb.checked) selectedTypes.add(cb.dataset.type); });
@@ -11300,7 +11326,9 @@ async function confirmMode4Execute() {
   }
   // Guard 1: Empty selection
   const selectedBlocks = m4Result.blocks.filter(b => selectedTypes.has(b.section_type));
+  console.log('[NIRAS DEBUG] STEP 2: selectedTypes =', [...selectedTypes], '| selectedBlocks =', selectedBlocks.length);
   if (!selectedBlocks || selectedBlocks.length === 0) {
+    console.warn('[NIRAS DEBUG] STEP 2 FAIL: selectedBlocks is empty');
     showToast('No valid reading passages found for question generation.', 'error'); return;
   }
 
@@ -11330,6 +11358,8 @@ async function confirmMode4Execute() {
   // Mode 4: skip alphaRatio gate — Mode 4 semantic analysis already validated quality
   document.getElementById('upload-mode4-panel').style.display = 'none';
 
+  console.log('[NIRAS DEBUG] STEP 3: blocksForPipeline =', blocksForPipeline.length,
+    '| eligibleBlocks =', eligibleBlocks.length, '| retryBlocks =', retryBlocks.length);
   // Mode 4 → Prompt 2 path (block-structured generation)
   // Fallback to standard pipeline if Prompt2 returns empty
   const qtype      = document.getElementById('upload-qtype')?.value || 'mixed';
@@ -11338,19 +11368,25 @@ async function confirmMode4Execute() {
 
   // Show processing step
   goUploadStep(2);
-  emitPipeline('generate', 'Prompt 2: Generating questions from ' + blocksForPipeline.length + ' blocks…', {});
+  goUploadStep(2);
+  emitPipeline('generate', 'Generating questions…', { activeChunk: blocksForPipeline.length + ' content blocks selected' });
 
   const p2questions = await generateFromBlocksPrompt2(blocksForPipeline, count, qtype, difficulty);
 
+  console.log('[NIRAS DEBUG] STEP 9b: p2questions count =', p2questions ? p2questions.length : 'null');
   if (p2questions && p2questions.length > 0) {
     // Prompt2 success — go directly to review
     upload.questions = p2questions;
+    console.log('[NIRAS DEBUG] STEP 10: calling goUploadStep(3) + renderUploadReview with', p2questions.length, 'questions');
+    showToast(p2questions.length + ' questions generated successfully.', 'success');
     goUploadStep(3);
     renderUploadReview(p2questions);
+    console.log('[NIRAS DEBUG] STEP 11: renderUploadReview completed');
   } else {
+    console.warn('[NIRAS DEBUG] STEP 9b FAIL: p2questions empty — falling back to Mode 1');
     // Fallback: standard Mode 1 pipeline with joined text
     console.warn('[NIRAS] Prompt2 returned empty — fallback to Mode 1 pipeline');
-    showToast('Switching to standard generation mode…', 'info');
+    showToast('AI returned no questions — trying standard mode…', 'info');
     upload.extractedText  = filteredText;
     upload.pageCount      = _m3PagesArray.length;
     upload._preProcessed  = true;
@@ -11412,87 +11448,180 @@ function smartTrim(text, maxLen) {
 
 
 async function generateFromBlocksPrompt2(blocks, count, qtype, difficulty) {
-  // Rank and filter blocks
-  const rankedBlocks = prompt2RankBlocks(blocks);
 
-  if (rankedBlocks.length === 0) {
-    console.warn('[NIRAS] Prompt2: no scoreable blocks after ranking');
-    return [];
+  // ── PHASE 1: PASSAGE EXTRACTION (deterministic JS — no LLM) ──
+
+  // PHASE 1A: Unit detection — scan for unit/chapter boundaries
+  const unitBoundaryPattern = /^(unit|chapter|lesson|part|section)\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b/i;
+  const numberedHeadingPattern = /^(\d{1,2})\.\s+[A-Z]/;
+  const allCapsShortPattern = /^[A-Z\s]{3,40}$/;
+
+  let currentUnit = 'Unit 1';
+  let unitIndex   = 1;
+  const blocksWithUnit = blocks.map(b => {
+    const text = (b.clean_text || '').trim();
+    const firstLine = text.split('\n')[0].trim();
+    if (unitBoundaryPattern.test(firstLine) ||
+        numberedHeadingPattern.test(firstLine) ||
+        (allCapsShortPattern.test(firstLine) && firstLine.split(' ').length <= 6)) {
+      unitIndex++;
+      currentUnit = firstLine.slice(0, 40) || ('Unit ' + unitIndex);
+    }
+    return { ...b, _unit: currentUnit, _unitIndex: unitIndex };
+  });
+
+  // PHASE 1B: Filter — only viable READING_PASSAGE blocks
+  const filtered = blocksWithUnit.filter(b => {
+    const wc = (b.clean_text || '').split(/\s+/).filter(w => w.length > 0).length;
+    return b.section_type === 'READING_PASSAGE' &&
+           wc >= 80 &&
+           b.block_scope !== 'continuation' &&
+           (b.confidence || 0) >= 0.60;
+  });
+
+  if (filtered.length === 0) {
+    // Fallback: relax filters — accept any block with wc >= 50
+    const relaxed = blocksWithUnit.filter(b => {
+      const wc = (b.clean_text || '').split(/\s+/).filter(w => w.length > 0).length;
+      return wc >= 50 && b.block_scope !== 'continuation' &&
+             !['NOISE','HEADER_OR_FOOTER','ANSWER_KEY','INSTRUCTION'].includes(b.section_type);
+    });
+    if (relaxed.length === 0) {
+      console.warn('[NIRAS] Prompt2 Phase 1: no viable passages found');
+      return [];
+    }
+    filtered.push(...relaxed.slice(0, 5));
   }
 
-  // Cap blocks to avoid token overflow — take top 10
-  const topBlocks = rankedBlocks.slice(0, 10);
+  // PHASE 1C: Random selection — prefer passages from different units
+  const passagesPerExam = Math.min(3, filtered.length);
+  const selected = [];
+  const usedUnits = new Set();
 
-  const system = `You are a production-grade EXAM QUESTION GENERATION ENGINE.
-You receive structured educational content as semantic blocks.
-Generate high-quality exam questions directly from these blocks.
-
-CRITICAL RULES:
-1. MUST NOT use external knowledge
-2. MUST NOT merge blocks — process each independently first
-3. Every question MUST include "source_sentence" (exact substring from clean_text)
-4. Output MUST be valid JSON ONLY — no markdown
-
-BLOCK PROCESSING:
-- READING_PASSAGE → comprehension questions
-- COMPREHENSION_QUESTION → inference + detail questions
-- VOCABULARY_EXERCISE → meaning + usage questions
-- GRAMMAR_EXPLANATION → rule application questions
-- TABLE_OR_DIAGRAM → structured extraction questions
-- NOISE / HEADER_OR_FOOTER → SKIP completely
-- confidence < 0.5 → skip or reduce count
-- block_scope == "continuation" → avoid as primary question source
-
-QUALITY RULES:
-- Never more than 5 questions per block
-- Distractors MUST come from same block context
-- No invented facts, no cross-block referencing
-- Prefer quality over quantity
-
-OUTPUT FORMAT (strict JSON, no text outside):
-{
-  "questions": [
-    {
-      "question_id": "chunk0_block1_q1",
-      "block_id": "chunk0_block1",
-      "type": "MCQ",
-      "question_text": "...",
-      "options": {"A":"...","B":"...","C":"...","D":"..."},
-      "correct_answer": "B",
-      "source_sentence": "exact substring from block clean_text",
-      "difficulty": "medium",
-      "confidence": 0.87,
-      "stem": "...",
-      "qtype": "mcq",
-      "points": 1,
-      "ai_verified": true
+  // First pass: one passage per unit
+  for (const b of filtered) {
+    if (selected.length >= passagesPerExam) break;
+    if (!usedUnits.has(b._unit)) {
+      selected.push(b);
+      usedUnits.add(b._unit);
     }
-  ]
-}`;
+  }
+  // Second pass: fill remaining from any unit
+  for (const b of filtered) {
+    if (selected.length >= passagesPerExam) break;
+    if (!selected.includes(b)) selected.push(b);
+  }
 
-  // Trim clean_text to avoid token overflow (max 500 chars per block)
-  const trimmedBlocks = topBlocks.map(b => ({
-    ...b,
-    clean_text: smartTrim(b.clean_text, 500)
+  console.log('[NIRAS] Prompt2 Phase 1: filtered=' + filtered.length +
+    ' → selected=' + selected.length + ' passages from ' + usedUnits.size + ' units');
+
+  // Trim each passage (sentence-safe)
+  const questionsPerPassage = Math.max(1, Math.ceil(count / selected.length));
+  const passages = selected.map(b => ({
+    block_id:     b.block_id,
+    unit:         b._unit,
+    section_type: b.section_type,
+    clean_text:   smartTrim(b.clean_text, 600),
+    confidence:   b.confidence || 0,
+    block_scope:  b.block_scope
   }));
 
-  const user = `Generate ${count} exam questions.
-Type: ${qtype || 'mixed'} | Difficulty: ${difficulty || 'medium'}
+  // ── PHASE 2: QUESTION GENERATION (single LLM call) ───────────
 
-BLOCKS:
-${JSON.stringify(trimmedBlocks, null, 0)}
+  const system = `You are a STRICT READING COMPREHENSION EXAM GENERATOR.
 
-Return ONLY valid JSON with "questions" array. No text outside JSON.`;
+You receive pre-filtered reading passages from an educational PDF.
+Your ONLY job: generate high-quality exam questions from REAL passage content.
+
+STEP 0 — PASSAGE VALIDATION (before generating ANY question):
+Reject passage entirely if passage_text contains ANY of:
+STRUCTURAL MARKERS: "Previewing Chart", "Class Audio", "Audio CD", "CD Track",
+"How to Use", "About This Book", "To the Teacher", "To the Student",
+"Table of Contents", "Answer Key", "Appendix", "Acknowledgment",
+"This book", "This unit", "This chapter", "This exercise",
+"ISBN", "Copyright", "Published by", "All rights reserved"
+INSTRUCTION PATTERNS (more than 2 imperative sentences starting with):
+Read / Look / Listen / Answer / Circle / Match / Write / Choose /
+Complete / Discuss / Fill / Check / Find / Underline / Preview / Review
+STRUCTURAL CONTENT: text describing charts, diagrams, book sections, or unit contents
+If rejected → skip all questions for this passage.
+
+STEP 1 — CONTENT MINING (before writing questions):
+For each valid passage, extract internally:
+✔ 5+ specific FACTS (numbers, dates, names, events, causes, results)
+✔ 3+ RELATIONSHIPS (X causes Y, A leads to B, P differs from Q)
+✔ 3+ KEY TERMS with context-visible definitions
+✔ 2+ COMPARISONS or CONTRASTS
+NEVER generate a question without a source from this list.
+
+STEP 2 — LEVEL DETECTION: A2 / B1 / B2 / C1 from vocabulary and syntax. Affects phrasing only.
+
+STEP 3 — FORBIDDEN QUESTION PATTERNS (NEVER generate these):
+❌ "What is the main topic of this passage/chapter/unit?"
+❌ "What is the purpose of [book feature]?"
+❌ "What does this chapter/unit cover?"
+❌ Any question about Previewing Chart, Audio CD, book exercises
+❌ Any question answerable WITHOUT reading passage_text
+❌ Any question about document structure or book organization
+
+REQUIRED PATTERNS (ONLY generate these):
+✅ "According to the passage, why did [specific event] happen?"
+✅ "What does the author say about [specific person/place/idea]?"
+✅ "Based on the passage, which statement about [X] is correct?"
+✅ "The passage states that [paraphrase]. True or False?"
+
+PER-TYPE RULES:
+MCQ: ONE specific fact | stem: "According to the passage..." | 4 options A-D | distractors from passage only
+TRUE_FALSE: paraphrase ONE specific sentence | verifiable from passage only | FORBIDDEN: "This passage is about..."
+SHORT_ANSWER: specific reason/result/definition | answer = phrase from passage | FORBIDDEN if block_scope=partial
+FILL_BLANK: copy sentence from passage | remove 1 content word | word_bank 4 options
+VOCABULARY: word with context clue | "What does '[word]' mean as used in the passage?" | 4 options
+
+STEP 4 — VERIFY EACH QUESTION before adding to output:
+✔ Answer explicitly in passage_text?
+✔ source_sentence = EXACT substring of passage_text?
+✔ Impossible to answer without reading passage?
+✔ No mention of chapter/unit/book structure?
+✔ Not a FORBIDDEN pattern?
+If any check fails → discard → generate replacement from different fact
+
+STEP 5 — COUNT ENFORCEMENT:
+If verified questions < requested count → add FILL_BLANK from passage sentences → verify each
+NEVER return fewer questions than requested.
+
+HARD GUARANTEES:
+- STEP 0: structural passages rejected before any generation
+- STEP 1: facts extracted before questions written
+- STEP 3: forbidden patterns explicitly blocked
+- STEP 4: every question verified
+- source_sentence = exact substring always
+- zero hallucination / zero external knowledge
+- exact question count always delivered
+- Start response with { end with } — NO markdown, NO explanation`;
+
+  const user = `Generate EXACTLY ${questionsPerPassage} questions per passage.
+Question types: ${qtype || 'mixed'} | Difficulty: ${difficulty || 'medium'}
+
+Distribute types evenly. For each passage: read fully, identify facts, then generate.
+
+Return ONLY valid JSON. Start with { end with }.
+
+INPUT:
+${JSON.stringify({ passages: passages, settings: { questions_per_passage: questionsPerPassage, requested_types: qtype || 'mixed', difficulty: difficulty || 'medium' } }, null, 0)}
+
+OUTPUT FORMAT:
+{"status":"generated","total_questions":${questionsPerPassage * passages.length},"exam":[{"passage_id":"id","unit":"Unit 1","estimated_level":"B1","questions":[{"question_id":"id_q1","type":"MCQ","question_text":"According to the passage...","options":{"A":"...","B":"...","C":"...","D":"..."},"correct_answer":"B","source_sentence":"exact substring","confidence":0.91,"stem":"...","qtype":"mcq","points":1,"ai_verified":true}]}],"summary":{"passages_used":${passages.length},"total_questions":${questionsPerPassage * passages.length},"forbidden_patterns_detected":0}}`;
 
   try {
-    const raw = await groqWithRetry(system, user, 2500);
-    // Strip markdown fences and any leading/trailing non-JSON text
+    const raw = await groqChatWithTokens(system, user, 3500);
+    console.log('[NIRAS DEBUG] STEP 6: raw response length =', raw.length);
+    console.log('[NIRAS DEBUG] STEP 7: raw response first 500 chars:', raw.slice(0, 500));
+
     let clean = raw.replace(/```json|```/g, '').trim();
-    // Extract first JSON object or array
     const jsonStart = clean.search(/[\[{]/);
     const jsonEnd   = Math.max(clean.lastIndexOf(']'), clean.lastIndexOf('}'));
     if (jsonStart === -1 || jsonEnd === -1) {
-      console.warn('[NIRAS] Prompt2: no JSON structure found in response');
+      console.warn('[NIRAS] Prompt2: no JSON found');
       return [];
     }
     clean = clean.slice(jsonStart, jsonEnd + 1);
@@ -11500,149 +11629,58 @@ Return ONLY valid JSON with "questions" array. No text outside JSON.`;
     let parsed;
     try {
       parsed = JSON.parse(clean);
+      console.log('[NIRAS DEBUG] STEP 8: JSON.parse SUCCESS');
     } catch (parseErr) {
-      // Try to extract questions array directly
+      console.warn('[NIRAS DEBUG] STEP 8 FAIL:', parseErr.message);
       const arrMatch = clean.match(/"questions"\s*:\s*(\[[\s\S]*?\])/);
       if (arrMatch) {
-        parsed = { questions: JSON.parse(arrMatch[1]) };
-      } else {
-        console.warn('[NIRAS] Prompt2: JSON parse failed:', parseErr.message);
-        return [];
+        try { parsed = { exam: [{ questions: JSON.parse(arrMatch[1]) }] }; }
+        catch (e2) { return []; }
+      } else { return []; }
+    }
+
+    // Extract questions from exam[] or questions[] format
+    let allQuestions = [];
+    if (parsed.exam && Array.isArray(parsed.exam)) {
+      for (const passage of parsed.exam) {
+        const qs = passage.questions || [];
+        // Attach passage_text as metadata
+        qs.forEach(q => { q._passage_text = passage.passage_text || ''; });
+        allQuestions.push(...qs);
       }
+    } else if (Array.isArray(parsed)) {
+      allQuestions = parsed;
+    } else if (parsed.questions) {
+      allQuestions = parsed.questions;
     }
 
-    // Handle both {questions:[]} and [] formats
-    const questions = Array.isArray(parsed)
-      ? parsed
-      : (parsed.questions || []);
+    console.log('[NIRAS DEBUG] STEP 9: questions count =', allQuestions.length);
 
-    if (!questions || questions.length === 0) {
-      console.warn('[NIRAS] Prompt2: returned empty questions array');
-      return [];
-    }
+    if (!allQuestions || allQuestions.length === 0) return [];
 
     // Normalize to Mode 1/2/3 compatible format
-    return questions.map((q, i) => ({
-      stem:          q.question_text || q.stem || 'Question ' + (i+1),
-      qtype:         (q.type || q.qtype || 'mcq').toLowerCase(),
-      difficulty:    q.difficulty || difficulty || 'medium',
-      points:        q.points || 1,
-      options:       q.options ? Object.values(q.options) : (q.options_list || []),
-      correct_index: q.options
-        ? Object.keys(q.options).indexOf(q.correct_answer)
-        : (q.correct_index || 0),
+    return allQuestions.map((q, i) => ({
+      stem:           q.question_text || q.stem || ('Question ' + (i + 1)),
+      qtype:          (q.type || q.qtype || 'mcq').toLowerCase(),
+      difficulty:     q.difficulty || difficulty || 'medium',
+      points:         q.points || 1,
+      options:        q.options ? Object.values(q.options) : (q.options_list || []),
+      correct_index:  q.options ? Object.keys(q.options).indexOf(q.correct_answer) : (q.correct_index || 0),
       correct_answer: q.correct_answer,
-      explanation:   q.source_sentence || '',
+      word_bank:      q.word_bank || [],
+      explanation:    q.source_sentence || '',
       source_sentence: q.source_sentence || '',
-      block_id:      q.block_id || '',
-      ai_verified:   true
+      passage_text:   q._passage_text || '',
+      block_id:       q.block_id || '',
+      ai_verified:    true
     }));
+
   } catch (e) {
-    console.error('[NIRAS] Prompt2 failed:', e.message);
+    console.error('[NIRAS DEBUG] STEP ERROR:', e.message, e.stack);
     return [];
   }
 }
 
-
-// ============================================================
-// MODE ENGINE — NIRAS Upload Pipeline
-// ============================================================
-
-function detectUploadMode(contentLength, pageCount) {
-  if (pageCount <= 8  || contentLength <= 8000)  return 'quick';
-  if (pageCount <= 40 || contentLength <= 35000) return 'standard';
-  return 'deep';
-}
-
-function smartSample(text, maxChars) {
-  if (text.length <= maxChars) return text;
-  const zone = Math.floor(maxChars / 3);
-  const start = text.slice(0, zone);
-  const mid   = text.slice(Math.floor(text.length/2) - Math.floor(zone/2),
-                            Math.floor(text.length/2) + Math.floor(zone/2));
-  const end   = text.slice(-zone);
-  return start + '\n\n[...]\n\n' + mid + '\n\n[...]\n\n' + end;
-}
-
-function chunkText(text, chunkSize, overlap, totalPages) {
-  const chunks = [];
-  const totalChars = text.length;
-  let i = 0, idx = 0;
-  while (i < text.length) {
-    const charStart = i;
-    const charEnd   = Math.min(i + chunkSize, text.length);
-    const pageStart = totalPages ? Math.floor((charStart / totalChars) * totalPages) + 1 : null;
-    const pageEnd   = totalPages ? Math.min(Math.ceil((charEnd / totalChars) * totalPages), totalPages) : null;
-    chunks.push({
-      text:      text.slice(charStart, charEnd),
-      charStart, charEnd,
-      pageStart, pageEnd,
-      index:     idx++,
-      pct:       Math.round((charEnd / totalChars) * 100)
-    });
-    if (charEnd >= text.length) break;
-    i += chunkSize - overlap;
-  }
-  return chunks;
-}
-
-function jaccardSimilarity(a, b) {
-  const setA = new Set(a.split(' ').filter(w => w.length > 3));
-  const setB = new Set(b.split(' ').filter(w => w.length > 3));
-  if (!setA.size || !setB.size) return 0;
-  const inter = [...setA].filter(w => setB.has(w)).length;
-  return inter / (setA.size + setB.size - inter);
-}
-
-function deduplicateQuestions(questions, threshold) {
-  const stems = [];
-  return questions.filter(q => {
-    const s = (q.stem || '').toLowerCase().replace(/[^a-z0-9 ]/g, '');
-    const isDup = stems.some(seen => jaccardSimilarity(seen, s) > threshold);
-    if (!isDup) stems.push(s);
-    return !isDup;
-  });
-}
-
-function rankByDiversity(questions, targetCount) {
-  const types = ['mcq','true_false','short_answer','fill_blank','matching','ordering'];
-  const buckets = {};
-  types.forEach(t => { buckets[t] = []; });
-  questions.forEach(q => { (buckets[q.qtype] || buckets.mcq).push(q); });
-  const result = [];
-  let safety = 0;
-  while (result.length < targetCount && safety++ < 500) {
-    let added = false;
-    for (const t of types) {
-      if (buckets[t].length && result.length < targetCount) {
-        result.push(buckets[t].shift());
-        added = true;
-      }
-    }
-    if (!added) break;
-  }
-  return result;
-}
-
-function createSemaphore(limit) {
-  let active = 0;
-  const queue = [];
-  return function acquire(fn) {
-    return new Promise((resolve, reject) => {
-      const run = async () => {
-        active++;
-        try { resolve(await fn()); }
-        catch (e) { reject(e); }
-        finally {
-          active--;
-          if (queue.length) queue.shift()();
-        }
-      };
-      if (active < limit) run();
-      else queue.push(run);
-    });
-  };
-}
 
 async function groqChatWithTokens(systemPrompt, userPrompt, maxTokens) {
   const r = await fetch('/api/groq', {
@@ -11650,7 +11688,7 @@ async function groqChatWithTokens(systemPrompt, userPrompt, maxTokens) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: GROQ_MODEL,
-      temperature: 0.7,
+      temperature: 0.1,
       max_tokens: maxTokens,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -11658,9 +11696,18 @@ async function groqChatWithTokens(systemPrompt, userPrompt, maxTokens) {
       ]
     })
   });
-  if (!r.ok) { const err = new Error('Groq error ' + r.status); err.status = r.status; throw err; }
+  console.log('[NIRAS DEBUG] STEP 5b: /api/groq response status =', r.status);
+  if (!r.ok) {
+    console.error('[NIRAS DEBUG] STEP 5b FAIL: Groq HTTP error', r.status);
+    const err = new Error('Groq error ' + r.status); err.status = r.status; throw err;
+  }
   const data = await r.json();
-  return data.choices?.[0]?.message?.content || '';
+  const msg = data.choices?.[0]?.message?.content;
+  if (!msg || msg.trim().length === 0) {
+    console.error('[NIRAS] Groq returned empty content. Full response:', JSON.stringify(data).slice(0, 200));
+    throw new Error('Groq returned empty response');
+  }
+  return msg;
 }
 
 async function analyzeDocumentIntelligence(text) {
@@ -11779,6 +11826,92 @@ async function validateQuestions(questions, onProgress, targetCount) {
   }
 
   return validatedAll;
+}
+
+
+// ── Jaccard similarity for deduplication ─────────────────────
+function jaccardSimilarity(a, b) {
+  const sa = new Set(a.toLowerCase().split(/\s+/));
+  const sb = new Set(b.toLowerCase().split(/\s+/));
+  const inter = [...sa].filter(x => sb.has(x)).length;
+  const union = new Set([...sa, ...sb]).size;
+  return union ? inter / union : 0;
+}
+
+function deduplicateQuestions(questions, threshold) {
+  threshold = threshold || 0.70;
+  const result = [];
+  for (const q of questions) {
+    const isDup = result.some(r => jaccardSimilarity(r.stem || '', q.stem || '') > threshold);
+    if (!isDup) result.push(q);
+  }
+  return result;
+}
+
+function rankByDiversity(questions, count) {
+  const types = ['mcq','tf','short','fill','match','order','mixed'];
+  const byType = {};
+  for (const q of questions) {
+    const t = q.qtype || 'mcq';
+    if (!byType[t]) byType[t] = [];
+    byType[t].push(q);
+  }
+  const result = [];
+  let safety = 0;
+  while (result.length < count && safety < 1000) {
+    safety++;
+    let added = false;
+    for (const t of types) {
+      if (byType[t] && byType[t].length > 0 && result.length < count) {
+        result.push(byType[t].shift());
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+  return result;
+}
+
+function createSemaphore(n) {
+  let active = 0;
+  const queue = [];
+  return fn => new Promise((resolve, reject) => {
+    const run = async () => {
+      active++;
+      try { resolve(await fn()); }
+      catch (e) { reject(e); }
+      finally {
+        active--;
+        if (queue.length) queue.shift()();
+      }
+    };
+    if (active < n) run();
+    else queue.push(run);
+  });
+}
+
+
+// ── chunkText with page metadata ─────────────────────────────
+function chunkText(text, chunkSize, overlap, totalPages) {
+  const chunks = [];
+  const totalChars = text.length;
+  let i = 0, idx = 0;
+  while (i < text.length) {
+    const charStart = i;
+    const charEnd   = Math.min(i + chunkSize, text.length);
+    const pageStart = totalPages ? Math.floor((charStart / totalChars) * totalPages) + 1 : null;
+    const pageEnd   = totalPages ? Math.min(Math.ceil((charEnd / totalChars) * totalPages), totalPages) : null;
+    chunks.push({
+      text:      text.slice(charStart, charEnd),
+      charStart, charEnd,
+      pageStart, pageEnd,
+      index:     idx++,
+      pct:       Math.round((charEnd / totalChars) * 100)
+    });
+    if (charEnd >= text.length) break;
+    i += chunkSize - overlap;
+  }
+  return chunks;
 }
 
 
