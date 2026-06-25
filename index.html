@@ -10451,6 +10451,8 @@ async function handleUploadGenerate() {
     }
     const btn = document.getElementById('btn-upload-process');
     btn.disabled = true; btn.textContent = 'Processing…';
+    // Show processing panel so notifications are visible
+    goUploadStep(2);
     const _m4StartTime = Date.now();
     const _m4Timer = setInterval(() => {
       const elapsed = Math.floor((Date.now() - _m4StartTime) / 1000);
@@ -10471,7 +10473,8 @@ async function handleUploadGenerate() {
       const rp  = m4Result.chunk_summary?.section_types_found || [];
       const rpCount = m4Result.blocks?.filter(b => b.section_type === 'READING_PASSAGE').length || 0;
       emitPipeline('done', rpCount + ' reading passages detected. Select content to generate questions.', { modeBadge: '◎ Mode 4' });
-      // Step 3: Show UI — user selects content types
+      // Hide processing panel, show Mode 4 selection UI
+      goUploadStep(1);
       showMode4UI(m4Result);
     } catch (e) {
       console.error('[NIRAS] Mode 4 failed:', e);
@@ -11364,6 +11367,7 @@ async function confirmMode4Execute() {
   const count      = parseInt(document.getElementById('upload-count')?.value) || 10;
 
   // Show processing step
+  goUploadStep(2);
   goUploadStep(2);
   emitPipeline('generate', 'Generating questions…', { activeChunk: blocksForPipeline.length + ' content blocks selected' });
 
