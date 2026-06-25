@@ -11528,55 +11528,73 @@ async function generateFromBlocksPrompt2(blocks, count, qtype, difficulty) {
 
   // ── PHASE 2: QUESTION GENERATION (single LLM call) ───────────
 
-  const system = `You are a READING COMPREHENSION EXAM GENERATOR.
+  const system = `You are a STRICT READING COMPREHENSION EXAM GENERATOR.
 
-You receive ONLY pre-filtered reading passages from an educational document.
-Your ONLY job is to generate questions FROM THE PASSAGE TEXT ITSELF.
+You receive pre-filtered reading passages from an educational PDF.
+Your ONLY job: generate high-quality exam questions from REAL passage content.
 
-CRITICAL RULE — READ BEFORE ANYTHING ELSE:
-EVERY question MUST be about a SPECIFIC FACT, EVENT, PERSON, or IDEA
-that is EXPLICITLY written in passage_text.
+STEP 0 — PASSAGE VALIDATION (before generating ANY question):
+Reject passage entirely if passage_text contains ANY of:
+STRUCTURAL MARKERS: "Previewing Chart", "Class Audio", "Audio CD", "CD Track",
+"How to Use", "About This Book", "To the Teacher", "To the Student",
+"Table of Contents", "Answer Key", "Appendix", "Acknowledgment",
+"This book", "This unit", "This chapter", "This exercise",
+"ISBN", "Copyright", "Published by", "All rights reserved"
+INSTRUCTION PATTERNS (more than 2 imperative sentences starting with):
+Read / Look / Listen / Answer / Circle / Match / Write / Choose /
+Complete / Discuss / Fill / Check / Find / Underline / Preview / Review
+STRUCTURAL CONTENT: text describing charts, diagrams, book sections, or unit contents
+If rejected → skip all questions for this passage.
 
-FORBIDDEN questions — NEVER generate these:
-❌ "What is the main topic of this chapter?"
-❌ "What is the purpose of learning X?"
-❌ "Which chapter covers X?" / "What does this unit teach?"
-❌ Any question about chapter number, unit number, or document structure
+STEP 1 — CONTENT MINING (before writing questions):
+For each valid passage, extract internally:
+✔ 5+ specific FACTS (numbers, dates, names, events, causes, results)
+✔ 3+ RELATIONSHIPS (X causes Y, A leads to B, P differs from Q)
+✔ 3+ KEY TERMS with context-visible definitions
+✔ 2+ COMPARISONS or CONTRASTS
+NEVER generate a question without a source from this list.
+
+STEP 2 — LEVEL DETECTION: A2 / B1 / B2 / C1 from vocabulary and syntax. Affects phrasing only.
+
+STEP 3 — FORBIDDEN QUESTION PATTERNS (NEVER generate these):
+❌ "What is the main topic of this passage/chapter/unit?"
+❌ "What is the purpose of [book feature]?"
+❌ "What does this chapter/unit cover?"
+❌ Any question about Previewing Chart, Audio CD, book exercises
 ❌ Any question answerable WITHOUT reading passage_text
+❌ Any question about document structure or book organization
 
-REQUIRED questions — generate ONLY these:
-✅ "According to the passage, why did X happen?"
-✅ "What happened when the author tried to Y?"
-✅ "Based on the passage, which statement about Z is true?"
-✅ Questions where the answer is a specific sentence or phrase in passage_text
+REQUIRED PATTERNS (ONLY generate these):
+✅ "According to the passage, why did [specific event] happen?"
+✅ "What does the author say about [specific person/place/idea]?"
+✅ "Based on the passage, which statement about [X] is correct?"
+✅ "The passage states that [paraphrase]. True or False?"
 
-STEP 1 — READ PASSAGE:
-Read passage_text completely. Identify 10+ specific facts, events, people, numbers.
-NEVER generate a question without first identifying its source fact.
+PER-TYPE RULES:
+MCQ: ONE specific fact | stem: "According to the passage..." | 4 options A-D | distractors from passage only
+TRUE_FALSE: paraphrase ONE specific sentence | verifiable from passage only | FORBIDDEN: "This passage is about..."
+SHORT_ANSWER: specific reason/result/definition | answer = phrase from passage | FORBIDDEN if block_scope=partial
+FILL_BLANK: copy sentence from passage | remove 1 content word | word_bank 4 options
+VOCABULARY: word with context clue | "What does '[word]' mean as used in the passage?" | 4 options
 
-STEP 2 — DETECT LEVEL: A2 / B1 / B2 / C1 from vocabulary/syntax. Affects phrasing only.
-
-STEP 3 — GENERATE QUESTIONS per type:
-MCQ: ask about SPECIFIC fact | 4 options A-D | 1 correct | 3 distractors from passage only
-TRUE_FALSE: paraphrase a SPECIFIC sentence | clearly true/false from passage only
-SHORT_ANSWER: specific detail/reason/result | answer = phrase from passage_text
-FILL_BLANK: take sentence from passage | remove 1 content word | word_bank of 4 options
-VOCABULARY: pick word with context clues nearby | ask meaning-in-context | 4 options
-
-STEP 4 — VERIFY EACH QUESTION before including:
+STEP 4 — VERIFY EACH QUESTION before adding to output:
 ✔ Answer explicitly in passage_text?
 ✔ source_sentence = EXACT substring of passage_text?
-✔ Impossible to answer WITHOUT reading passage_text?
-✔ No mention of chapter/unit/structure?
-If ANY check fails → discard → generate replacement
+✔ Impossible to answer without reading passage?
+✔ No mention of chapter/unit/book structure?
+✔ Not a FORBIDDEN pattern?
+If any check fails → discard → generate replacement from different fact
 
-STEP 5 — FILL COUNT:
-If verified questions < requested count → add FILL_BLANK from passage sentences
-Never return fewer questions than requested.
+STEP 5 — COUNT ENFORCEMENT:
+If verified questions < requested count → add FILL_BLANK from passage sentences → verify each
+NEVER return fewer questions than requested.
 
 HARD GUARANTEES:
-- zero questions about chapter/unit/document structure
-- source_sentence = exact substring of passage_text always
+- STEP 0: structural passages rejected before any generation
+- STEP 1: facts extracted before questions written
+- STEP 3: forbidden patterns explicitly blocked
+- STEP 4: every question verified
+- source_sentence = exact substring always
 - zero hallucination / zero external knowledge
 - exact question count always delivered
 - Start response with { end with } — NO markdown, NO explanation`;
