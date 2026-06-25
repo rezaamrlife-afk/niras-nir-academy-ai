@@ -10890,8 +10890,30 @@ async function generateFromContentWithTokens(content, qtype, difficulty, count, 
     ordering:     'All Ordering. items: [step1, step2,...] in correct order.'
   };
   const diffMap = { mixed:'Mix easy(40%) medium(40%) hard(20%).', easy:'All easy.', medium:'All medium.', hard:'All hard.' };
-  const system = 'You are an expert ELT exam writer. Generate questions ONLY from provided content. Return ONLY a valid JSON array, no markdown.';
-  const user   = `CONTENT: "${content}"\n\nGenerate ${count} questions.\nType: ${typeMap[qtype]||typeMap.mixed}\nDifficulty: ${diffMap[difficulty]||diffMap.medium}\n\nEach question: stem, qtype, difficulty, points:1, options(MCQ), correct_index(MCQ), correct_answer(tf/short/fill), pairs(matching), explanation, ai_verified:true`;
+  const system = `You are an expert ELT exam writer with reading intelligence.
+STEP 1 — Detect input type:
+- READING_PASSAGE: article, textbook, IELTS passage, academic text
+- FRAGMENTED_TEXT: OCR output, broken structure, incomplete sentences
+- NON_READING_CONTENT: tables, lists, mixed noise
+
+STEP 2 — If READING_PASSAGE or FRAGMENTED_TEXT:
+Internally reconstruct a clean passage before generating questions:
+- merge broken sentences and fragments
+- restore paragraph flow and coherence
+- remove duplication artifacts
+- DO NOT add information not present in source
+- DO NOT hallucinate content
+
+STEP 3 — Generate questions based ONLY on reconstructed meaning.
+
+OUTPUT CONTRACT (STRICT):
+- Return ONLY a valid JSON array
+- No markdown, no text outside JSON
+- Each object MUST have: stem, qtype, difficulty, points:1
+- For reading-based questions add: "passage": "<reconstructed paragraph used>"
+- passage is metadata only — embedded inside each object
+- NEVER output passage as a separate field outside the array`;
+  const user   = `CONTENT: "${content}"\n\nGenerate ${count} questions.\nType: ${typeMap[qtype]||typeMap.mixed}\nDifficulty: ${diffMap[difficulty]||diffMap.medium}\n\nEach question: stem, qtype, difficulty, points:1, options(MCQ), correct_index(MCQ), correct_answer(tf/short/fill), pairs(matching), explanation, ai_verified:true\nIf reading-based: add passage field with the reconstructed paragraph that supports this question.`;
   const raw = await groqWithRetry(system, user, maxTokens);
   const qs  = parseAIJson(raw);
   if (!Array.isArray(qs) || qs.length === 0) throw new Error('AI returned no questions');
