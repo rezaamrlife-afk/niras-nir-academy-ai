@@ -11389,6 +11389,24 @@ function prompt2RankBlocks(blocks) {
     .sort((a, b) => b._score - a._score);
 }
 
+// ── smartTrim — sentence-boundary-aware trimming ─────────────
+// Prevents mid-sentence cuts that break Prompt2 source_sentence matching
+function smartTrim(text, maxLen) {
+  maxLen = maxLen || 500;
+  if (!text || text.length <= maxLen) return text;
+  const slice = text.slice(0, maxLen);
+  const sentenceEnd = Math.max(
+    slice.lastIndexOf('.'),
+    slice.lastIndexOf('!'),
+    slice.lastIndexOf('?')
+  );
+  if (sentenceEnd > maxLen * 0.6) return slice.slice(0, sentenceEnd + 1).trim();
+  const lastSpace = slice.lastIndexOf(' ');
+  if (lastSpace > maxLen * 0.6) return slice.slice(0, lastSpace).trim();
+  return slice.trim();
+}
+
+
 async function generateFromBlocksPrompt2(blocks, count, qtype, difficulty) {
   // Rank and filter blocks
   const rankedBlocks = prompt2RankBlocks(blocks);
@@ -11451,7 +11469,7 @@ OUTPUT FORMAT (strict JSON, no text outside):
   // Trim clean_text to avoid token overflow (max 500 chars per block)
   const trimmedBlocks = topBlocks.map(b => ({
     ...b,
-    clean_text: (b.clean_text || '').slice(0, 500)
+    clean_text: smartTrim(b.clean_text, 500)
   }));
 
   const user = `Generate ${count} exam questions.
