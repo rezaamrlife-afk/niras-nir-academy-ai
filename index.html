@@ -11283,7 +11283,7 @@ async function runMode3HeadlessForMode4(file) {
 }
 
 // ── confirmMode4Execute — orchestrator owns pipeline trigger ──
-function confirmMode4Execute() {
+async function confirmMode4Execute() {
   const m4Result = window._m4Result;
   if (!m4Result || m4Result.status === 'fatal_error') {
     showToast('No analysis result available.', 'error'); return;
@@ -11329,17 +11329,172 @@ function confirmMode4Execute() {
     showToast('Selected content has low text quality. Include reading passages.', 'error'); return;
   }
   document.getElementById('upload-mode4-panel').style.display = 'none';
-  // handleUploadGenerate owns pipeline execution — NOT Mode 4
-  upload.extractedText = filteredText;
-  upload.pageCount     = _m3PagesArray.length;
-  upload._preProcessed = true;
-  startUploadProcessing(); // caller responsibility
+
+  // Mode 4 → Prompt 2 path (block-structured generation)
+  // Fallback to standard pipeline if Prompt2 returns empty
+  const qtype      = document.getElementById('upload-qtype')?.value || 'mixed';
+  const difficulty = document.getElementById('upload-difficulty')?.value || 'medium';
+  const count      = parseInt(document.getElementById('upload-count')?.value) || 10;
+
+  // Show processing step
+  goUploadStep(2);
+  emitPipeline('generate', 'Prompt 2: Generating questions from ' + blocksForPipeline.length + ' blocks…', {});
+
+  const p2questions = await generateFromBlocksPrompt2(blocksForPipeline, count, qtype, difficulty);
+
+  if (p2questions && p2questions.length > 0) {
+    // Prompt2 success — go directly to review
+    upload.questions = p2questions;
+    goUploadStep(3);
+    renderUploadReview(p2questions);
+  } else {
+    // Fallback: standard Mode 1 pipeline with joined text
+    console.warn('[NIRAS] Prompt2 returned empty — fallback to Mode 1 pipeline');
+    showToast('Switching to standard generation mode…', 'info');
+    upload.extractedText  = filteredText;
+    upload.pageCount      = _m3PagesArray.length;
+    upload._preProcessed  = true;
+    startUploadProcessing();
+  }
 }
 
 function cancelMode4() {
   document.getElementById('upload-mode4-panel').style.display = 'none';
   document.getElementById('upanel-1').style.display = '';
   window._m4Result = null;
+}
+
+
+// ============================================================
+// PROMPT 2 — BLOCK-BASED QUESTION GENERATION (MODE 4 ONLY)
+// Mode 1/2/3 use generateFromContentWithTokens — untouched.
+// This function is EXCLUSIVELY for Mode 4 structured blocks.
+// ============================================================
+
+const PROMPT2_BLOCK_SCORE = {
+  READING_PASSAGE:       3,
+  COMPREHENSION_QUESTION: 2,
+  VOCABULARY_EXERCISE:   2,
+  GRAMMAR_EXPLANATION:   1,
+  TABLE_OR_DIAGRAM:      1,
+  INSTRUCTION:           1,
+  ANSWER_KEY:            0,
+  HEADER_OR_FOOTER:      0,
+  NOISE:                 0
+};
+
+function prompt2RankBlocks(blocks) {
+  return [...blocks]
+    .filter(b => PROMPT2_BLOCK_SCORE[b.section_type] > 0)
+    .map(b => ({
+      ...b,
+      _score: PROMPT2_BLOCK_SCORE[b.section_type] + (b.question_ready ? 1 : 0) + (b.confidence || 0)
+    }))
+    .sort((a, b) => b._score - a._score);
+}
+
+async function generateFromBlocksPrompt2(blocks, count, qtype, difficulty) {
+  // Rank and filter blocks
+  const rankedBlocks = prompt2RankBlocks(blocks);
+
+  if (rankedBlocks.length === 0) {
+    console.warn('[NIRAS] Prompt2: no scoreable blocks after ranking');
+    return [];
+  }
+
+  // Cap blocks to avoid token overflow — take top 10
+  const topBlocks = rankedBlocks.slice(0, 10);
+
+  const system = `You are a production-grade EXAM QUESTION GENERATION ENGINE.
+You receive structured educational content as semantic blocks.
+Generate high-quality exam questions directly from these blocks.
+
+CRITICAL RULES:
+1. MUST NOT use external knowledge
+2. MUST NOT merge blocks — process each independently first
+3. Every question MUST include "source_sentence" (exact substring from clean_text)
+4. Output MUST be valid JSON ONLY — no markdown
+
+BLOCK PROCESSING:
+- READING_PASSAGE → comprehension questions
+- COMPREHENSION_QUESTION → inference + detail questions
+- VOCABULARY_EXERCISE → meaning + usage questions
+- GRAMMAR_EXPLANATION → rule application questions
+- TABLE_OR_DIAGRAM → structured extraction questions
+- NOISE / HEADER_OR_FOOTER → SKIP completely
+- confidence < 0.5 → skip or reduce count
+- block_scope == "continuation" → avoid as primary question source
+
+QUALITY RULES:
+- Never more than 5 questions per block
+- Distractors MUST come from same block context
+- No invented facts, no cross-block referencing
+- Prefer quality over quantity
+
+OUTPUT FORMAT (strict JSON, no text outside):
+{
+  "questions": [
+    {
+      "question_id": "chunk0_block1_q1",
+      "block_id": "chunk0_block1",
+      "type": "MCQ",
+      "question_text": "...",
+      "options": {"A":"...","B":"...","C":"...","D":"..."},
+      "correct_answer": "B",
+      "source_sentence": "exact substring from block clean_text",
+      "difficulty": "medium",
+      "confidence": 0.87,
+      "stem": "...",
+      "qtype": "mcq",
+      "points": 1,
+      "ai_verified": true
+    }
+  ]
+}`;
+
+  const user = `Generate ${count} exam questions.
+Type: ${qtype || 'mixed'} | Difficulty: ${difficulty || 'medium'}
+
+BLOCKS:
+${JSON.stringify(topBlocks, null, 0)}
+
+Return ONLY valid JSON with "questions" array. No text outside JSON.`;
+
+  try {
+    const raw     = await groqWithRetry(system, user, 2500);
+    const clean   = raw.replace(/\`\`\`json|\`\`\`/g, '').trim();
+    const parsed  = JSON.parse(clean.slice(clean.search(/[\[{]/)));
+
+    // Handle both {questions:[]} and [] formats
+    const questions = Array.isArray(parsed)
+      ? parsed
+      : (parsed.questions || []);
+
+    if (!questions || questions.length === 0) {
+      console.warn('[NIRAS] Prompt2: returned empty questions array');
+      return [];
+    }
+
+    // Normalize to Mode 1/2/3 compatible format
+    return questions.map((q, i) => ({
+      stem:          q.question_text || q.stem || 'Question ' + (i+1),
+      qtype:         (q.type || q.qtype || 'mcq').toLowerCase(),
+      difficulty:    q.difficulty || difficulty || 'medium',
+      points:        q.points || 1,
+      options:       q.options ? Object.values(q.options) : (q.options_list || []),
+      correct_index: q.options
+        ? Object.keys(q.options).indexOf(q.correct_answer)
+        : (q.correct_index || 0),
+      correct_answer: q.correct_answer,
+      explanation:   q.source_sentence || '',
+      source_sentence: q.source_sentence || '',
+      block_id:      q.block_id || '',
+      ai_verified:   true
+    }));
+  } catch (e) {
+    console.error('[NIRAS] Prompt2 failed:', e.message);
+    return [];
+  }
 }
 
 
