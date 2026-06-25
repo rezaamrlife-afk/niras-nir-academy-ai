@@ -11300,17 +11300,26 @@ function confirmMode4Execute() {
     showToast('No valid reading passages found for question generation.', 'error'); return;
   }
 
-  // Guard 2: retry_needed enforcement gate
+  // Guard 2: Smart fallback selection (retry_needed = signal, not filter)
   const eligibleBlocks = selectedBlocks.filter(b => !b.retry_needed);
   const retryBlocks    = selectedBlocks.filter(b => b.retry_needed);
-  if (retryBlocks.length > 0) {
-    console.warn('[NIRAS] Mode 4: Skipped ' + retryBlocks.length + ' blocks with retry_needed');
-  }
-  if (eligibleBlocks.length === 0) {
-    showToast('No eligible blocks after quality filter. Try selecting different content types.', 'error'); return;
+  let blocksForPipeline;
+
+  if (eligibleBlocks.length > 0) {
+    // CASE 1: Normal — use high-quality blocks
+    blocksForPipeline = eligibleBlocks;
+  } else if (selectedBlocks.length > 0) {
+    // CASE 2: OCR degraded but usable — fallback safe mode
+    console.warn('[NIRAS] Mode 4: Low OCR quality — fallback to all selected blocks');
+    showToast('Low OCR quality detected — using best available content. Processing may include noise.', 'info');
+    blocksForPipeline = selectedBlocks;
+  } else {
+    // CASE 3: Nothing usable
+    showToast('No valid content found. Please select different content types.', 'error');
+    return;
   }
 
-  const filteredText = eligibleBlocks.map(b => b.clean_text).join('\n\n');
+  const filteredText = blocksForPipeline.map(b => b.clean_text).join('\n\n');
   if (!filteredText || filteredText.trim().length < 50) {
     showToast('Selected content too short. Include more content types.', 'error'); return;
   }
