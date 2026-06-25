@@ -11613,7 +11613,7 @@ OUTPUT FORMAT:
 {"status":"generated","total_questions":${questionsPerPassage * passages.length},"exam":[{"passage_id":"id","unit":"Unit 1","estimated_level":"B1","questions":[{"question_id":"id_q1","type":"MCQ","question_text":"According to the passage...","options":{"A":"...","B":"...","C":"...","D":"..."},"correct_answer":"B","source_sentence":"exact substring","confidence":0.91,"stem":"...","qtype":"mcq","points":1,"ai_verified":true}]}],"summary":{"passages_used":${passages.length},"total_questions":${questionsPerPassage * passages.length},"forbidden_patterns_detected":0}}`;
 
   try {
-    const raw = await groqChatWithTokens(system, user, 3500);
+    const raw = await groqWithRetry(system, user, 3500);
     console.log('[NIRAS DEBUG] STEP 6: raw response length =', raw.length);
     console.log('[NIRAS DEBUG] STEP 7: raw response first 500 chars:', raw.slice(0, 500));
 
@@ -11749,6 +11749,21 @@ Internally reconstruct a clean passage before generating questions:
 - DO NOT hallucinate content
 
 STEP 3 — Generate questions based ONLY on reconstructed meaning.
+
+CRITICAL RULES — NON-NEGOTIABLE:
+- NEVER use external knowledge
+- NEVER invent facts, answers, or options
+- NEVER create generic textbook questions
+- EVERY answer must exist explicitly in the provided text
+- source_sentence must be an exact substring of the provided content
+- If you cannot find enough valid questions in the text, generate fewer — never fabricate
+- Accuracy is more important than quantity
+
+STEP 4 — VERIFY each question before output:
+✔ Answer exists in provided text
+✔ source_sentence is exact substring of content
+✔ Question cannot be answered without reading the text
+If verification fails → discard question, do not include it
 
 OUTPUT CONTRACT (STRICT):
 - Return ONLY a valid JSON array
@@ -11912,6 +11927,30 @@ function chunkText(text, chunkSize, overlap, totalPages) {
     i += chunkSize - overlap;
   }
   return chunks;
+}
+
+
+// ── detectUploadMode — determines quick/standard/deep ────────
+function detectUploadMode(content, totalPages) {
+  const charCount = content ? content.length : 0;
+  const pages     = totalPages || 1;
+  if (charCount <= 8000 || pages <= 3)   return 'quick';
+  if (charCount <= 50000 || pages <= 20) return 'standard';
+  return 'deep';
+}
+
+// ── smartSample — representative sample for quick mode ───────
+function smartSample(content, maxLength) {
+  if (!content) return '';
+  if (content.length <= maxLength) return content;
+  const third = Math.floor(maxLength / 3);
+  const start = content.slice(0, third);
+  const mid   = content.slice(
+    Math.floor(content.length / 2) - Math.floor(third / 2),
+    Math.floor(content.length / 2) + Math.floor(third / 2)
+  );
+  const end = content.slice(content.length - third);
+  return [start, mid, end].join('\n\n...\n\n');
 }
 
 
