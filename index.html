@@ -10730,8 +10730,20 @@ async function confirmMode3Scope(runOCR) {
 
   const finalText = mergedPages.map(p => p.text).join('\n').trim();
 
+  // ── Mode 3 Text Quality Gate ─────────────────────────────────
+  // Applied ONLY in Mode 3, before pipeline — Mode 1/2 untouched
   if (!finalText || finalText.length < 50) {
     showToast('No readable content after processing. Please try pasting text instead.', 'error');
+    return;
+  }
+  const _m3Letters     = (finalText.match(/[a-zA-Z؀-ۿ]/g) || []).length;
+  const _m3AlphaRatio  = finalText.length > 0 ? _m3Letters / finalText.length : 0;
+  if (_m3AlphaRatio < 0.3) {
+    showToast(
+      'OCR result contains unreadable or low-quality text. ' +
+      'Please select different pages or improve scan quality.',
+      'error'
+    );
     return;
   }
 
