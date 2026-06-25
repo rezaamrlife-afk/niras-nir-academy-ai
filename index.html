@@ -10528,6 +10528,7 @@ function showMode3UI(blocks) {
         background:${color};border:1px solid ${border};border-radius:6px;cursor:pointer;">
         <input type="checkbox" data-idx="${i}" ${b.selectedForOCR && isOCR ? 'checked' : ''}
           ${!isOCR ? 'disabled style="opacity:0.3"' : ''}
+          onchange="m3UpdateCapVisual()"
           style="accent-color:var(--gold);width:14px;height:14px;">
         <span style="color:${iconCol};font-size:13px;">${icon}</span>
         <div style="flex:1;">
@@ -10542,12 +10543,15 @@ function showMode3UI(blocks) {
   // Show panel
   document.getElementById('upanel-1').style.display = 'none';
   document.getElementById('upload-mode3-panel').style.display = 'block';
+  // Show cap visual after DOM renders
+  setTimeout(m3UpdateCapVisual, 50);
 }
 
 // ── Select/deselect all OCR blocks ───────────────────────────
 function m3SelectAll(state) {
   document.querySelectorAll('#upload-m3-block-list input[type=checkbox]:not(:disabled)')
     .forEach(cb => { cb.checked = state; });
+  m3UpdateCapVisual();
 }
 
 // ── Auto-select only flagged blocks ──────────────────────────
@@ -10556,7 +10560,54 @@ function m3AutoSelect() {
     const idx = parseInt(cb.dataset.idx);
     if (!cb.disabled) cb.checked = _m3Blocks[idx]?.status === 'OCR_REQUIRED';
   });
+  m3UpdateCapVisual();
 }
+
+// ── Cap visual: show which blocks will actually run ───────────
+function m3UpdateCapVisual() {
+  const maxPages  = m3MaxOcrPages();
+  const checkboxes = [...document.querySelectorAll('#upload-m3-block-list input[type=checkbox]')];
+  let pagesAccum  = 0;
+  let capReached  = false;
+
+  checkboxes.forEach(cb => {
+    const idx   = parseInt(cb.dataset.idx);
+    const block = _m3Blocks[idx];
+    if (!block) return;
+    const blockPages = block.pageEnd - block.pageStart + 1;
+    const row        = cb.closest('label');
+
+    if (cb.checked) {
+      if (capReached || pagesAccum + blockPages > maxPages) {
+        // Will be skipped — show as dimmed
+        capReached = true;
+        if (row) {
+          row.style.opacity = '0.45';
+          row.title = 'OCR cap reached — this block will use extracted text';
+        }
+      } else {
+        pagesAccum += blockPages;
+        if (row) { row.style.opacity = ''; row.title = ''; }
+      }
+    } else {
+      if (row) { row.style.opacity = ''; row.title = ''; }
+    }
+  });
+
+  // Update status line
+  const statusEl = document.getElementById('upload-m3-status');
+  if (statusEl) {
+    const flagged = _m3Blocks.filter(b => b.status === 'OCR_REQUIRED').length;
+    if (pagesAccum > 0 && capReached) {
+      statusEl.textContent = `${_m3Blocks.length} blocks · ${flagged} need OCR · ⚠ cap: pages 1–${pagesAccum} will be processed (${maxPages} page limit)`;
+    } else if (pagesAccum > 0) {
+      statusEl.textContent = `${_m3Blocks.length} blocks · ${flagged} need OCR · ${pagesAccum} pages selected for OCR`;
+    } else {
+      statusEl.textContent = `${_m3Blocks.length} blocks analysed · ${flagged} need OCR · max ${maxPages} pages per session`;
+    }
+  }
+}
+
 
 // ── Cancel Mode 3 → go back ──────────────────────────────────
 function cancelMode3() {
