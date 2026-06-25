@@ -10450,23 +10450,38 @@ async function handleUploadGenerate() {
       showToast('Mode 4 requires a PDF file.', 'error'); return;
     }
     const btn = document.getElementById('btn-upload-process');
-    btn.disabled = true; btn.textContent = 'Running OCR…';
-    emitPipeline('mode', 'Mode 4: Running OCR…', { modeBadge: '◎ Mode 4' });
+    btn.disabled = true; btn.textContent = 'Processing…';
+    const _m4StartTime = Date.now();
+    const _m4Timer = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - _m4StartTime) / 1000);
+      const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+      const ss = String(elapsed % 60).padStart(2, '0');
+      const ac = document.getElementById('upload-active-chunk');
+      if (ac) ac.textContent = 'Elapsed: ' + mm + ':' + ss;
+    }, 1000);
+    emitPipeline('mode', 'Processing document…', { modeBadge: '◎ Mode 4' });
     try {
       // Step 1: Headless OCR (Mode 3 extraction without UI/pipeline)
       const pagesArray = await runMode3HeadlessForMode4(upload.file);
       // Step 2: Mode 4 semantic analysis — returns JSON only, NEVER calls pipeline
-      const m4Result   = runMode4SemanticAnalysis(pagesArray, 0);
+      emitPipeline('mode', 'Analysing document structure…', { modeBadge: '◎ Mode 4', activeChunk: 'Identifying reading passages, questions and exercises' });
+    const m4Result   = runMode4SemanticAnalysis(pagesArray, 0);
       window._m4Result = m4Result;
       console.log('[NIRAS] Mode 4 output:', JSON.stringify(m4Result, null, 2));
+      const rp  = m4Result.chunk_summary?.section_types_found || [];
+      const rpCount = m4Result.blocks?.filter(b => b.section_type === 'READING_PASSAGE').length || 0;
+      emitPipeline('done', rpCount + ' reading passages detected. Select content to generate questions.', { modeBadge: '◎ Mode 4' });
       // Step 3: Show UI — user selects content types
       showMode4UI(m4Result);
     } catch (e) {
       console.error('[NIRAS] Mode 4 failed:', e);
-      showToast('Document analysis failed — switching to Mode 1.', 'error');
+      showToast('Analysis failed — switching to standard mode.', 'error');
       selectUploadMode(1);
       startUploadProcessing();
     } finally {
+      clearInterval(_m4Timer);
+      const ac = document.getElementById('upload-active-chunk');
+      if (ac) ac.textContent = '';
       btn.disabled = false; btn.textContent = '✦ Generate Exam';
     }
     return;
@@ -11268,11 +11283,11 @@ async function runMode3HeadlessForMode4(file) {
       const tc   = await page.getTextContent();
       _m3PagesArray.push({ page: i, text: tc.items.map(it => it.str).join(' ').trim() });
     } catch (e) { _m3PagesArray.push({ page: i, text: '' }); }
-    if (i % 10 === 0) emitPipeline('chunk', 'Extracting pages… ' + i + '/' + limit, { pct: Math.round(i/limit*100) });
+    emitPipeline('chunk', 'Reading page ' + i + ' of ' + limit + '…', { pct: Math.round(i/limit*100), activeChunk: 'Page ' + i + '/' + limit });
   }
   const nonEmpty = _m3PagesArray.filter(p => p.text.length > 20).length;
   if (nonEmpty < limit * 0.2) {
-    emitPipeline('mode', 'Mode 4: Running OCR on scanned pages…', {});
+    emitPipeline('mode', 'Scanning pages with OCR…', { activeChunk: 'This may take a moment' });
     await loadTesseract();
     const pdf2 = await window.pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
     const maxP = m3IsMobile() ? 5 : 15;
@@ -11350,7 +11365,7 @@ async function confirmMode4Execute() {
 
   // Show processing step
   goUploadStep(2);
-  emitPipeline('generate', 'Prompt 2: Generating questions from ' + blocksForPipeline.length + ' blocks…', {});
+  emitPipeline('generate', 'Generating questions…', { activeChunk: blocksForPipeline.length + ' content blocks selected' });
 
   const p2questions = await generateFromBlocksPrompt2(blocksForPipeline, count, qtype, difficulty);
 
@@ -11359,6 +11374,7 @@ async function confirmMode4Execute() {
     // Prompt2 success — go directly to review
     upload.questions = p2questions;
     console.log('[NIRAS DEBUG] STEP 10: calling goUploadStep(3) + renderUploadReview with', p2questions.length, 'questions');
+    showToast(p2questions.length + ' questions generated successfully.', 'success');
     goUploadStep(3);
     renderUploadReview(p2questions);
     console.log('[NIRAS DEBUG] STEP 11: renderUploadReview completed');
