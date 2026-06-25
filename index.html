@@ -11459,49 +11459,79 @@ async function generateFromBlocksPrompt2(blocks, count, qtype, difficulty) {
   // Cap blocks to avoid token overflow — take top 10
   const topBlocks = rankedBlocks.slice(0, 10);
 
-  const system = `You are a production-grade EXAM QUESTION GENERATION ENGINE.
-You receive structured educational content as semantic blocks.
-Generate high-quality exam questions directly from these blocks.
+  const system = `You are a UNIVERSAL EXAM QUESTION GENERATION ENGINE.
+You receive structured text blocks from any educational document.
+Process EACH block independently. Generate questions ONLY from each block's own text.
 
-CRITICAL RULES:
-1. MUST NOT use external knowledge
-2. MUST NOT merge blocks — process each independently first
-3. Every question MUST include "source_sentence" (exact substring from clean_text)
-4. Output MUST be valid JSON ONLY — no markdown
+STEP 0 — SKIP BLOCK IF:
+- clean_text word count < 50 → skip (return nothing for this block)
+- block_scope = "continuation" → skip
+- section_type is NOISE or HEADER_OR_FOOTER → skip
 
-BLOCK PROCESSING:
-- READING_PASSAGE → comprehension questions
-- COMPREHENSION_QUESTION → inference + detail questions
-- VOCABULARY_EXERCISE → meaning + usage questions
-- GRAMMAR_EXPLANATION → rule application questions
-- TABLE_OR_DIAGRAM → structured extraction questions
-- NOISE / HEADER_OR_FOOTER → SKIP completely
-- confidence < 0.5 → skip or reduce count
-- block_scope == "continuation" → avoid as primary question source
+STEP 1 — CONFIDENCE GATE (per block):
+- confidence ≥ 0.85 → allowed: MCQ, SHORT_ANSWER, TRUE_FALSE, FILL_BLANK, VOCABULARY
+- confidence 0.70–0.84 → allowed: MCQ, TRUE_FALSE, FILL_BLANK, VOCABULARY
+- confidence < 0.70 → allowed: TRUE_FALSE, VOCABULARY only
+- block_scope = "partial" → REMOVE SHORT_ANSWER from allowed types
 
-QUALITY RULES:
-- Never more than 5 questions per block
-- Distractors MUST come from same block context
-- No invented facts, no cross-block referencing
-- Prefer quality over quantity
+STEP 2 — LEVEL DETECTION (infer from vocabulary/syntax):
+- A2: simple factual, basic vocabulary
+- B1: standard comprehension, common vocabulary
+- B2: inference required, multi-sentence understanding
+- C1: abstract/academic reasoning, technical vocabulary
 
-IMPORTANT: You MUST respond with ONLY a JSON object. No explanation, no markdown fences, no text before or after. Start your response with { and end with }.
+STEP 3 — SECTION TYPE → QUESTION TYPE MAPPING:
+- READING_PASSAGE → MCQ, SHORT_ANSWER, TRUE_FALSE
+- COMPREHENSION_QUESTION → MCQ, TRUE_FALSE
+- VOCABULARY_EXERCISE → FILL_BLANK, VOCABULARY
+- GRAMMAR_EXPLANATION → FILL_BLANK, TRUE_FALSE
+- TABLE_OR_DIAGRAM → MCQ, FILL_BLANK
+- INSTRUCTION → TRUE_FALSE, SHORT_ANSWER
+Final allowed = STEP 1 gate ∩ STEP 3 mapping
 
-OUTPUT FORMAT (strict JSON, no text outside):
+STEP 4 — GENERATION RULES:
+MCQ: 4 options (A-D), 1 correct, distractors from same block text
+TRUE_FALSE: directly verifiable in text, no inference beyond text
+SHORT_ANSWER: answer extractable from text, FORBIDDEN if block_scope=partial
+FILL_BLANK: remove 1 content word, provide word_bank of 4-5 options
+VOCABULARY: target word from text, meaning-in-context only
+
+STEP 5 — HARD RULES:
+- ONLY use information in clean_text — NEVER external knowledge
+- source_sentence MUST be exact substring of clean_text
+- NEVER cross-reference between blocks
+- Max 5 questions per block
+- Start response with { and end with } — NO markdown, NO explanation
+
+OUTPUT FORMAT (strict JSON only):
 {
   "questions": [
     {
-      "question_id": "chunk0_block1_q1",
-      "block_id": "chunk0_block1",
+      "question_id": "{{block_id}}_q1",
+      "block_id": "{{block_id}}",
       "type": "MCQ",
       "question_text": "...",
       "options": {"A":"...","B":"...","C":"...","D":"..."},
       "correct_answer": "B",
-      "source_sentence": "exact substring from block clean_text",
+      "source_sentence": "exact substring from clean_text",
       "difficulty": "medium",
+      "estimated_level": "B1",
       "confidence": 0.87,
       "stem": "...",
       "qtype": "mcq",
+      "points": 1,
+      "ai_verified": true
+    },
+    {
+      "question_id": "{{block_id}}_q2",
+      "type": "FILL_BLANK",
+      "question_text": "The scientist discovered a new _____ in the lab.",
+      "word_bank": ["method", "result", "compound", "theory", "experiment"],
+      "correct_answer": "compound",
+      "source_sentence": "exact substring",
+      "confidence": 0.85,
+      "stem": "The scientist discovered a new _____ in the lab.",
+      "qtype": "fill",
       "points": 1,
       "ai_verified": true
     }
@@ -11519,13 +11549,28 @@ OUTPUT FORMAT (strict JSON, no text outside):
     _score:       b._score || 0
   }));
 
-  const user = `Generate ${count} exam questions.
-Type: ${qtype || 'mixed'} | Difficulty: ${difficulty || 'medium'}
+  // JS pre-filter: remove blocks that would fail Step 0 (< 50 words or continuation)
+  const viableBlocks = trimmedBlocks.filter(b => {
+    const wc = (b.clean_text || '').split(/\s+/).filter(w => w.length > 0).length;
+    return wc >= 50 && b.block_scope !== 'continuation';
+  });
+
+  if (viableBlocks.length === 0) {
+    console.warn('[NIRAS] Prompt2: no viable blocks after Step 0 pre-filter');
+    return [];
+  }
+
+  const countPerType = Math.max(1, Math.ceil(count / Math.max(viableBlocks.length, 1)));
+
+  const user = `Generate ${count} exam questions total from the blocks below.
+Target: ~${countPerType} question(s) per block where content permits.
+Question types: ${qtype || 'mixed'} | Difficulty: ${difficulty || 'medium'}
+
+Apply STEP 0–5 rules strictly for each block.
+Return ONLY valid JSON object with "questions" array. Start with { end with }.
 
 BLOCKS:
-${JSON.stringify(trimmedBlocks, null, 0)}
-
-Return ONLY valid JSON with "questions" array. No text outside JSON.`;
+${JSON.stringify(viableBlocks, null, 0)}`;
 
   const payloadSize = JSON.stringify(trimmedBlocks).length;
   console.log('[NIRAS DEBUG] STEP 4: trimmedBlocks payload size =', payloadSize, 'chars |', Math.round(payloadSize/4), 'est tokens');
