@@ -6366,16 +6366,9 @@ button:active {
             <div id="upload-mode-explain-m1" style="">
               <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;color:var(--gold-dim);margin-bottom:6px;">⚡ MODE 1 — FAST &amp; AUTOMATIC</div>
               <ul style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:3px;">
-                <li style="font-size:12px;color:var(--white-dim);">Reads up to <strong style="color:var(--gold-dim);">50 pages</strong> from your PDF</li>
-                <li style="font-size:12px;color:var(--white-dim);">Questions generated <strong style="color:var(--gold-dim);">only from your document</strong> — no guessing</li>
-                <li style="font-size:12px;color:var(--white-dim);">Auto-detects content: Quick / Standard / Deep</li>
-                <li style="font-size:12px;color:var(--white-dim);">Supports PDF, Word, and pasted text</li>
-                <li style="font-size:12px;color:var(--white-dim);">Best for text-based PDFs and articles</li>
-                <li style="font-size:12px;color:var(--white-dim);">❌ Does not support image or scanned files → use Mode 3</li>
-              </ul>
-              <div style="margin-top:8px;font-family:var(--font-mono);font-size:10px;color:var(--white-muted);padding:6px 8px;background:rgba(201,168,76,0.06);border-radius:4px;">
-                Quick ≤3p · Standard ≤20p · Deep &gt;20p
-              </divactice or small files</li>
+                <li style="font-size:12px;color:var(--white-dim);">Upload → AI generates questions instantly</li>
+                <li style="font-size:12px;color:var(--white-dim);">No manual selection needed</li>
+                <li style="font-size:12px;color:var(--white-dim);">Best for quick practice or small files</li>
               </ul>
             </div>
             <div id="upload-mode-explain-m2" style="display:none;">
@@ -9233,7 +9226,7 @@ function retryCountdown(delayMs) {
 // Single retry-safe entry point for ALL Groq calls
 async function groqWithRetry(systemPrompt, userPrompt, maxTokens) {
   const delays     = [3000, 6000, 12000, 24000];
-  const retryOn    = [429, 503, 413];
+  const retryOn    = [429, 503];
   const maxAttempts = delays.length + 1;
   let lastErr;
 
@@ -9284,42 +9277,10 @@ async function groqWithRetry(systemPrompt, userPrompt, maxTokens) {
 // ——— Safe JSON parse from AI response ———
 function parseAIJson(text) {
   const clean = text.replace(/```json|```/g, '').trim();
+  // Find first [ or {
   const start = clean.search(/[\[{]/);
   if (start === -1) throw new Error('No JSON found');
-  let jsonStr = clean.slice(start);
-
-  // Try direct parse first
-  try {
-    return JSON.parse(jsonStr);
-  } catch (e) {
-    // JSON truncated — attempt repair
-    // Close any open arrays/objects
-    const opens  = (jsonStr.match(/\[|\{/g) || []).length;
-    const closes = (jsonStr.match(/\]|\}/g) || []).length;
-    let repaired = jsonStr;
-
-    // Remove trailing incomplete object/string
-    const lastComplete = Math.max(
-      repaired.lastIndexOf('},'),
-      repaired.lastIndexOf('}]'),
-      repaired.lastIndexOf('"}')
-    );
-    if (lastComplete > jsonStr.length * 0.5) {
-      repaired = repaired.slice(0, lastComplete + 1);
-      // Close array if needed
-      if (repaired.trim()[0] === '[' && !repaired.trim().endsWith(']')) {
-        repaired = repaired + ']';
-      }
-    }
-
-    try {
-      const parsed = JSON.parse(repaired);
-      console.warn('[NIRAS] parseAIJson: repaired truncated JSON, items:', Array.isArray(parsed) ? parsed.length : 1);
-      return parsed;
-    } catch (e2) {
-      throw new Error('JSON parse failed (truncated): ' + e.message);
-    }
-  }
+  return JSON.parse(clean.slice(start));
 }
 
 // ============================================================
@@ -10125,7 +10086,7 @@ async function extractTextFromFile(file) {
   const type = file.type;
   if (type.startsWith('text/')) return await file.text();
   if (type === 'application/pdf') return await extractPDFText(file);
-  if (type.startsWith('image/'))  throw new Error('Image files are not supported in Mode 1. Please upload a PDF or paste your text instead.');
+  if (type.startsWith('image/'))  return `[Image: ${file.name}] Generate questions based on typical academic content.`;
   if (type.includes('word') || file.name.endsWith('.docx') || file.name.endsWith('.doc'))
     return await extractWordText(file);
   try { return await file.text(); } catch { return ''; }
@@ -10146,7 +10107,7 @@ async function extractPDFText(file) {
     const countSel = document.getElementById('upload-count');
     if (countSel) countSel.value = String(rec);
     const pages = [];
-    for (let i = 1; i <= Math.min(pdf.numPages, 50); i++) {
+    for (let i = 1; i <= Math.min(pdf.numPages, 30); i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       pages.push(content.items.map(item => item.str).join(' '));
@@ -11848,17 +11809,7 @@ OUTPUT CONTRACT (STRICT):
 - For reading-based questions add: "passage": "<reconstructed paragraph used>"
 - passage is metadata only — embedded inside each object
 - NEVER output passage as a separate field outside the array`;
-  // Trim content to safe token limit (~4000 tokens input budget)
-  const _safeContent = content.length > 8000 ? content.slice(0, 8000) + '\n...[truncated]' : content;
-  const user   = `DOCUMENT TEXT (read carefully before writing questions):
-"""
-${_safeContent}
-"""
-
-Generate ${count} exam questions ONLY from the document text above.
-Type: ${typeMap[qtype]||typeMap.mixed} | Difficulty: ${diffMap[difficulty]||diffMap.medium}
-RULES: only use facts from the text above — never invent — source_sentence must be exact substring
-Each question: stem, qtype, difficulty, points:1, options(MCQ), correct_index(MCQ), correct_answer(tf/short/fill), explanation, ai_verified:true`;
+  const user   = `CONTENT: "${content}"\n\nGenerate ${count} questions.\nType: ${typeMap[qtype]||typeMap.mixed}\nDifficulty: ${diffMap[difficulty]||diffMap.medium}\n\nEach question: stem, qtype, difficulty, points:1, options(MCQ), correct_index(MCQ), correct_answer(tf/short/fill), pairs(matching), explanation, ai_verified:true\nIf reading-based: add passage field with the reconstructed paragraph that supports this question.`;
   const raw = await groqWithRetry(system, user, maxTokens);
   const qs  = parseAIJson(raw);
   if (!Array.isArray(qs) || qs.length === 0) throw new Error('AI returned no questions');
@@ -12089,7 +12040,7 @@ async function runModePipeline(content, options) {
         }
       );
       emitPipeline('generate', 'Generating questions from section ' + (i+1) + '…', { chunkIndex: i, chunkTotal: chunks.length });
-      const q = await generateFromContentWithTokens(chunks[i].text, qtype, difficulty, qPerChunk, 2500);
+      const q = await generateFromContentWithTokens(chunks[i].text, qtype, difficulty, qPerChunk, 1500);
       allQ.push(...q);
       if (i < chunks.length - 1) await delay(1000);
     }
@@ -12113,7 +12064,7 @@ async function runModePipeline(content, options) {
   let completed = 0;
   await Promise.all(chunks.map((_, i) =>
     sem(async () => {
-      results[i] = await generateFromContentWithTokens(chunks[i].text, qtype, difficulty, 2, 2000);
+      results[i] = await generateFromContentWithTokens(chunks[i].text, qtype, difficulty, 2, 1200);
       completed++;
       const d_meta = chunks[i];
       emitPipeline('chunk',
@@ -12294,33 +12245,9 @@ async function startUploadProcessing() {
     await delay(400); setProcStep(5,'done');
 
     setTimeout(() => {
-      // Normalize questions before render
-      const safeQuestions = (questions || []).map(q => {
-        const opts = q.options || [];
-        let ci = parseInt(q.correct_index);
-        if (isNaN(ci) || ci < 0 || ci >= opts.length) {
-          if (q.correct_answer && opts.length > 0) {
-            const found = opts.findIndex(o => o?.toLowerCase?.() === q.correct_answer?.toLowerCase?.());
-            ci = found >= 0 ? found : 0;
-          } else { ci = 0; }
-        }
-        return {
-          ...q,
-          qtype: (q.qtype || 'mcq').toLowerCase().replace(/[^a-z_]/g, ''),
-          correct_index: ci,
-          options: opts,
-          stem: q.stem || q.question_text || q.question || 'Question',
-          difficulty: q.difficulty || 'medium',
-          points: q.points || 1
-        };
-      }).filter(q => q.stem && q.stem.length > 3);
-
       goUploadStep(3);
-      renderUploadReview(safeQuestions);
+      renderUploadReview(questions);
       document.getElementById('btn-upload-insert').style.display = '';
-      // Scroll modal body to top so questions are visible
-      const modalBody = document.querySelector('.upload-modal-body');
-      if (modalBody) modalBody.scrollTop = 0;
       document.getElementById('btn-upload-insert').disabled = true;
       document.getElementById('upload-footer-info').textContent =
         `${questions.length} questions generated — select to insert`;
@@ -12373,10 +12300,6 @@ function renderUploadReview(questions) {
   const list    = document.getElementById('upload-question-list');
   const letters = ['A','B','C','D'];
 
-  if (!questions || questions.length === 0) {
-    list.innerHTML = '<div style="padding:20px;color:var(--white-muted);text-align:center;">No questions generated. Please try again.</div>';
-    return;
-  }
   list.innerHTML = questions.map((q,i) => {
     const diff = q.difficulty || 'medium';
     let optHtml = '';
