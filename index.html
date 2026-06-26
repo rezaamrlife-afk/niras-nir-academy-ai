@@ -9957,7 +9957,8 @@ const upload = {
   extractedText: '',
   questions:     [],
   selectedIdx:   new Set(),
-  targetSection: null
+  targetSection: null,
+  _cachedText:   null
 };
 
 function openUploadModal() {
@@ -9975,7 +9976,7 @@ function closeUploadModal() {
 function resetUploadModal() {
   clearRetryCountdown();
   hideCoveragePanel();
-  upload.file = null; upload.extractedText = ''; upload.questions = []; upload.selectedIdx = new Set();
+  upload.file = null; upload.extractedText = ''; upload.questions = []; upload.selectedIdx = new Set(); upload._cachedText = null;
   goUploadStep(1);
   document.getElementById('upload-file-input').value = '';
   document.getElementById('upload-file-selected').classList.remove('visible');
@@ -10081,6 +10082,51 @@ document.addEventListener('DOMContentLoaded', () => {
       upload.file = file; onFileSelected({files:[file]}); }
   });
 });
+
+
+function exportExtractedToWord() {
+  var text = upload._cachedText || upload.extractedText;
+  if (!text || !text.trim()) {
+    showToast('No extracted text available. Process a file first.', 'error');
+    return;
+  }
+  var fname = upload.file ? upload.file.name.replace('.pdf', '').replace('.PDF', '') : 'extracted';
+  var safe = text.replace(/&/g, '&amp;').replace(/[<]/g, '&lt;').replace(/[>]/g, '&gt;');
+  var doc = "<html><head><meta charset=\"utf-8\"></head><body><pre style=\"font-family:Arial;font-size:12pt;white-space:pre-wrap;\">" + safe + "</pre></body></html>";
+  var blob = new Blob([doc], {type: 'application/msword'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fname + '.doc';
+  a.click();
+  showToast('Exported as Word document.', 'success');
+}
+
+async function extractTextSmart(file) {
+  // Central OCR — runs once, cached for all modes
+  if (upload._cachedText) return upload._cachedText;
+
+  // Try fast text extraction first
+  const text = await extractTextFromFile(file);
+  if (text && text.trim().length > 500) {
+    upload._cachedText = text;
+    return text;
+  }
+
+  // Scanned PDF → OCR fallback
+  try {
+    const pagesArray = await runMode3HeadlessForMode4(file);
+    const merged = pagesArray.map(p => p.text || '').join('\n\n').trim();
+    if (merged.length > 100) {
+      upload._cachedText = merged;
+      return merged;
+    }
+  } catch(e) {
+    console.warn('[NIRAS] extractTextSmart OCR fallback failed:', e.message);
+  }
+
+  upload._cachedText = text;
+  return text;
+}
 
 async function extractTextFromFile(file) {
   const type = file.type;
@@ -12189,7 +12235,7 @@ async function startUploadProcessing() {
     if (upload._preProcessed && upload.extractedText) {
       content = upload.extractedText;
     } else {
-      if (upload.file)  content = await extractTextFromFile(upload.file);
+      if (upload.file)  content = await extractTextSmart(upload.file);
       if (pastedText)   content = pastedText + (content ? '\n\n'+content : '');
     }
     // ── PRE-MODE INGESTION GATE ──────────────────────────────
