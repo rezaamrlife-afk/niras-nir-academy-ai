@@ -6389,8 +6389,6 @@ button:active {
                 <li style="font-size:12px;color:var(--white-dim);">Best for scanned books and image-based PDFs</li>
               </ul>
             </div>
-          </div>
-
             <div id="upload-mode-explain-m4" style="display:none;">
               <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;color:var(--gold-dim);margin-bottom:6px;">◎ MODE 4 — DOCUMENT INTELLIGENCE</div>
               <ul style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:3px;">
@@ -6400,6 +6398,7 @@ button:active {
                 <li style="font-size:12px;color:var(--white-dim);">Best for complex academic or mixed-content PDFs</li>
               </ul>
             </div>
+          </div>
 
           <!-- Smart recommendation hint -->
           <div id="upload-mode-recommendation" style="font-size:11px;color:var(--white-muted);padding:0 2px;">
@@ -7058,7 +7057,7 @@ button:active {
         <button class="btn-sg-generate" id="btn-sg-generate" onclick="runSG()">
           ✦ Generate
         </button>
-        <button class="btn-sg-regen"   id="btn-sg-regen" onclick="resetSG()" style="display:none">← Redo</button>
+        <button class="btn-sg-regen"   id="btn-sg-regen" onclick="resetSGToForm()" style="display:none">← Redo</button>
         <button class="btn-sg-insert"   id="btn-sg-insert" onclick="insertSGContent()" style="display:none">Insert ✦</button>
       </div>
     </div>
@@ -10869,32 +10868,34 @@ async function confirmMode3Scope(runOCR) {
   // Merge: OCR results override page text where available
   const CONFIDENCE_THRESHOLD = 70; // Tesseract: 0–100
 
-  // PATCH 1 — strict single-source rule:
-  // If OCR confidence ≥ threshold → use OCR text ONLY
-  // Else → use PDF extracted text ONLY
-  // NEVER mix both sources
+  // PATCH 1 (fixed) — single-source rule applied PER PAGE, not per document:
+  // - Page WAS OCR'd + confidence ≥ threshold → use OCR text for that page
+  // - Page WAS OCR'd but confidence < threshold → fall back to that page's
+  //   originally extracted PDF text (never drop it to empty)
+  // - Page was NOT selected for OCR at all → always use its extracted PDF text
+  // This guarantees pages outside the OCR'd blocks are never silently wiped
+  // out of the content sent to the question-generation pipeline.
   const ocrPageCount = Object.keys(_m3OcrResults).length;
   const highConfOcr  = Object.values(_m3OcrResults)
     .filter(r => r && r.confidence >= CONFIDENCE_THRESHOLD).length;
-  const useOcrSource = ocrPageCount > 0 && highConfOcr > 0;
+  const lowConfOcrPages = [];
 
   const mergedPages = _m3PagesArray.map(p => {
     const ocrResult = _m3OcrResults[p.page];
     let text;
-    if (useOcrSource) {
-      // OCR mode: use OCR if high confidence, else empty (not mix)
-      text = (ocrResult && ocrResult.confidence >= CONFIDENCE_THRESHOLD)
-        ? ocrResult.text
-        : '';
+    if (ocrResult && ocrResult.confidence >= CONFIDENCE_THRESHOLD) {
+      text = ocrResult.text;
     } else {
-      // PDF mode: use original extracted text only
+      // Not OCR'd, or OCR'd but low-confidence → fall back to PDF text for THIS page only
+      if (ocrResult) lowConfOcrPages.push(p.page);
       text = p.text;
     }
     return { page: p.page, text };
   });
 
-  console.log('[NIRAS] Mode 3 source:', useOcrSource ? 'OCR' : 'PDF',
-    '| OCR pages:', ocrPageCount, '| high-conf:', highConfOcr);
+  console.log('[NIRAS] Mode 3 source: per-page merge',
+    '| OCR pages:', ocrPageCount, '| high-conf:', highConfOcr,
+    '| low-conf fallback to PDF text:', lowConfOcrPages.length, lowConfOcrPages);
 
   // PATCH 3 — normalize before pipeline
   const rawText   = mergedPages.map(p => p.text).join('\n').trim();
@@ -10925,7 +10926,7 @@ async function confirmMode3Scope(runOCR) {
   upload.pageCount      = _m3PagesArray.length;
   upload._preProcessed  = true; // skip gate — text already merged by Mode 3 OCR
   // PATCH 4 — stronger dedup threshold for OCR source (noisier text)
-  upload._m3OcrSource   = useOcrSource;
+  upload._m3OcrSource   = highConfOcr > 0;
 
   startUploadProcessing();
 }
@@ -13317,24 +13318,6 @@ async function sendResetEmail() {
 // ============================================================
 // SERVICE WORKER REGISTRATION
 // ============================================================
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(reg => console.log('SW registered:', reg.scope))
-      .catch(err => console.log('SW failed:', err));
-  });
-}
-
-// ============================================================
-// INIT — check session on load
-// ============================================================
-(function init() {
-  initIntro();
-  if (sb.restoreSession()) {
-    enterDashboard();
-  }
-})();
-
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
