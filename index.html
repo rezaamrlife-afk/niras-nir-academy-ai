@@ -12325,7 +12325,13 @@ async function startUploadProcessing() {
       }).filter(q => q.stem && q.stem.length > 3);
 
       goUploadStep(3);
-      renderUploadReview(safeQuestions);
+      try {
+        renderUploadReview(safeQuestions);
+      } catch(renderErr) {
+        console.error('[NIRAS] renderUploadReview failed:', renderErr.message, renderErr.stack);
+        document.getElementById('upload-question-list').innerHTML =
+          '<div style="padding:20px;color:red;">Render error: ' + renderErr.message + '</div>';
+      }
       document.getElementById('btn-upload-insert').style.display = '';
       document.getElementById('btn-upload-insert').disabled = true;
       document.getElementById('upload-footer-info').textContent =
