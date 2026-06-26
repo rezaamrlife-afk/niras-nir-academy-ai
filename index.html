@@ -9284,10 +9284,42 @@ async function groqWithRetry(systemPrompt, userPrompt, maxTokens) {
 // ——— Safe JSON parse from AI response ———
 function parseAIJson(text) {
   const clean = text.replace(/```json|```/g, '').trim();
-  // Find first [ or {
   const start = clean.search(/[\[{]/);
   if (start === -1) throw new Error('No JSON found');
-  return JSON.parse(clean.slice(start));
+  let jsonStr = clean.slice(start);
+
+  // Try direct parse first
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    // JSON truncated — attempt repair
+    // Close any open arrays/objects
+    const opens  = (jsonStr.match(/\[|\{/g) || []).length;
+    const closes = (jsonStr.match(/\]|\}/g) || []).length;
+    let repaired = jsonStr;
+
+    // Remove trailing incomplete object/string
+    const lastComplete = Math.max(
+      repaired.lastIndexOf('},'),
+      repaired.lastIndexOf('}]'),
+      repaired.lastIndexOf('"}')
+    );
+    if (lastComplete > jsonStr.length * 0.5) {
+      repaired = repaired.slice(0, lastComplete + 1);
+      // Close array if needed
+      if (repaired.trim()[0] === '[' && !repaired.trim().endsWith(']')) {
+        repaired = repaired + ']';
+      }
+    }
+
+    try {
+      const parsed = JSON.parse(repaired);
+      console.warn('[NIRAS] parseAIJson: repaired truncated JSON, items:', Array.isArray(parsed) ? parsed.length : 1);
+      return parsed;
+    } catch (e2) {
+      throw new Error('JSON parse failed (truncated): ' + e.message);
+    }
+  }
 }
 
 // ============================================================
@@ -12067,7 +12099,7 @@ async function runModePipeline(content, options) {
         }
       );
       emitPipeline('generate', 'Generating questions from section ' + (i+1) + '…', { chunkIndex: i, chunkTotal: chunks.length });
-      const q = await generateFromContentWithTokens(chunks[i].text, qtype, difficulty, qPerChunk, 1500);
+      const q = await generateFromContentWithTokens(chunks[i].text, qtype, difficulty, qPerChunk, 2500);
       allQ.push(...q);
       if (i < chunks.length - 1) await delay(1000);
     }
@@ -12091,7 +12123,7 @@ async function runModePipeline(content, options) {
   let completed = 0;
   await Promise.all(chunks.map((_, i) =>
     sem(async () => {
-      results[i] = await generateFromContentWithTokens(chunks[i].text, qtype, difficulty, 2, 1200);
+      results[i] = await generateFromContentWithTokens(chunks[i].text, qtype, difficulty, 2, 2000);
       completed++;
       const d_meta = chunks[i];
       emitPipeline('chunk',
