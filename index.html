@@ -6629,6 +6629,12 @@ button:active {
                 onclick="insertUploadedQuestions()">
           Insert Selected
         </button>
+        <button class="btn-upload-cancel" id="btn-export-word"
+                style="display:none;"
+                onclick="exportExtractedToWord()"
+                title="Download the extracted text as a Word document">
+          📄 Export Text
+        </button>
       </div>
     </div>
 
@@ -9984,6 +9990,7 @@ function resetUploadModal() {
   document.getElementById('btn-upload-process').disabled = true;
   document.getElementById('btn-upload-process').style.display = '';
   document.getElementById('btn-upload-insert').style.display  = 'none';
+  var exportBtn = document.getElementById('btn-export-word'); if (exportBtn) exportBtn.style.display = 'none';
   document.getElementById('upload-footer-info').textContent = 'Supported: PDF, Word, TXT, Images';
   // Reset Mode 2 + 3 state
   _uploadMode = 1;
@@ -12325,6 +12332,7 @@ async function startUploadProcessing() {
       renderUploadReview(questions);
       document.getElementById('btn-upload-insert').style.display = '';
       document.getElementById('btn-upload-insert').disabled = true;
+      document.getElementById('btn-export-word').style.display = (upload._cachedText || upload.extractedText) ? '' : 'none';
       document.getElementById('upload-footer-info').textContent =
         `${questions.length} questions generated — select to insert`;
     }, 400);
