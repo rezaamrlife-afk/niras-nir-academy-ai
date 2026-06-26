@@ -6366,9 +6366,16 @@ button:active {
             <div id="upload-mode-explain-m1" style="">
               <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;color:var(--gold-dim);margin-bottom:6px;">⚡ MODE 1 — FAST &amp; AUTOMATIC</div>
               <ul style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:3px;">
-                <li style="font-size:12px;color:var(--white-dim);">Upload → AI generates questions instantly</li>
-                <li style="font-size:12px;color:var(--white-dim);">No manual selection needed</li>
-                <li style="font-size:12px;color:var(--white-dim);">Best for quick practice or small files</li>
+                <li style="font-size:12px;color:var(--white-dim);">Reads up to <strong style="color:var(--gold-dim);">50 pages</strong> from your PDF</li>
+                <li style="font-size:12px;color:var(--white-dim);">Questions generated <strong style="color:var(--gold-dim);">only from your document</strong> — no guessing</li>
+                <li style="font-size:12px;color:var(--white-dim);">Auto-detects content: Quick / Standard / Deep</li>
+                <li style="font-size:12px;color:var(--white-dim);">Supports PDF, Word, and pasted text</li>
+                <li style="font-size:12px;color:var(--white-dim);">Best for text-based PDFs and articles</li>
+                <li style="font-size:12px;color:var(--white-dim);">❌ Does not support image or scanned files → use Mode 3</li>
+              </ul>
+              <div style="margin-top:8px;font-family:var(--font-mono);font-size:10px;color:var(--white-muted);padding:6px 8px;background:rgba(201,168,76,0.06);border-radius:4px;">
+                Quick ≤3p · Standard ≤20p · Deep &gt;20p
+              </divactice or small files</li>
               </ul>
             </div>
             <div id="upload-mode-explain-m2" style="display:none;">
@@ -10107,7 +10114,7 @@ async function extractPDFText(file) {
     const countSel = document.getElementById('upload-count');
     if (countSel) countSel.value = String(rec);
     const pages = [];
-    for (let i = 1; i <= Math.min(pdf.numPages, 30); i++) {
+    for (let i = 1; i <= Math.min(pdf.numPages, 50); i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       pages.push(content.items.map(item => item.str).join(' '));
@@ -11809,7 +11816,27 @@ OUTPUT CONTRACT (STRICT):
 - For reading-based questions add: "passage": "<reconstructed paragraph used>"
 - passage is metadata only — embedded inside each object
 - NEVER output passage as a separate field outside the array`;
-  const user   = `CONTENT: "${content}"\n\nGenerate ${count} questions.\nType: ${typeMap[qtype]||typeMap.mixed}\nDifficulty: ${diffMap[difficulty]||diffMap.medium}\n\nEach question: stem, qtype, difficulty, points:1, options(MCQ), correct_index(MCQ), correct_answer(tf/short/fill), pairs(matching), explanation, ai_verified:true\nIf reading-based: add passage field with the reconstructed paragraph that supports this question.`;
+  const user   = `You are generating exam questions EXCLUSIVELY from the document text below.
+STRICT RULES:
+- Read the document text carefully before writing ANY question
+- Every question MUST be answerable ONLY by reading this exact text
+- NEVER use knowledge outside this text
+- NEVER guess, assume, or invent any fact
+- Every answer MUST exist as a phrase or sentence in the text below
+- If the text does not contain enough facts for ${count} questions, generate fewer — do NOT fabricate
+
+DOCUMENT TEXT (source of truth):
+"""
+${content}
+"""
+
+Generate ${count} exam questions from the document text above.
+Type: ${typeMap[qtype]||typeMap.mixed}
+Difficulty: ${diffMap[difficulty]||diffMap.medium}
+
+Each question: stem, qtype, difficulty, points:1, options(MCQ), correct_index(MCQ), correct_answer(tf/short/fill), pairs(matching), explanation, ai_verified:true
+Add: source_sentence (exact substring from document text that proves the answer)
+If reading-based: add passage field with the exact paragraph from document text.`;
   const raw = await groqWithRetry(system, user, maxTokens);
   const qs  = parseAIJson(raw);
   if (!Array.isArray(qs) || qs.length === 0) throw new Error('AI returned no questions');
