@@ -12327,6 +12327,10 @@ async function startUploadProcessing() {
       goUploadStep(3);
       try {
         renderUploadReview(safeQuestions);
+        const listEl = document.getElementById('upload-question-list');
+        console.log('[NIRAS DEBUG] list innerHTML length:', listEl?.innerHTML?.length);
+        console.log('[NIRAS DEBUG] list children count:', listEl?.children?.length);
+        console.log('[NIRAS DEBUG] upanel-3 active:', document.getElementById('upanel-3')?.classList?.contains('active'));
       } catch(renderErr) {
         console.error('[NIRAS] renderUploadReview failed:', renderErr.message, renderErr.stack);
         document.getElementById('upload-question-list').innerHTML =
