@@ -12306,8 +12306,36 @@ async function startUploadProcessing() {
     setTimeout(() => {
       console.log('[NIRAS DEBUG] questions before render:', JSON.stringify(questions?.[0]));
       console.log('[NIRAS DEBUG] questions count:', questions?.length);
+
+      // Sanitize questions before render
+      const safeQuestions = (questions || []).map(q => {
+        const opts = q.options || [];
+        let ci = parseInt(q.correct_index);
+        // Fix out-of-range correct_index
+        if (isNaN(ci) || ci < 0 || ci >= opts.length) {
+          // Try to find correct answer in options
+          if (q.correct_answer && opts.length > 0) {
+            const found = opts.findIndex(o =>
+              o?.toLowerCase?.() === q.correct_answer?.toLowerCase?.()
+            );
+            ci = found >= 0 ? found : 0;
+          } else {
+            ci = 0;
+          }
+        }
+        return {
+          ...q,
+          qtype: (q.qtype || 'mcq').toLowerCase().replace(/[^a-z_]/g, ''),
+          correct_index: ci,
+          options: opts,
+          stem: q.stem || q.question_text || q.question || 'Question',
+          difficulty: q.difficulty || 'medium',
+          points: q.points || 1
+        };
+      }).filter(q => q.stem && q.stem.length > 3);
+
       goUploadStep(3);
-      renderUploadReview(questions);
+      renderUploadReview(safeQuestions);
       document.getElementById('btn-upload-insert').style.display = '';
       document.getElementById('btn-upload-insert').disabled = true;
       document.getElementById('upload-footer-info').textContent =
