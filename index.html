@@ -12294,24 +12294,15 @@ async function startUploadProcessing() {
     await delay(400); setProcStep(5,'done');
 
     setTimeout(() => {
-      console.log('[NIRAS DEBUG] questions before render:', JSON.stringify(questions?.[0]));
-      console.log('[NIRAS DEBUG] questions count:', questions?.length);
-
-      // Sanitize questions before render
+      // Normalize questions before render
       const safeQuestions = (questions || []).map(q => {
         const opts = q.options || [];
         let ci = parseInt(q.correct_index);
-        // Fix out-of-range correct_index
         if (isNaN(ci) || ci < 0 || ci >= opts.length) {
-          // Try to find correct answer in options
           if (q.correct_answer && opts.length > 0) {
-            const found = opts.findIndex(o =>
-              o?.toLowerCase?.() === q.correct_answer?.toLowerCase?.()
-            );
+            const found = opts.findIndex(o => o?.toLowerCase?.() === q.correct_answer?.toLowerCase?.());
             ci = found >= 0 ? found : 0;
-          } else {
-            ci = 0;
-          }
+          } else { ci = 0; }
         }
         return {
           ...q,
@@ -12325,18 +12316,11 @@ async function startUploadProcessing() {
       }).filter(q => q.stem && q.stem.length > 3);
 
       goUploadStep(3);
-      try {
-        renderUploadReview(safeQuestions);
-        const listEl = document.getElementById('upload-question-list');
-        console.log('[NIRAS DEBUG] list innerHTML length:', listEl?.innerHTML?.length);
-        console.log('[NIRAS DEBUG] list children count:', listEl?.children?.length);
-        console.log('[NIRAS DEBUG] upanel-3 active:', document.getElementById('upanel-3')?.classList?.contains('active'));
-      } catch(renderErr) {
-        console.error('[NIRAS] renderUploadReview failed:', renderErr.message, renderErr.stack);
-        document.getElementById('upload-question-list').innerHTML =
-          '<div style="padding:20px;color:red;">Render error: ' + renderErr.message + '</div>';
-      }
+      renderUploadReview(safeQuestions);
       document.getElementById('btn-upload-insert').style.display = '';
+      // Scroll modal body to top so questions are visible
+      const modalBody = document.querySelector('.upload-modal-body');
+      if (modalBody) modalBody.scrollTop = 0;
       document.getElementById('btn-upload-insert').disabled = true;
       document.getElementById('upload-footer-info').textContent =
         `${questions.length} questions generated — select to insert`;
