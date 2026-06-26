@@ -12304,6 +12304,8 @@ async function startUploadProcessing() {
     await delay(400); setProcStep(5,'done');
 
     setTimeout(() => {
+      console.log('[NIRAS DEBUG] questions before render:', JSON.stringify(questions?.[0]));
+      console.log('[NIRAS DEBUG] questions count:', questions?.length);
       goUploadStep(3);
       renderUploadReview(questions);
       document.getElementById('btn-upload-insert').style.display = '';
@@ -12359,6 +12361,10 @@ function renderUploadReview(questions) {
   const list    = document.getElementById('upload-question-list');
   const letters = ['A','B','C','D'];
 
+  if (!questions || questions.length === 0) {
+    list.innerHTML = '<div style="padding:20px;color:var(--white-muted);text-align:center;">No questions generated. Please try again.</div>';
+    return;
+  }
   list.innerHTML = questions.map((q,i) => {
     const diff = q.difficulty || 'medium';
     let optHtml = '';
