@@ -7037,7 +7037,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // ============================================================
 // CONFIG — Groq AI (proxied via Vercel serverless)
 // ============================================================
-const GROQ_MODEL = 'llama-3.1-8b-instant';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
 // ============================================================
 // SUPABASE REST CLIENT (no CDN dependency)
@@ -10656,57 +10656,49 @@ async function groqChatWithTokens(systemPrompt, userPrompt, maxTokens) {
   return msg;
 }
 
-async function analyzeDocumentIntelligence(text) {
-  const sample = text.slice(0, 2000);
-  const system = 'You are an educational content analyzer. Return ONLY valid JSON, no markdown.';
-  const user   = 'Analyze this educational document and return JSON: {"content_type":"textbook|lecture_notes|ielts|exam_paper|article|other","subject_area":"brief subject","difficulty":"beginner|intermediate|advanced","exam_style":"academic|language|general"}. Document: "' + sample + '"';
-  try {
-    const raw = await groqWithRetry(system, user, 300);
-    return JSON.parse(raw.replace(/```json|```/g, '').trim());
-  } catch (e) {
-    console.warn('[NIRAS] Document intelligence failed:', e.message);
-    return { content_type: 'other', difficulty: 'intermediate', exam_style: 'general' };
-  }
-}
+// ── masterAnalyze — one call: metadata + verified facts ───────
+async function masterAnalyze(content) {
+  const sample = content.slice(0, 8000);
+  const system = `You are a precise academic content analyst for an ELT exam system.
+Read the provided text and return ONLY valid JSON — no markdown, no explanation.`;
 
-// ── PHASE 1: Deep content analysis — extracts verified facts ──
-async function analyzeContentFacts(content) {
-  const system = `You are a precise academic content analyst.
-Your ONLY job: read the provided text carefully and extract VERIFIABLE facts, claims, and key information.
+  const user = `Analyze this educational text and return JSON with this exact structure:
+{
+  "subject_area": "brief subject (e.g. IELTS Reading, Grammar, Biology)",
+  "content_type": "textbook|lecture_notes|ielts|exam_paper|article|other",
+  "difficulty": "beginner|intermediate|advanced",
+  "exam_style": "academic|language|general",
+  "key_facts": [
+    { "fact": "exact claim stated in text", "source": "verbatim phrase from text proving this" }
+  ],
+  "key_terms": ["term1", "term2"],
+  "relationships": ["X is defined as Y", "A causes B"]
+}
 
 RULES:
-- Extract ONLY information explicitly stated in the text
-- Do NOT add any external knowledge
-- Do NOT infer or assume anything not written
-- Every item must be directly quotable from the source
+- key_facts: extract 8–15 facts ONLY from the text — nothing external
+- Every fact must have a direct verbatim source from the text
+- key_terms: important words/concepts mentioned in the text
+- relationships: cause-effect, definitions, comparisons found in the text
 
-Return ONLY valid JSON — no markdown, no explanation:
-{
-  "topic": "main topic in 5 words max",
-  "key_facts": [
-    { "fact": "exact claim from text", "source": "verbatim phrase from text that proves this fact" }
-  ],
-  "key_terms": ["important term 1", "important term 2"],
-  "relationships": ["X causes Y", "A is defined as B"],
-  "text_type": "reading_passage|lecture_notes|textbook|exam_paper|article|other"
-}
-
-Extract at least 8 key_facts if content is long enough. Quality over quantity — only include facts you can directly verify in the text.`;
-
-  const user = `TEXT TO ANALYZE:\n\n"${content.slice(0, 6000)}"`;
+TEXT:
+"${sample}"`;
 
   try {
     const raw = await groqWithRetry(system, user, 1500);
     const clean = raw.replace(/```json|```/g, '').trim();
     return JSON.parse(clean);
   } catch (e) {
-    console.warn('[NIRAS] Phase 1 analysis failed, using fallback:', e.message);
-    return { topic: 'unknown', key_facts: [], key_terms: [], relationships: [], text_type: 'other' };
+    console.warn('[NIRAS] masterAnalyze failed, using fallback:', e.message);
+    return {
+      subject_area: '', content_type: 'other', difficulty: 'intermediate',
+      exam_style: 'general', key_facts: [], key_terms: [], relationships: []
+    };
   }
 }
 
-// ── PHASE 2: Generate questions from verified facts only ───────
-async function generateFromContentWithTokens(content, qtype, difficulty, count, maxTokens) {
+// ── Pure question generator — receives pre-computed analysis ──
+async function generateFromContentWithTokens(content, qtype, difficulty, count, maxTokens, analysis) {
   const typeMap = {
     mixed:        'Mix: MCQ (50%), True/False (25%), Short Answer (25%).',
     mcq:          'All MCQ. 4 options each. Mark correct_index (0–3). Distractors must be plausible but clearly wrong based on the text.',
@@ -10723,17 +10715,14 @@ async function generateFromContentWithTokens(content, qtype, difficulty, count, 
     hard:   'Hard: test inference, comparison, or deeper comprehension — all still anchored to the text.'
   };
 
-  // PHASE 1 — Analyze content first
-  const analysis = await analyzeContentFacts(content);
-  const factList = (analysis.key_facts || []).slice(0, 15)
-    .map((f, i) => `${i+1}. FACT: "${f.fact}" | PROOF: "${f.source}"`)
-    .join('\n');
-  const termList = (analysis.key_terms || []).slice(0, 10).join(', ');
-  const relList  = (analysis.relationships || []).slice(0, 5).join(' | ');
+  const hasAnalysis = analysis && analysis.key_facts && analysis.key_facts.length > 0;
+  const factList = hasAnalysis
+    ? (analysis.key_facts || []).slice(0, 15)
+        .map((f, i) => `${i+1}. FACT: "${f.fact}" | PROOF: "${f.source}"`).join('\n')
+    : '';
+  const termList = hasAnalysis ? (analysis.key_terms || []).slice(0, 10).join(', ') : '';
+  const relList  = hasAnalysis ? (analysis.relationships || []).slice(0, 5).join(' | ') : '';
 
-  const hasAnalysis = analysis.key_facts && analysis.key_facts.length > 0;
-
-  // PHASE 2 — Generate from verified facts
   const system = `You are NIRAS — a strict, intelligent ELT exam question engine.
 
 IDENTITY:
@@ -10744,7 +10733,6 @@ IDENTITY:
 ANTI-HALLUCINATION PROTOCOL:
 ✖ NEVER invent answer options not supported by the text
 ✖ NEVER create questions whose answers require outside knowledge
-✖ NEVER use phrases like "according to research" or "studies show" unless the text says so
 ✖ NEVER generate a question if you cannot point to exact text evidence
 ✖ If you run out of valid facts → generate FEWER questions, never fabricate
 
@@ -10774,18 +10762,19 @@ OUTPUT FORMAT (STRICT):
   const user = `SOURCE TEXT:
 "${content.slice(0, 5000)}"
 
-${hasAnalysis ? `VERIFIED FACTS EXTRACTED FROM THIS TEXT:
+${hasAnalysis
+  ? `VERIFIED FACTS FROM THIS TEXT:
 ${factList}
-
 KEY TERMS: ${termList}
 KEY RELATIONSHIPS: ${relList || 'none detected'}
 
-INSTRUCTION: Generate ${count} exam questions using ONLY the verified facts above and the source text. Do NOT use any fact not listed above or not present in the source text.` : `INSTRUCTION: Read the source text carefully and generate ${count} exam questions. Every answer must be directly found in the text above.`}
+INSTRUCTION: Generate ${count} exam questions using ONLY the verified facts and source text above.`
+  : `INSTRUCTION: Read the source text carefully and generate ${count} exam questions. Every answer must be directly found in the text above.`}
 
 Question type: ${typeMap[qtype] || typeMap.mixed}
 Difficulty: ${diffMap[difficulty] || diffMap.medium}
 
-Return a JSON array of ${count} questions. If you cannot find ${count} valid questions in the text, return fewer — never fabricate.`;
+Return a JSON array of ${count} questions. If fewer valid questions exist in the text, return fewer — never fabricate.`;
 
   const raw = await groqWithRetry(system, user, maxTokens || 2500);
   const qs  = parseAIJson(raw);
@@ -10970,37 +10959,40 @@ function smartSample(content, maxLength) {
 
 async function runModePipeline(content, options) {
   const { qtype, difficulty, pageCount, onProgress } = options;
-  const count = Math.max(1, Math.min(30, parseInt(options.count) || 5)); // clamp 1–30
+  const count = Math.max(1, Math.min(30, parseInt(options.count) || 5));
   const mode = detectUploadMode(content.length, pageCount || 1);
   const _pipelineStart = Date.now();
-  const LATENCY_GUARD_MS = 55000; // skip validation if pipeline > 55s
+  const LATENCY_GUARD_MS = 55000;
   console.log('[NIRAS] Mode:', mode, '| chars:', content.length, '| pages:', pageCount);
 
-  if (onProgress) onProgress('Analysing document structure…');
-  const intel = await analyzeDocumentIntelligence(content);
-  console.log('[NIRAS] Document intelligence:', intel);
+  // ── ONE masterAnalyze call for the entire document ───────────
+  if (onProgress) onProgress('Analysing document…');
+  emitPipeline('extract', 'Reading document and extracting key facts…', { activeChunk: 'Analysing content' });
+  const analysis = await masterAnalyze(content);
+  console.log('[NIRAS] masterAnalyze:', analysis);
 
-  // Show real AI insight to user
   const modeLabel = mode === 'quick' ? '⚡ Quick Mode' : mode === 'standard' ? '◆ Standard Mode' : '◈ Deep Mode';
   const chunks_preview = mode === 'quick' ? 1 : mode === 'standard' ? Math.min(5, Math.ceil(content.length/10000)) : Math.ceil(content.length/8000);
   emitPipeline('mode',
-    intel.subject_area ? 'Subject detected: ' + intel.subject_area : 'Content analysed',
+    analysis.subject_area ? 'Subject: ' + analysis.subject_area : 'Content analysed',
     {
       modeBadge:   modeLabel,
       mode,
       chunkTotal:  chunks_preview,
-      activeChunk: (pageCount||'?') + ' pages · ' + chunks_preview + ' sections · ' + (intel.content_type || 'document')
+      activeChunk: (pageCount||'?') + ' pages · ' + chunks_preview + ' sections · ' + (analysis.content_type || 'document')
     }
   );
-  await delay(600);
+  await delay(400);
 
+  // ── QUICK ────────────────────────────────────────────────────
   if (mode === 'quick') {
-    emitPipeline('generate', 'Analysing content facts…', { mode: 'quick', activeChunk: 'Phase 1: extracting key information' });
-    await delay(400);
-    emitPipeline('generate', 'Generating questions from verified facts…', { mode: 'quick', activeChunk: 'Phase 2: building exam questions' });
-    return await generateFromContentWithTokens(smartSample(content, 12000), qtype, difficulty, count, 2500);
+    emitPipeline('generate', 'Generating questions from verified facts…', {
+      mode: 'quick', activeChunk: 'Building ' + count + ' questions'
+    });
+    return await generateFromContentWithTokens(smartSample(content, 12000), qtype, difficulty, count, 2500, analysis);
   }
 
+  // ── STANDARD ─────────────────────────────────────────────────
   if (mode === 'standard') {
     const chunks = chunkText(content, 10000, 500, pageCount || 1).slice(0, 5);
     const MAX_PER_CHUNK = 8;
@@ -11011,25 +11003,19 @@ async function runModePipeline(content, options) {
       const chunk_meta = chunks[i];
       const pageInfo = chunk_meta.pageStart ? '  ·  pages ' + chunk_meta.pageStart + '–' + chunk_meta.pageEnd : '';
       emitPipeline('chunk',
-        'Section ' + (i+1) + ' of ' + chunks.length + ' — extracting facts…',
+        'Generating from section ' + (i+1) + ' of ' + chunks.length + '…',
         {
           chunkIndex: i, chunkTotal: chunks.length,
           pageStart:  chunk_meta.pageStart, pageEnd: chunk_meta.pageEnd,
           pct:        chunk_meta.pct,
-          activeChunk: '📖 Phase 1: Reading section ' + (i+1) + '/' + chunks.length + pageInfo
+          activeChunk: '✍ Section ' + (i+1) + '/' + chunks.length + pageInfo
         }
       );
-      await delay(200);
-      emitPipeline('generate', 'Section ' + (i+1) + ' — generating questions from verified facts…', {
-        chunkIndex: i, chunkTotal: chunks.length,
-        activeChunk: '✍ Phase 2: Building questions from section ' + (i+1) + '/' + chunks.length + pageInfo
-      });
-      const q = await generateFromContentWithTokens(chunks[i].text, qtype, difficulty, qPerChunk, 2500);
+      const q = await generateFromContentWithTokens(chunks[i].text, qtype, difficulty, qPerChunk, 2500, analysis);
       allQ.push(...q);
-      if (i < chunks.length - 1) await delay(800);
+      if (i < chunks.length - 1) await delay(600);
     }
-    const _dedupThreshold = 0.70;
-    const deduped = deduplicateQuestions(allQ, _dedupThreshold).slice(0, count);
+    const deduped = deduplicateQuestions(allQ, 0.70).slice(0, count);
     console.log('[NIRAS] Trace: raw=' + allQ.length + ' → deduped=' + deduped.length);
     emitPipeline('dedup', 'Removing duplicates — ' + allQ.length + ' → ' + deduped.length + ' questions', {});
     emitPipeline('validate', 'AI quality check — reviewing ' + deduped.length + ' questions…', {});
@@ -11040,14 +11026,14 @@ async function runModePipeline(content, options) {
     return await validateQuestions(deduped, onProgress, count);
   }
 
-  // Deep mode — concurrency 3
+  // ── DEEP — concurrency 3 ─────────────────────────────────────
   const chunks = chunkText(content, 8000, 800, pageCount || 1);
   const sem = createSemaphore(3);
   const results = new Array(chunks.length).fill(null);
   let completed = 0;
   await Promise.all(chunks.map((_, i) =>
     sem(async () => {
-      results[i] = await generateFromContentWithTokens(chunks[i].text, qtype, difficulty, 2, 1200);
+      results[i] = await generateFromContentWithTokens(chunks[i].text, qtype, difficulty, 2, 1500, analysis);
       completed++;
       const d_meta = chunks[i];
       emitPipeline('chunk',
@@ -11062,8 +11048,7 @@ async function runModePipeline(content, options) {
     })
   ));
   const allQ = results.flat().filter(Boolean);
-  const _deepDedupThreshold = 0.60;
-  const _deduped = deduplicateQuestions(allQ, _deepDedupThreshold);
+  const _deduped = deduplicateQuestions(allQ, 0.60);
   const ranked = rankByDiversity(_deduped, count);
   console.log('[NIRAS] Trace: raw=' + allQ.length + ' → deduped=' + _deduped.length + ' → ranked=' + ranked.length);
   emitPipeline('validate', 'AI quality check — reviewing ' + ranked.length + ' questions…', {});
@@ -11073,7 +11058,6 @@ async function runModePipeline(content, options) {
   }
   return await validateQuestions(ranked, onProgress, count);
 }
-
 
 // ── UX Alignment: Live AI state renderer ─────────────────────
 function updateProcUI(title, sub, showMode) {
@@ -11275,8 +11259,8 @@ function setProcStep(n, state) {
 }
 
 async function generateFromContent(content, qtype, difficulty, count) {
-  // Uses same two-phase engine as generateFromContentWithTokens
-  return await generateFromContentWithTokens(content, qtype, difficulty, count, 2500);
+  // Pure generator — no analysis (used in contexts where masterAnalyze already ran)
+  return await generateFromContentWithTokens(content, qtype, difficulty, count, 2500, null);
 }
 
 function renderUploadReview(questions) {
