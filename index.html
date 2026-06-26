@@ -6359,20 +6359,20 @@ button:active {
             <div id="upload-mode-explain-m1" style="">
               <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;color:var(--gold-dim);margin-bottom:6px;">⚡ MODE 1 — FAST &amp; AUTOMATIC</div>
               <ul style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:3px;">
-                <li style="font-size:12px;color:var(--white-dim);">Upload → AI reads the full file and generates questions instantly</li>
-                <li style="font-size:12px;color:var(--white-dim);"><span style="color:var(--green);">✔</span> Accepts: text-based PDF, Word (.doc/.docx), TXT</li>
-                <li style="font-size:12px;color:var(--white-dim);"><span style="color:var(--gold-dim);">⚠</span> Images (JPG/PNG): OCR attempted — quality may vary</li>
-                <li style="font-size:12px;color:var(--white-dim);"><span style="color:var(--red-err);">✖</span> Scanned or image-based PDFs are not supported</li>
-                <li style="font-size:12px;color:var(--white-dim);">Best for quick practice, small files, or any single document</li>
+                <li style="font-size:12px;color:var(--white-dim);">Upload any file → AI reads it and generates questions instantly</li>
+                <li style="font-size:12px;color:var(--white-dim);"><span style="color:var(--green);">✔</span> PDF (text-based), Word (.doc/.docx), TXT</li>
+                <li style="font-size:12px;color:var(--white-dim);"><span style="color:var(--red-err);">✖</span> Images (JPG/PNG) are not supported — upload PDF, Word, or TXT instead</li>
+                <li style="font-size:12px;color:var(--white-dim);"><span style="color:var(--gold-dim);">⚠</span> For large files, AI reads the most relevant sections</li>
+                <li style="font-size:12px;color:var(--white-dim);">Best for any file — no setup needed</li>
               </ul>
             </div>
             <div id="upload-mode-explain-m2" style="display:none;">
               <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;color:var(--gold-dim);margin-bottom:6px;">◈ MODE 2 — PAGE RANGE SELECTION</div>
               <ul style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:3px;">
-                <li style="font-size:12px;color:var(--white-dim);">You specify which pages to generate questions from</li>
+                <li style="font-size:12px;color:var(--white-dim);">You choose exactly which pages to generate questions from</li>
                 <li style="font-size:12px;color:var(--white-dim);"><span style="color:var(--green);">✔</span> PDF only — text-based (not scanned)</li>
-                <li style="font-size:12px;color:var(--white-dim);"><span style="color:var(--red-err);">✖</span> Word, TXT, and images are not supported in this mode</li>
-                <li style="font-size:12px;color:var(--white-dim);">Best for books and long PDFs where you need a specific section</li>
+                <li style="font-size:12px;color:var(--white-dim);"><span style="color:var(--gold-dim);">⚠</span> Page numbers are based on physical PDF order, not printed numbers</li>
+                <li style="font-size:12px;color:var(--white-dim);">Best for books and long PDFs — target a specific chapter or unit</li>
               </ul>
               <!-- Page Range Input -->
               <div id="upload-m2-range" style="margin-top:12px;padding:10px 12px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:6px;">
@@ -10040,7 +10040,7 @@ function resetUploadModal() {
   selectUploadMode(1);
   // Reset recommendation hint
   const recEl = document.getElementById('upload-mode-recommendation');
-  if (recEl) recEl.innerHTML = 'Not sure? &nbsp;<span style="color:var(--gold-dim);">Mode 1</span> for quick results &nbsp;&middot;&nbsp; <span style="color:var(--gold-dim);">Mode 2</span> for structured learning';
+  if (recEl) recEl.innerHTML = 'Not sure? &nbsp;<span style="color:var(--gold-dim);">Mode 1</span> for any file, quick results &nbsp;&middot;&nbsp; <span style="color:var(--gold-dim);">Mode 2</span> for PDF, specific pages';
 }
 
 function populateUploadSectionSelect() {
