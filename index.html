@@ -6069,7 +6069,7 @@ button:active {
       <button class="btn-sidebar-toggle" id="btn-sidebar-toggle" onclick="toggleSidebar()">⚙</button>
       <button class="btn-builder-action upload-btn" onclick="openUploadModal()">⬆ Upload</button>
       <button class="btn-builder-action" onclick="builderPreview()">👁 Preview</button>
-      <button class="btn-builder-action primary" onclick="builderExport()">📄 Export PDF</button>
+      <button class="btn-builder-action primary" onclick="builderExport()">⬇ Export</button>
     </div>
   </header>
 
@@ -6286,7 +6286,7 @@ button:active {
       <button class="preview-mode-tab" id="preview-tab-teacher"
               onclick="switchPreviewMode('teacher')">Teacher Key</button>
     </div>
-    <button class="btn-builder-action primary" onclick="closePreview();builderExport()">📄 Export PDF</button>
+    <button class="btn-builder-action primary" onclick="closePreview();builderExport()">⬇ Export</button>
   </header>
   <div class="preview-body">
     <div class="preview-paper" id="preview-paper">
@@ -7410,7 +7410,7 @@ function renderExams(exams) {
       </div>
       <div class="exam-card-actions">
         <button class="btn-icon" title="Edit" onclick="openExam('${ex.id}');event.stopPropagation()">✏️</button>
-        <button class="btn-icon" title="Export PDF" onclick="exportExam('${ex.id}');event.stopPropagation()">📄</button>
+        <button class="btn-icon" title="Export" onclick="exportExam('${ex.id}');event.stopPropagation()">⬇</button>
         <button class="btn-icon danger" title="Delete" onclick="deleteExam('${ex.id}');event.stopPropagation()">🗑</button>
       </div>
     </div>
