@@ -9233,7 +9233,7 @@ function retryCountdown(delayMs) {
 // Single retry-safe entry point for ALL Groq calls
 async function groqWithRetry(systemPrompt, userPrompt, maxTokens) {
   const delays     = [3000, 6000, 12000, 24000];
-  const retryOn    = [429, 503];
+  const retryOn    = [429, 503, 413];
   const maxAttempts = delays.length + 1;
   let lastErr;
 
@@ -11848,27 +11848,17 @@ OUTPUT CONTRACT (STRICT):
 - For reading-based questions add: "passage": "<reconstructed paragraph used>"
 - passage is metadata only — embedded inside each object
 - NEVER output passage as a separate field outside the array`;
-  const user   = `You are generating exam questions EXCLUSIVELY from the document text below.
-STRICT RULES:
-- Read the document text carefully before writing ANY question
-- Every question MUST be answerable ONLY by reading this exact text
-- NEVER use knowledge outside this text
-- NEVER guess, assume, or invent any fact
-- Every answer MUST exist as a phrase or sentence in the text below
-- If the text does not contain enough facts for ${count} questions, generate fewer — do NOT fabricate
-
-DOCUMENT TEXT (source of truth):
+  // Trim content to safe token limit (~4000 tokens input budget)
+  const _safeContent = content.length > 8000 ? content.slice(0, 8000) + '\n...[truncated]' : content;
+  const user   = `DOCUMENT TEXT (read carefully before writing questions):
 """
-${content}
+${_safeContent}
 """
 
-Generate ${count} exam questions from the document text above.
-Type: ${typeMap[qtype]||typeMap.mixed}
-Difficulty: ${diffMap[difficulty]||diffMap.medium}
-
-Each question: stem, qtype, difficulty, points:1, options(MCQ), correct_index(MCQ), correct_answer(tf/short/fill), pairs(matching), explanation, ai_verified:true
-Add: source_sentence (exact substring from document text that proves the answer)
-If reading-based: add passage field with the exact paragraph from document text.`;
+Generate ${count} exam questions ONLY from the document text above.
+Type: ${typeMap[qtype]||typeMap.mixed} | Difficulty: ${diffMap[difficulty]||diffMap.medium}
+RULES: only use facts from the text above — never invent — source_sentence must be exact substring
+Each question: stem, qtype, difficulty, points:1, options(MCQ), correct_index(MCQ), correct_answer(tf/short/fill), explanation, ai_verified:true`;
   const raw = await groqWithRetry(system, user, maxTokens);
   const qs  = parseAIJson(raw);
   if (!Array.isArray(qs) || qs.length === 0) throw new Error('AI returned no questions');
