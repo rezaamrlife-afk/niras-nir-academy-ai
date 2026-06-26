@@ -10104,23 +10104,26 @@ async function extractTextSmart(file) {
   // Central OCR — runs once, cached for all modes
   if (upload._cachedText) return upload._cachedText;
 
-  // Try fast text extraction first
+  // Try fast text extraction first (images already go through real OCR here)
   const text = await extractTextFromFile(file);
   if (text && text.trim().length > 500) {
     upload._cachedText = text;
     return text;
   }
 
-  // Scanned PDF → OCR fallback
-  try {
-    const pagesArray = await runMode3HeadlessForMode4(file);
-    const merged = pagesArray.map(p => p.text || '').join('\n\n').trim();
-    if (merged.length > 100) {
-      upload._cachedText = merged;
-      return merged;
+  // Scanned PDF → OCR fallback (PDF-only — runMode3HeadlessForMode4 requires pdf.js
+  // and will throw on non-PDF files, e.g. images, which already used direct OCR above)
+  if (file.type === 'application/pdf') {
+    try {
+      const pagesArray = await runMode3HeadlessForMode4(file);
+      const merged = pagesArray.map(p => p.text || '').join('\n\n').trim();
+      if (merged.length > 100) {
+        upload._cachedText = merged;
+        return merged;
+      }
+    } catch(e) {
+      console.warn('[NIRAS] extractTextSmart OCR fallback failed:', e.message);
     }
-  } catch(e) {
-    console.warn('[NIRAS] extractTextSmart OCR fallback failed:', e.message);
   }
 
   upload._cachedText = text;
@@ -10131,7 +10134,7 @@ async function extractTextFromFile(file) {
   const type = file.type;
   if (type.startsWith('text/')) return await file.text();
   if (type === 'application/pdf') return await extractPDFText(file);
-  if (type.startsWith('image/'))  return `[Image: ${file.name}] Generate questions based on typical academic content.`;
+  if (type.startsWith('image/'))  return await extractImageTextOCR(file);
   if (type.includes('word') || file.name.endsWith('.docx') || file.name.endsWith('.doc'))
     return await extractWordText(file);
   try { return await file.text(); } catch { return ''; }
@@ -10168,6 +10171,34 @@ async function extractWordText(file) {
     const result = await window.mammoth.extractRawText({arrayBuffer: await file.arrayBuffer()});
     return result.value || '';
   } catch (err) { console.error('Word error:', err); return ''; }
+}
+
+// ── Real OCR for directly-uploaded image files (jpg/png/etc) ──
+// NEVER fabricate placeholder text — if OCR fails or yields nothing
+// usable, return '' so the ingestion gate can surface a clear error
+// instead of silently feeding the AI a made-up prompt to "guess".
+async function extractImageTextOCR(file) {
+  try {
+    await loadTesseract();
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload  = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const result     = await Tesseract.recognize(dataUrl, 'eng', { logger: () => {} });
+    const text       = (result?.data?.text || '').trim();
+    const confidence = result?.data?.confidence || 0;
+    upload.pageCount = 1;
+    if (!text || text.length < 20 || confidence < 50) {
+      console.warn('[NIRAS] Image OCR low quality — text length:', text.length, '| confidence:', confidence);
+      return '';
+    }
+    return text;
+  } catch (err) {
+    console.error('[NIRAS] Image OCR failed:', err);
+    return '';
+  }
 }
 
 function loadScript(src) {
@@ -12262,13 +12293,20 @@ async function startUploadProcessing() {
     // Skip gate if text was already validated by Mode 2 or Mode 3
     if (!upload._preProcessed) {
       if (!content.trim()) {
-        const isPDF = upload.file?.type === 'application/pdf';
+        const isPDF   = upload.file?.type === 'application/pdf';
+        const isImage = upload.file?.type?.startsWith('image/');
         if (isPDF) {
           throw new Error(
             'No readable text detected in this PDF.\n' +
             'NIRAS can only generate questions from PDFs that contain selectable text.\n' +
             'This usually happens when the file is scanned, image-based, corrupted, or exported without a text layer.\n' +
             'Solution: upload a text-based PDF, or use Mode 3 for OCR assistance.'
+          );
+        } else if (isImage) {
+          throw new Error(
+            'No readable text detected in this image.\n' +
+            'NIRAS could not extract usable text via OCR — the image may be blurry, low-resolution, or not contain text.\n' +
+            'Solution: upload a clearer image, or paste the text directly instead.'
           );
         } else {
           throw new Error('No content found in file. Please try a different file or paste text instead.');
@@ -12280,7 +12318,9 @@ async function startUploadProcessing() {
       const _avgChars   = Math.round(_totalChars / _pageCount);
       const _letters    = (content.match(/[a-zA-Z؀-ۿЀ-ӿ]/g) || []).length;
       const _alphaRatio = _totalChars > 0 ? _letters / _totalChars : 0;
-      const _isScanned  = upload.file?.type === 'application/pdf' && (
+      const _isPDF      = upload.file?.type === 'application/pdf';
+      const _isImage    = upload.file?.type?.startsWith('image/');
+      const _isScanned  = (_isPDF || _isImage) && (
         _avgChars < 50 || (_totalChars < 500 && _pageCount > 1) || _alphaRatio < 0.3
       );
 
@@ -12290,11 +12330,13 @@ async function startUploadProcessing() {
           : _alphaRatio < 0.3
           ? `Text quality too low (${Math.round(_alphaRatio*100)}% readable characters).`
           : `Too little text extracted (${_totalChars} total chars).`;
-        emitPipeline('error', 'PDF could not be read — it appears to be scanned or image-based.', {});
+        emitPipeline('error', _isImage
+          ? 'Image could not be read — OCR quality too low.'
+          : 'PDF could not be read — it appears to be scanned or image-based.', {});
         throw new Error(
-          `PDF ingestion failed: ${reason} ` +
-          `This PDF appears to be scanned or image-based. ` +
-          `Try Mode 3 (OCR) for scanned documents.`
+          _isImage
+            ? `Image OCR failed: ${reason} Try a clearer image, or paste the text directly instead.`
+            : `PDF ingestion failed: ${reason} This PDF appears to be scanned or image-based. Try Mode 3 (OCR) for scanned documents.`
         );
       }
     }
@@ -12307,13 +12349,18 @@ async function startUploadProcessing() {
       showToast('Low text content detected — question quality may be limited.', 'error');
     }
 
-    // Truncation warning
-    if (content.length > 12000) {
-      showToast('Large document detected. The most relevant sections will be analysed.', 'info');
+    // Note: content is NOT truncated here. runModePipeline already decides,
+    // based on the FULL content length, whether to run quick/standard/deep
+    // mode — and standard/deep already chunk the entire document safely via
+    // chunkText(). Truncating to 12000 chars here used to silently hide most
+    // of large documents from the AI even when standard/deep mode was meant
+    // to process all of it.
+    if (content.length > 50000) {
+      showToast('Large document detected. Processing the full document in sections.', 'info');
     }
 
     if (!wasPreProcessed) {
-      upload.extractedText = content.slice(0, 12000);
+      upload.extractedText = content;
     }
     setProcStep(1,'done');
 
