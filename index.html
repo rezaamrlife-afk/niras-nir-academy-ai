@@ -6349,7 +6349,7 @@ button:active {
             </button>
             <button id="upload-mode-btn-2" class="upload-mode-btn" onclick="selectUploadMode(2)">
               <span style="font-size:11px;letter-spacing:0.08em;font-family:var(--font-mono);">◈ MODE 2</span>
-              <span style="font-size:10px;color:var(--white-muted);display:block;margin-top:2px;">Smart · Chapter Select</span>
+              <span style="font-size:10px;color:var(--white-muted);display:block;margin-top:2px;">PDF · Page Range</span>
             </button>
 
           </div>
@@ -6359,26 +6359,48 @@ button:active {
             <div id="upload-mode-explain-m1" style="">
               <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;color:var(--gold-dim);margin-bottom:6px;">⚡ MODE 1 — FAST &amp; AUTOMATIC</div>
               <ul style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:3px;">
-                <li style="font-size:12px;color:var(--white-dim);">Upload → AI generates questions instantly</li>
-                <li style="font-size:12px;color:var(--white-dim);">No manual selection needed</li>
-                <li style="font-size:12px;color:var(--white-dim);">Best for quick practice or small files</li>
+                <li style="font-size:12px;color:var(--white-dim);">Upload → AI reads the full file and generates questions instantly</li>
+                <li style="font-size:12px;color:var(--white-dim);"><span style="color:var(--green);">✔</span> Accepts: text-based PDF, Word (.doc/.docx), TXT</li>
+                <li style="font-size:12px;color:var(--white-dim);"><span style="color:var(--gold-dim);">⚠</span> Images (JPG/PNG): OCR attempted — quality may vary</li>
+                <li style="font-size:12px;color:var(--white-dim);"><span style="color:var(--red-err);">✖</span> Scanned or image-based PDFs are not supported</li>
+                <li style="font-size:12px;color:var(--white-dim);">Best for quick practice, small files, or any single document</li>
               </ul>
             </div>
             <div id="upload-mode-explain-m2" style="display:none;">
-              <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;color:var(--gold-dim);margin-bottom:6px;">◈ MODE 2 — SMART CHAPTER SELECTION</div>
+              <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;color:var(--gold-dim);margin-bottom:6px;">◈ MODE 2 — PAGE RANGE SELECTION</div>
               <ul style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:3px;">
-                <li style="font-size:12px;color:var(--white-dim);">AI analyzes full document structure first</li>
-                <li style="font-size:12px;color:var(--white-dim);">You choose chapters or page ranges</li>
-                <li style="font-size:12px;color:var(--white-dim);">More control over question generation</li>
-                <li style="font-size:12px;color:var(--white-dim);">Best for books, PDFs, and long documents</li>
+                <li style="font-size:12px;color:var(--white-dim);">You specify which pages to generate questions from</li>
+                <li style="font-size:12px;color:var(--white-dim);"><span style="color:var(--green);">✔</span> PDF only — text-based (not scanned)</li>
+                <li style="font-size:12px;color:var(--white-dim);"><span style="color:var(--red-err);">✖</span> Word, TXT, and images are not supported in this mode</li>
+                <li style="font-size:12px;color:var(--white-dim);">Best for books and long PDFs where you need a specific section</li>
               </ul>
+              <!-- Page Range Input -->
+              <div id="upload-m2-range" style="margin-top:12px;padding:10px 12px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:6px;">
+                <div style="font-family:var(--font-mono);font-size:10px;color:var(--gold-dim);letter-spacing:0.08em;margin-bottom:8px;">SELECT PAGE RANGE</div>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <label style="font-size:11px;color:var(--white-muted);font-family:var(--font-mono);">From</label>
+                    <input id="m2-page-from" type="number" min="1" value="1"
+                      style="width:60px;background:var(--black-card);border:1px solid var(--black-border);color:var(--white);font-family:var(--font-mono);font-size:12px;padding:5px 8px;border-radius:4px;text-align:center;"
+                      oninput="validateM2Range()">
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <label style="font-size:11px;color:var(--white-muted);font-family:var(--font-mono);">To</label>
+                    <input id="m2-page-to" type="number" min="1" value="50"
+                      style="width:60px;background:var(--black-card);border:1px solid var(--black-border);color:var(--white);font-family:var(--font-mono);font-size:12px;padding:5px 8px;border-radius:4px;text-align:center;"
+                      oninput="validateM2Range()">
+                  </div>
+                  <div id="m2-range-hint" style="font-size:11px;color:var(--white-muted);font-family:var(--font-mono);">e.g. pages 10 – 40</div>
+                </div>
+                <div id="m2-range-error" style="display:none;font-size:11px;color:var(--red-err);margin-top:6px;font-family:var(--font-mono);"></div>
+              </div>
             </div>
 
           </div>
 
           <!-- Smart recommendation hint -->
           <div id="upload-mode-recommendation" style="font-size:11px;color:var(--white-muted);padding:0 2px;">
-            Not sure? &nbsp;<span style="color:var(--gold-dim);">Mode 1</span> for quick results &nbsp;·&nbsp; <span style="color:var(--gold-dim);">Mode 2</span> for structured learning
+            Not sure? &nbsp;<span style="color:var(--gold-dim);">Mode 1</span> for any file, quick results &nbsp;·&nbsp; <span style="color:var(--gold-dim);">Mode 2</span> for PDF, specific pages
           </div>
 
         </div>
@@ -10229,6 +10251,25 @@ function selectUploadMode(mode) {
   if (m2) m2.style.display = mode === 2 ? '' : 'none';
 }
 
+function validateM2Range() {
+  const fromEl  = document.getElementById('m2-page-from');
+  const toEl    = document.getElementById('m2-page-to');
+  const errEl   = document.getElementById('m2-range-error');
+  const hintEl  = document.getElementById('m2-range-hint');
+  if (!fromEl || !toEl) return true;
+  const from = parseInt(fromEl.value) || 1;
+  const to   = parseInt(toEl.value)   || 1;
+  if (from < 1) { fromEl.value = 1; }
+  if (to < from) {
+    if (errEl) { errEl.textContent = 'End page must be greater than start page.'; errEl.style.display = ''; }
+    if (hintEl) hintEl.style.display = 'none';
+    return false;
+  }
+  if (errEl)  { errEl.style.display = 'none'; }
+  if (hintEl) { hintEl.textContent = `pages ${from} – ${to} (${to - from + 1} pages)`; hintEl.style.display = ''; }
+  return true;
+}
+
 // ── Adaptive full PDF extraction (Mode 2 only) ───────────────
 async function extractPDFTextFull(file) {
   const arrayBuffer = await file.arrayBuffer();
@@ -10435,7 +10476,7 @@ async function handleUploadGenerate() {
     return;
   }
 
-  // ── MODE 2: smart pre-processing ────────────────────────
+  // ── MODE 2: page range pre-processing ───────────────────
   const pastedText = document.getElementById('upload-paste-text').value.trim();
   if (pastedText) {
     // Pasted text: no PDF extraction needed, skip to scope
@@ -10450,6 +10491,19 @@ async function handleUploadGenerate() {
     showToast('Please upload a file first.', 'error');
     return;
   }
+
+  if (upload.file.type !== 'application/pdf') {
+    showToast('Mode 2 supports PDF files only. Please switch to Mode 1 for other file types.', 'error');
+    return;
+  }
+
+  if (!validateM2Range()) {
+    showToast('Please fix the page range before continuing.', 'error');
+    return;
+  }
+
+  const m2From = parseInt(document.getElementById('m2-page-from')?.value) || 1;
+  const m2To   = parseInt(document.getElementById('m2-page-to')?.value)   || 50;
 
   const btn = document.getElementById('btn-upload-process');
   btn.disabled = true;
@@ -10466,9 +10520,20 @@ async function handleUploadGenerate() {
       return;
     }
 
-    const structure = await detectStructure(fullText);
-    upload.extractedText = fullText; // store for reference
-    showMode2ScopeUI(structure);
+    // Filter _m2PagesArray by the user-specified page range
+    const rangePages = _m2PagesArray.filter(p => p.page >= m2From && p.page <= m2To);
+    if (rangePages.length === 0) {
+      showToast(`No content found in pages ${m2From}–${m2To}. Please check the range.`, 'error');
+      btn.disabled    = false;
+      btn.textContent = '✦ Generate Exam';
+      return;
+    }
+    const rangeText = rangePages.map(p => p.text).join('\n');
+    upload.extractedText = rangeText;
+    upload.pageCount     = rangePages.length;
+    upload._preProcessed = true;
+    emitPipeline('extract', `Pages ${m2From}–${m2To} extracted (${rangePages.length} pages)`, {});
+    startUploadProcessing();
 
   } catch (e) {
     console.error('[NIRAS] Mode 2 extraction failed:', e);
