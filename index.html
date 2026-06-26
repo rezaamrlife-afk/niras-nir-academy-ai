@@ -10086,7 +10086,7 @@ async function extractTextFromFile(file) {
   const type = file.type;
   if (type.startsWith('text/')) return await file.text();
   if (type === 'application/pdf') return await extractPDFText(file);
-  if (type.startsWith('image/'))  return `[Image: ${file.name}] Generate questions based on typical academic content.`;
+  if (type.startsWith('image/'))  throw new Error('Image files are not supported in Mode 1. Please upload a PDF or paste your text instead.');
   if (type.includes('word') || file.name.endsWith('.docx') || file.name.endsWith('.doc'))
     return await extractWordText(file);
   try { return await file.text(); } catch { return ''; }
