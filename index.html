@@ -10371,17 +10371,32 @@ async function detectStructure(text) {
   const chapterPatterns = [
     /^(Chapter|CHAPTER|Unit|UNIT|Section|SECTION|Part|PART)\s+(\d+|[IVXivx]+)[:\s\-–—]/gm,
     /^\d+\.\s+[A-Z][^\n]{3,50}$/gm,
-    /^(Introduction|Conclusion|Overview|Summary|Appendix)[:\s]/gim,
+    // Keyword must be alone on its line (optionally with a trailing colon) —
+    // NOT just any sentence that happens to start with the word followed by
+    // a space (e.g. "Summary of everything covered..." is body text, not a
+    // heading, and must not be treated as a chapter boundary).
+    /^(Introduction|Conclusion|Overview|Summary|Appendix)\s*:?\s*$/gim,
   ];
 
   const found = [];
-  for (const pattern of chapterPatterns) {
+  for (let pIdx = 0; pIdx < chapterPatterns.length; pIdx++) {
+    const pattern = chapterPatterns[pIdx];
     const matches = [...sample.matchAll(pattern)];
     matches.forEach(m => {
       const title = m[0].trim();
-      if (title && !found.find(f => f.title === title)) {
-        found.push({ title, charPos: m.index });
+      if (!title || found.find(f => f.title === title)) return;
+      // The numbered-heading pattern (index 1) has no explicit chapter
+      // keyword, so it also matches ordinary numbered list items / steps
+      // (e.g. "1. Buy milk and eggs from the store"). Real headings tend
+      // to have most of their words capitalized (Title Case); ordinary
+      // sentences only capitalize the first word. Require at least half
+      // the words to start with a capital letter to filter those out.
+      if (pIdx === 1) {
+        const words = title.replace(/^\d+\.\s*/, '').split(/\s+/).filter(Boolean);
+        const capWords = words.filter(w => /^[A-Z]/.test(w)).length;
+        if (words.length === 0 || (capWords / words.length) < 0.5) return;
       }
+      found.push({ title, charPos: m.index });
     });
   }
 
@@ -10476,19 +10491,22 @@ function filterTextByScope() {
     selectedChapters.forEach(ch => {
       for (let p = ch.pageStart; p <= ch.pageEnd; p++) selectedPages.add(p);
     });
-    return _m2PagesArray.filter(p => selectedPages.has(p.page)).map(p => p.text).join('\n');
+    const matchedPages = _m2PagesArray.filter(p => selectedPages.has(p.page));
+    return { text: matchedPages.map(p => p.text).join('\n'), pageCount: matchedPages.length };
 
   } else {
     // Page range filter
     const from = parseInt(document.getElementById('upload-m2-page-from').value) || 1;
     const to   = parseInt(document.getElementById('upload-m2-page-to').value)   || 10;
-    return _m2PagesArray.filter(p => p.page >= from && p.page <= to).map(p => p.text).join('\n');
+    const matchedPages = _m2PagesArray.filter(p => p.page >= from && p.page <= to);
+    return { text: matchedPages.map(p => p.text).join('\n'), pageCount: matchedPages.length };
   }
 }
 
 // ── Confirm Mode 2 scope → feed into Mode 1 pipeline ─────────
 async function confirmMode2Scope() {
-  const filteredText = filterTextByScope();
+  const scope = filterTextByScope();
+  const filteredText = scope?.text;
   if (!filteredText || filteredText.trim().length < 50) {
     showToast('No content in selected scope — please adjust selection.', 'error');
     return;
@@ -10499,7 +10517,7 @@ async function confirmMode2Scope() {
 
   // Set as extractedText → Mode 1 pipeline will use this
   upload.extractedText = filteredText;
-  upload.pageCount     = _m2PagesArray.length;
+  upload.pageCount     = scope.pageCount || 1; // pages actually in the selected scope, not the whole document
   upload._preProcessed = true; // skip gate — text already validated by Mode 2
 
   // ── NOW RUN EXACT MODE 1 PIPELINE (unchanged) ──
