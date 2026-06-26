@@ -11508,12 +11508,39 @@ async function generateFromBlocksPrompt2(blocks, count, qtype, difficulty) {
   });
 
   // PHASE 1B: Filter — only viable READING_PASSAGE blocks
+  const INSTRUCTION_SIGNALS = [
+    /students are asked/i,
+    /ask students/i,
+    /previewing chart/i,
+    /class audio/i,
+    /audio cd/i,
+    /describe what (they|you) see/i,
+    /guess what the chapter/i,
+    /before reading/i,
+    /after reading/i,
+    /work with a partner/i,
+    /look at the photo/i,
+    /this activity/i,
+    /third activity/i,
+    /first activity/i,
+    /second activity/i,
+    /complete a/i,
+    /discuss the connection/i,
+    /read the quotation/i,
+    /to the teacher/i,
+    /to the student/i,
+    /how to use this/i
+  ];
+
   const filtered = blocksWithUnit.filter(b => {
     const wc = (b.clean_text || '').split(/\s+/).filter(w => w.length > 0).length;
-    return b.section_type === 'READING_PASSAGE' &&
-           wc >= 80 &&
-           b.block_scope !== 'continuation' &&
-           (b.confidence || 0) >= 0.60;
+    if (b.section_type !== 'READING_PASSAGE') return false;
+    if (wc < 80) return false;
+    if (b.block_scope === 'continuation') return false;
+    if ((b.confidence || 0) < 0.60) return false;
+    const hasInstruction = INSTRUCTION_SIGNALS.some(p => p.test(b.clean_text || ''));
+    if (hasInstruction) return false;
+    return true;
   });
 
   if (filtered.length === 0) {
