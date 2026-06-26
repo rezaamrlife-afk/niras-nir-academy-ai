@@ -12206,6 +12206,7 @@ async function startUploadProcessing() {
       }
     }
     // Reset flag for next use
+    const wasPreProcessed = upload._preProcessed;
     upload._preProcessed = false;
 
     // Soft warning — low quality but not zero
@@ -12218,7 +12219,9 @@ async function startUploadProcessing() {
       showToast('Large document detected. The most relevant sections will be analysed.', 'info');
     }
 
-    upload.extractedText = content.slice(0, 12000);
+    if (!wasPreProcessed) {
+      upload.extractedText = content.slice(0, 12000);
+    }
     setProcStep(1,'done');
 
     setProcStep(2,'active');
