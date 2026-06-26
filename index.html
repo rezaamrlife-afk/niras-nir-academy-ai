@@ -6629,12 +6629,6 @@ button:active {
                 onclick="insertUploadedQuestions()">
           Insert Selected
         </button>
-        <button class="btn-upload-cancel" id="btn-export-word"
-                style="display:none;"
-                onclick="exportExtractedToWord()"
-                title="Download the extracted text as a Word document">
-          📄 Export Text
-        </button>
       </div>
     </div>
 
@@ -9990,7 +9984,6 @@ function resetUploadModal() {
   document.getElementById('btn-upload-process').disabled = true;
   document.getElementById('btn-upload-process').style.display = '';
   document.getElementById('btn-upload-insert').style.display  = 'none';
-  var exportBtn = document.getElementById('btn-export-word'); if (exportBtn) exportBtn.style.display = 'none';
   document.getElementById('upload-footer-info').textContent = 'Supported: PDF, Word, TXT, Images';
   // Reset Mode 2 + 3 state
   _uploadMode = 1;
@@ -11071,8 +11064,27 @@ function m4ClassifySegment(text) {
   }
 
   // INSTRUCTION: imperative directives
-  if (/^(read|answer|circle|match|complete|choose|look|write|listen|discuss|underline|find|use|make|put)/i.test(text.trim())) {
-    return { type: 'INSTRUCTION', confidence: 0.87 };
+  const INSTRUCTION_PATTERNS = [
+    /^(read|answer|circle|match|complete|choose|look|write|listen|discuss|underline|find|use|make|put)/i,
+    /students are asked/i,
+    /ask students/i,
+    /previewing chart/i,
+    /class audio/i,
+    /audio cd/i,
+    /describe what (they|you) see/i,
+    /guess what the chapter/i,
+    /work with a partner/i,
+    /look at the photo/i,
+    /before reading/i,
+    /after reading/i,
+    /to the teacher/i,
+    /to the student/i,
+    /how to use this/i,
+    /read the quotation/i,
+    /discuss the connection/i
+  ];
+  if (INSTRUCTION_PATTERNS.some(p => p.test(text.trim()))) {
+    return { type: 'INSTRUCTION', confidence: 0.90 };
   }
 
   // COMPREHENSION_QUESTION: numbered question or question word
@@ -12332,7 +12344,6 @@ async function startUploadProcessing() {
       renderUploadReview(questions);
       document.getElementById('btn-upload-insert').style.display = '';
       document.getElementById('btn-upload-insert').disabled = true;
-      document.getElementById('btn-export-word').style.display = (upload._cachedText || upload.extractedText) ? '' : 'none';
       document.getElementById('upload-footer-info').textContent =
         `${questions.length} questions generated — select to insert`;
     }, 400);
